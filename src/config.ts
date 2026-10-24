@@ -3,20 +3,19 @@
  * Built with Arc Studio — https://studio.arc.io
  */
 
-import { http, createConfig } from 'wagmi'
-import { mainnet } from 'wagmi/chains'
-import { arcTestnet } from 'viem/chains'
-import { injected } from 'wagmi/connectors'
+import { createConfig } from '@privy-io/wagmi'
+import { http } from 'wagmi'
 import { registerChain } from './tracing'
+import { getBrowserChain, getBrowserNetwork } from './integration/network'
 
 // Pre-register chain RPC URLs so trace events show correct chain names immediately
-registerChain(arcTestnet.id, arcTestnet.rpcUrls.default.http[0])
+const browserNetwork = getBrowserNetwork()
+const browserChain = getBrowserChain()
+registerChain(browserChain.id, browserNetwork.rpcUrl)
 
 export const config = createConfig({
-  chains: [arcTestnet, mainnet], // mainnet needed for ENS resolution
-  connectors: [injected()],
+  chains: [browserChain],
   transports: {
-    [arcTestnet.id]: http(),
-    [mainnet.id]: http(), // ENS resolution uses mainnet
+    [browserChain.id]: http(browserNetwork.rpcUrl),
   },
 })
