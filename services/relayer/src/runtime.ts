@@ -1,6 +1,5 @@
 import {
   RelayerEventWorker,
-  type PollResult,
   type RelayerLogReader,
 } from './event-worker'
 import type { CursorStore } from './eligibility'
@@ -14,7 +13,7 @@ export interface RuntimeOptions {
 }
 
 export interface RuntimePoller {
-  pollOnce(): Promise<PollResult | null>
+  pollOnce(): Promise<unknown | null>
 }
 
 const defaultSleep = (milliseconds: number) =>
@@ -32,7 +31,7 @@ export class RelayerRuntime {
     }
   }
 
-  async runOnce(): Promise<PollResult | null> {
+  async runOnce(): Promise<unknown | null> {
     return this.worker.pollOnce()
   }
 
