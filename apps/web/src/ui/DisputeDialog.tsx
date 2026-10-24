@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useSignMessage } from 'wagmi'
+import { encodeCurrentEscrowAction } from '@/integration/current-actions'
 import { encodeEscrowAction } from '@/integration/escrow'
 import { describeUploadError, readFile, uploadEvidence, type EvidenceFile } from '@/integration/evidence'
 import { sha256Hex } from '@/integration/evidence'
@@ -20,7 +21,8 @@ type Stage = { kind: 'form' } | { kind: 'working'; text: string } | { kind: 'rea
  * A buyer's dispute: the reason and files are stored first (one wallet signature covers the list), then the dispute
  * itself is sent with the digest of exactly those files. If storing fails, nothing is sent and the part stays unfrozen.
  */
-export function DisputeDialog({ deal, part, owner, onCancel, onDone }: { deal: DealView; part: Tranche; owner: `0x${string}`; onCancel: () => void; onDone: () => void }) {
+export function DisputeDialog({ deal, part, owner, mode = 'dispute', onCancel, onDone }: { deal: DealView; part: Tranche; owner: `0x${string}`; mode?: 'dispute' | 'respond'; onCancel: () => void; onDone: () => void }) {
+  const respond = mode === 'respond'
   const { signMessageAsync } = useSignMessage()
   const [reason, setReason] = useState('')
   const [files, setFiles] = useState<File[]>([])
@@ -28,7 +30,7 @@ export function DisputeDialog({ deal, part, owner, onCancel, onDone }: { deal: D
   const [stage, setStage] = useState<Stage>({ kind: 'form' })
 
   const problem = (() => {
-    if (reason.trim().length < MIN_REASON) return `Say what is wrong in at least ${MIN_REASON} characters.`
+    if (reason.trim().length < MIN_REASON) return `Write at least ${MIN_REASON} characters.`
     if (files.length > MAX_FILES) return `Attach at most ${MAX_FILES} files.`
     if (files.some((f) => f.size < 1)) return 'One of the files is empty.'
     if (files.some((f) => f.size > MAX_BYTES)) return 'Each file must be 10 MB or smaller.'
@@ -61,20 +63,26 @@ export function DisputeDialog({ deal, part, owner, onCancel, onDone }: { deal: D
   return (
     <>
       <p className="label">Part {part.index}</p>
-      <h2 className="mt-1 text-[19px] leading-tight font-semibold">Dispute this part</h2>
+      <h2 className="mt-1 text-[19px] leading-tight font-semibold">{respond ? 'Respond to the dispute' : 'Dispute this part'}</h2>
       <p className="mt-2 text-[13.5px] leading-relaxed">
-        {formatAmount(part.amount)} USDC stays frozen until the arbiter decides. Other parts are not affected. The supplier can respond, and you can withdraw the dispute before it is decided.
+        {respond
+          ? `Tell the arbiter your side. ${formatAmount(part.amount)} USDC stays frozen until they decide. You can respond once.`
+          : `${formatAmount(part.amount)} USDC stays frozen until the arbiter decides. Other parts are not affected. The supplier can respond, and you can withdraw the dispute before it is decided.`}
       </p>
 
       {stage.kind === 'ready' ? (
         <div className="mt-4">
           <p className="mb-3 rounded-md border border-released/40 bg-released-wash px-3 py-2 text-[13px]">
-            Your reason and files are stored. Now send the dispute; its record is tied to exactly those files.
+            Your words and files are stored. Now send them; the record is tied to exactly those files.
           </p>
           <TxFlow
-            confirmLabel="Send dispute"
+            confirmLabel={respond ? 'Send response' : 'Send dispute'}
             tone="hold"
-            steps={[{ label: 'Freeze this part and file the dispute', action: encodeEscrowAction({ kind: 'dispute', dealId: deal.id, milestoneIndex: part.position, evidenceHash: stage.commitment }) }]}
+            steps={[
+              respond
+                ? { label: 'Send your response', action: encodeCurrentEscrowAction({ kind: 'respondToDispute', dealId: deal.id, milestoneIndex: part.position, evidenceHash: stage.commitment }) }
+                : { label: 'Freeze this part and file the dispute', action: encodeEscrowAction({ kind: 'dispute', dealId: deal.id, milestoneIndex: part.position, evidenceHash: stage.commitment }) },
+            ]}
             onCancel={onCancel}
             onDone={() => onDone()}
           />
@@ -82,7 +90,7 @@ export function DisputeDialog({ deal, part, owner, onCancel, onDone }: { deal: D
       ) : (
         <div className="mt-4 space-y-4">
           <div>
-            <label className="label block" htmlFor="reason">What is wrong</label>
+            <label className="label block" htmlFor="reason">{respond ? 'Your response' : 'What is wrong'}</label>
             <textarea
               id="reason"
               value={reason}

@@ -53,7 +53,7 @@ export default function AppHome() {
         </ul>
       ) : (
         <p className="mt-6 text-[13px] text-graphite">
-          Meanwhile, look through the{' '}
+          <Link href="/app/new" className="font-semibold text-ink underline decoration-rule underline-offset-2">Create your first deal</Link>, or look through the{' '}
           <Link href="/attestors" className="font-semibold text-ink underline decoration-rule underline-offset-2">
             attestor directory
           </Link>
