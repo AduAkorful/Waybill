@@ -7,6 +7,7 @@ import { parseDealEvents, splitDecisions } from './events'
 import { refundedFor, releasedFor, splitBuyerReceives, unknownSplitParts } from './derive'
 import type { DealView, Tranche } from './types'
 import { dealsInShell, heldShells, parseWalletDeals, rolesIn } from './wallet'
+import { needsFrom, sectionOf } from './inbox'
 
 const part = (fee: bigint) => ({ fee }) as Tranche
 
@@ -151,5 +152,40 @@ describe('wallet deals', () => {
     expect(() => parseWalletDeals([{ dealId: 'x', state: null, roles: [] }])).toThrow()
     expect(() => parseWalletDeals([{ dealId: '1', state: null, roles: [{ role: 'admin', milestoneIndex: null }] }])).toThrow()
     expect(() => parseWalletDeals([{ dealId: '1', state: null, roles: [] }])).toThrow()
+  })
+})
+
+describe('inbox', () => {
+  const wallet = '0x00000000000000000000000000000000000000aa' as `0x${string}`
+  const other = '0x00000000000000000000000000000000000000bb' as `0x${string}`
+  const tranche = (over: Partial<Tranche>): Tranche => ({ index: 1, position: 0, state: 'waiting', attestor: null, attestorAccepted: false, attested: false, responseSubmitted: false, disputeRaiser: null, responseDeadline: 0n, amount: 1_000_000n, ...over }) as Tranche
+  const deal = (over: Partial<DealView>, parts: Tranche[]): DealView =>
+    ({ state: 'funded', supplierPayout: other, arbiter: other, chainTime: 100n, tranches: parts, ...over }) as DealView
+
+  test('buyer: review, fund, refund', () => {
+    expect(needsFrom('buyer', deal({}, [tranche({ state: 'in_review' })]), wallet)).toBe('Review')
+    expect(needsFrom('buyer', deal({ state: 'accepted' }, [tranche({})]), wallet)).toBe('Fund')
+    expect(needsFrom('buyer', deal({}, [tranche({ state: 'refundable' })]), wallet)).toBe('Refund')
+    expect(needsFrom('buyer', deal({}, [tranche({})]), wallet)).toBeNull()
+  })
+
+  test('supplier: accept while unaccepted', () => {
+    expect(needsFrom('supplier', deal({ state: 'proposed', supplierPayout: null }, [tranche({})]), wallet)).toBe('Accept')
+  })
+
+  test('attestor: only parts naming this wallet', () => {
+    expect(needsFrom('attestor', deal({}, [tranche({ attestor: wallet })]), wallet)).toBe('Sign')
+    expect(needsFrom('attestor', deal({}, [tranche({ attestor: other })]), wallet)).toBeNull()
+  })
+
+  test('arbiter: decides once the response window has closed', () => {
+    const d = (now: bigint) => deal({ arbiter: wallet, chainTime: now }, [tranche({ state: 'disputed', responseDeadline: 50n })])
+    expect(needsFrom('arbiter', d(49n), wallet)).toBeNull()
+    expect(needsFrom('arbiter', d(50n), wallet)).toBe('Decide')
+  })
+
+  test('settled deals are done and need nothing', () => {
+    const d = deal({ state: 'settled' }, [tranche({ state: 'released' })])
+    expect(sectionOf('buyer', d, wallet)).toBe('done')
   })
 })
