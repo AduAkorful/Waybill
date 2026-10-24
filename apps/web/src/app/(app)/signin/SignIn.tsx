@@ -1,12 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useLogin, useLoginWithEmail, usePrivy } from '@privy-io/react-auth'
 import { useAccount, useSwitchChain } from 'wagmi'
 import { getBrowserNetwork } from '@/integration/network'
-import { ThemeToggle, Wordmark } from '@/ui/Chrome'
 import { SiteHeader } from '@/ui/SiteHeader'
 
 const CODE_LENGTH = 6
@@ -104,12 +102,11 @@ export function SignIn() {
   const heading = wrongNetwork ? 'Switch to Arc' : awaitingCode ? 'Enter the code we sent' : 'Sign in to Waybill'
 
   return (
-    <div className="grid min-h-dvh lg:grid-cols-[1fr_1fr]">
-      <aside className="relative hidden overflow-hidden border-r border-rule bg-sheet lg:block">
-        <div className="flex h-full flex-col justify-between p-10">
-          <Link href="/">
-            <Wordmark />
-          </Link>
+    <div className="flex min-h-dvh flex-col">
+      <SiteHeader signIn="signed-in" />
+      <div className="grid flex-1 lg:grid-cols-[1fr_1fr]">
+      <aside className="relative hidden overflow-hidden border-y border-r border-rule bg-sheet lg:block">
+        <div className="flex h-full flex-col justify-between gap-10 p-10">
           <div>
             <p className="max-w-md text-[34px] leading-[1.08] font-semibold tracking-tight">
               Pay a deposit. Release the rest when <span className="marked">someone you trust</span> confirms the goods.
@@ -128,13 +125,6 @@ export function SignIn() {
       </aside>
 
       <main className="flex flex-col">
-        <div className="lg:hidden">
-          <SiteHeader signIn="signed-in" />
-        </div>
-        <div className="hidden items-center justify-end px-8 py-4 lg:flex">
-          <ThemeToggle />
-        </div>
-
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 pb-16 md:max-w-md">
           <h1 className="text-[26px] leading-tight font-semibold tracking-tight">{heading}</h1>
           {!wrongNetwork && !awaitingCode ? <p className="mt-1 text-[13.5px] text-graphite lg:hidden">Pay a deposit. Release the rest when someone you trust confirms the goods.</p> : null}
@@ -222,7 +212,7 @@ export function SignIn() {
                 onKeyDown={(e) => e.key === 'Enter' && void send()}
                 aria-invalid={!!emailErr}
                 aria-describedby={emailErr ? 'email-err' : undefined}
-                className={`mt-1.5 w-full rounded-md border bg-sheet px-3.5 py-3 text-[15px] focus:border-held ${emailErr ? 'border-hold' : 'border-rule'}`}
+                className={`mt-1.5 w-full rounded-md border bg-sheet px-3.5 py-3 text-base focus:border-held ${emailErr ? 'border-hold' : 'border-rule'}`}
               />
               {emailErr ? (
                 <p id="email-err" role="alert" className="mt-1.5 text-[12.5px] text-hold">
@@ -256,6 +246,7 @@ export function SignIn() {
           )}
         </div>
       </main>
+      </div>
     </div>
   )
 }

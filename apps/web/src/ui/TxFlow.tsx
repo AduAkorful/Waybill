@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { usePublicClient } from 'wagmi'
+import { useAccount, usePublicClient } from 'wagmi'
 import type { Hex } from 'viem'
 import { useWaybillTransaction } from '@/components/use-waybill-transaction'
 import type { EncodedWalletAction } from '@/integration/escrow'
@@ -52,6 +52,15 @@ export function TxFlow({
   const [recheck, setRecheck] = useState<'idle' | 'checking' | 'still-unknown'>('idle')
   const [confirmedUnknown, setConfirmedUnknown] = useState(false)
   const [slowWallet, setSlowWallet] = useState(false)
+  const { address } = useAccount()
+  const [copied, setCopied] = useState(false)
+  // a button that has just appeared ignores clicks for a moment, so a double click on the one before cannot reach the wallet
+  const [armed, setArmed] = useState(false)
+  useEffect(() => {
+    setArmed(false)
+    const timer = setTimeout(() => setArmed(true), 600)
+    return () => clearTimeout(timer)
+  }, [index])
   const done = useRef(false)
   const step = steps[index]!
   const { state } = tx
@@ -135,9 +144,20 @@ export function TxFlow({
                 : `${state.error.message}. Nothing was sent${state.error.code === 'rpc_error' ? '; try again in a moment.' : '.'}`}
             </p>
           ) : null}
+          {state.status === 'error' && state.error.code === 'no_gas' && address ? (
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard?.writeText(address).then(() => setCopied(true)).catch(() => {})
+              }}
+              className="mb-2 w-full rounded-md border border-rule py-2.5 text-[13.5px] font-semibold hover:bg-sheet"
+            >
+              {copied ? 'Address copied' : 'Copy my wallet address'}
+            </button>
+          ) : null}
           <button
             onClick={() => void tx.execute(step.action)}
-            disabled={!tx.ready}
+            disabled={!tx.ready || !armed}
             className={`w-full rounded-md py-3 text-[14.5px] font-semibold disabled:opacity-60 ${TONE[tone]}`}
           >
             {steps.length > 1 ? step.label : confirmLabel}

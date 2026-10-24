@@ -6,6 +6,7 @@ import type { Hex } from 'viem'
 import type { EncodedWalletAction } from '../integration/escrow'
 import {
   assertActionNetwork,
+  assertCanPayFee,
   classifyWalletError,
   waitForActionReceipt,
   type WaybillWalletError,
@@ -51,6 +52,13 @@ export function useWaybillTransaction() {
           to: action.to,
           data: action.data,
         })
+        // Gas is paid in USDC on Arc: a wallet that cannot cover the fee is told so here, not left to a greyed-out wallet popup.
+        const [balance, gas, gasPrice] = await Promise.all([
+          publicClient.getBalance({ address: walletClient.account.address }),
+          publicClient.estimateGas({ account: walletClient.account, to: action.to, data: action.data }),
+          publicClient.getGasPrice(),
+        ])
+        assertCanPayFee(balance, gas, gasPrice)
       }
       setState({ status: 'signing' })
       const hash = await sendWalletAction(walletClient, action)

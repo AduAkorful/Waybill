@@ -119,7 +119,7 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
             <dd>{deal.panel ? deal.panel.members.map(shortAddress).join(', ') : shortAddress(deal.arbiter)}</dd>
             <dt>Escrow contract</dt>
             <dd>
-              <a className="inline-flex min-h-11 items-center underline sm:min-h-0" href={`${explorer}/address/${getBrowserNetwork().contracts.escrow}`} target="_blank" rel="noreferrer">
+              <a className="inline-flex min-h-11 items-center underline" href={`${explorer}/address/${getBrowserNetwork().contracts.escrow}`} target="_blank" rel="noreferrer">
                 {shortAddress(getBrowserNetwork().contracts.escrow)} ↗
               </a>
             </dd>

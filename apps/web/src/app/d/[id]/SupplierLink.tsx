@@ -85,7 +85,7 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
           <div role="group" aria-label={t.language} className="inline-flex items-center rounded-full border border-rule p-0.5 text-[13px]">
             <span aria-hidden className="hidden px-2 text-graphite sm:inline">文 / A</span>
             {(['en', 'zh'] as const).map((l) => (
-              <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} className={`min-h-10 rounded-full px-3 ${lang === l ? 'bg-ink text-paper' : 'text-graphite'}`}>{l === 'en' ? 'EN' : '中文'}</button>
+              <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} className={`min-h-11 min-w-11 rounded-full px-3 ${lang === l ? 'bg-ink text-paper' : 'text-graphite'}`}>{l === 'en' ? 'EN' : '中文'}</button>
             ))}
           </div>
         }
@@ -113,9 +113,9 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
               <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-graphite">{d.state === 'proposed' ? t.intro : t.introOngoing}</p>
 
               <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 rounded-md border border-rule bg-sheet px-4 py-3.5 sm:grid-cols-3">
-                <div className="col-span-2 sm:col-span-1"><p className="label">{t.total}</p><p className="mono text-[26px]">{formatAmount(d.totalAmount)} <span className="text-[14px] text-graphite">USDC</span></p></div>
-                <div><p className="label">{t.releasedTile}</p><p className="mono text-[26px] text-released">{formatAmount(releasedFor(d))} <span className="text-[14px] text-graphite">USDC</span></p></div>
-                <div><p className="label">{t.heldTile}</p><p className="mono text-[26px] text-held">{formatAmount(heldFor(d))} <span className="text-[14px] text-graphite">USDC</span></p><p className="text-[12px] text-graphite">{t.inclFees}</p></div>
+                <div className="col-span-2 sm:col-span-1"><p className="label">{t.total}</p><p className="mono text-[22px] whitespace-nowrap sm:text-[26px]">{formatAmount(d.totalAmount)} <span className="text-[14px] text-graphite">USDC</span></p></div>
+                <div><p className="label">{t.releasedTile}</p><p className="mono text-[22px] whitespace-nowrap sm:text-[26px] text-released">{formatAmount(releasedFor(d))} <span className="text-[14px] text-graphite">USDC</span></p></div>
+                <div><p className="label">{t.heldTile}</p><p className="mono text-[22px] whitespace-nowrap sm:text-[26px] text-held">{formatAmount(heldFor(d))} <span className="text-[14px] text-graphite">USDC</span></p><p className="text-[12px] text-graphite">{t.inclFees}</p></div>
               </div>
 
               <div className="mt-6">

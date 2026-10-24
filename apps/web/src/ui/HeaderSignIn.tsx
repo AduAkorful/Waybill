@@ -16,7 +16,7 @@ export function HeaderSignIn({ onlyWhenSignedIn = false, className }: { onlyWhen
   }, [])
   if (onlyWhenSignedIn && !signedIn) return null
   return (
-    <Link href={signedIn ? '/app' : '/signin'} className={className ?? "inline-flex min-h-11 items-center rounded-md border border-rule px-3 text-[13px] font-semibold whitespace-nowrap hover:bg-sheet"}>
+    <Link href={signedIn ? '/app' : '/signin'} className={className ?? "inline-flex min-h-11 items-center rounded-md border border-rule px-1.5 text-[13px] min-[360px]:px-3 font-semibold whitespace-nowrap hover:bg-sheet"}>
       {signedIn ? <><span className="min-[400px]:hidden">Deals</span><span className="hidden min-[400px]:inline">Your deals</span></> : 'Sign in'}
     </Link>
   )

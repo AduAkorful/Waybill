@@ -40,6 +40,7 @@ function errorText(error: unknown): string {
  * called a decline. A revert carries the contract's own error name when the node returned it.
  */
 export function classifyWalletError(error: unknown): WaybillWalletError {
+  if (error instanceof WaybillWalletError) return error
   // A limit or outage comes first: some wallets relay an RPC error under a rejection code, and calling that a
   // decline would send people to retry the wrong thing.
   if (isNetworkBusy(error)) {
@@ -58,7 +59,7 @@ export function classifyWalletError(error: unknown): WaybillWalletError {
   }
   const text = errorText(error)
   if (text.includes('insufficient funds') || text.includes('exceeds the balance') || text.includes('insufficient balance for')) {
-    return new WaybillWalletError('no_gas', 'This wallet has no USDC to pay the network fee. Send it a small amount of USDC on Arc first', error)
+    return new WaybillWalletError('no_gas', NO_GAS_MESSAGE, error)
   }
   if (text.includes('wrong network') || text.includes('chain mismatch') || text.includes('expected 5042')) {
     return new WaybillWalletError('wrong_network', 'Wallet is connected to the wrong network', error)
@@ -70,6 +71,13 @@ export function classifyWalletError(error: unknown): WaybillWalletError {
     return new WaybillWalletError('reverted', 'The contract would refuse this right now', error)
   }
   return new WaybillWalletError('unknown', 'The wallet request failed', error)
+}
+
+export const NO_GAS_MESSAGE = 'This wallet has no USDC to pay the network fee. Send it a small amount of USDC on Arc first'
+
+/** Arc charges gas in USDC, so a wallet holding less than the fee can never send. Say so before the wallet is opened. */
+export function assertCanPayFee(balance: bigint, gas: bigint, gasPrice: bigint): void {
+  if (balance < gas * gasPrice) throw new WaybillWalletError('no_gas', NO_GAS_MESSAGE)
 }
 
 export function assertActionNetwork(

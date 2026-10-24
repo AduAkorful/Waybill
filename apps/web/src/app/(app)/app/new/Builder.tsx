@@ -58,6 +58,13 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   }, [client, buyer])
   const [frozen, setFrozen] = useState<Extract<typeof built, { ok: true }> | null>(null)
   const [created, setCreated] = useState<bigint | null>(null)
+  // a click on Create while something is still wrong must answer, not do nothing
+  const [attempted, setAttempted] = useState(false)
+  const tryCreate = () => {
+    if (built.ok) return setFrozen(built)
+    setAttempted(true)
+    requestAnimationFrame(() => document.getElementById('build-problems')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
+  }
   const [lookup, setLookup] = useState('')
   const [details, setDetails] = useState<DetailsForm>(emptyDetails)
   const [now] = useState(() => Math.floor(Date.now() / 1000))
@@ -82,7 +89,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   const leader = isPanel ? panelChecks[0] : checked
   const arbiterFee = leader?.allowed ? leader.fee : 0n
   const bad = (prefix: string) => (showErrors && !built.ok && built.errors.some((e) => e.startsWith(prefix))) || undefined
-  const showErrors = form.total !== '' || form.supplier !== '' || form.arbiter !== '' || form.panel.some((m) => m !== '')
+  const showErrors = attempted || form.total !== '' || form.supplier !== '' || form.arbiter !== '' || form.panel.some((m) => m !== '')
 
   return (
     <main className="mx-auto grid max-w-6xl gap-8 px-4 pt-6 pb-40 md:px-8 md:pt-10 lg:pb-20 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -295,7 +302,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
               {built.errors.map((e) => <li key={e}>{e}</li>)}
             </ul>
           ) : null}
-          <button type="button" disabled={!built.ok} aria-describedby={!built.ok && showErrors ? "build-problems" : undefined} onClick={() => built.ok && setFrozen(built)} className="mt-4 w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet disabled:cursor-not-allowed disabled:opacity-40">
+          <button type="button" aria-disabled={!built.ok} aria-describedby={!built.ok && showErrors ? "build-problems" : undefined} onClick={tryCreate} className={`mt-4 w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet ${built.ok ? '' : 'opacity-60'}`}>
             Create deal
           </button>
           <p className="mt-3 text-[12px] text-graphite">Terms freeze when you fund. Nobody, including Waybill, can move the money except by these rules.</p>
@@ -304,7 +311,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
       </aside>
 
       <div className="fixed inset-x-0 bottom-[calc(2.85rem+env(safe-area-inset-bottom))] z-30 border-t border-rule bg-paper px-4 py-2.5 md:bottom-0 lg:hidden">
-        <button type="button" disabled={!built.ok} aria-label="Create deal" onClick={() => built.ok && setFrozen(built)} className="w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet disabled:cursor-not-allowed disabled:opacity-40">
+        <button type="button" aria-disabled={!built.ok} aria-label="Create deal" onClick={tryCreate} className={`w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet ${built.ok ? '' : 'opacity-60'}`}>
           {built.ok ? 'Create deal' : 'Create deal · fix the problems above'}
         </button>
       </div>

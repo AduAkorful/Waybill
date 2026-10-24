@@ -21,12 +21,12 @@ export function SiteHeader({
   extraOnOwnRow?: boolean
 }) {
   return (
-    <header className={`mx-auto flex w-full ${max} flex-wrap items-center justify-between gap-x-2 px-4 py-2 md:gap-x-4 md:px-8 md:py-4`}>
+    <header className={`mx-auto flex w-full ${max} flex-wrap items-center justify-between gap-x-1 min-[360px]:gap-x-2 px-4 py-2 md:gap-x-4 md:px-8 md:py-4`}>
       <Link href="/" aria-label="Waybill home" className="inline-flex min-h-11 items-center">
-        <Wordmark className="text-[17px]" />
+        <Wordmark className="text-[17px] max-[359px]:text-[15px]" />
       </Link>
       {extra && extraOnOwnRow ? <div className="order-last flex w-full justify-end pb-1 sm:hidden">{extra}</div> : null}
-      <div className="flex items-center justify-end gap-x-2 md:gap-x-5">
+      <div className="flex items-center justify-end gap-x-1 min-[360px]:gap-x-2 md:gap-x-5">
         <Link href="/attestors" className={`${extra ? 'hidden sm:inline-flex' : 'inline-flex'} min-h-11 items-center px-1 text-[13.5px] text-graphite hover:text-ink`}>
           Attestors
         </Link>

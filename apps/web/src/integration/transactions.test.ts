@@ -3,6 +3,7 @@ import { keccak256, toBytes, type Hex, type TransactionReceipt } from 'viem'
 import { ARC_TESTNET } from '@waybill/network/networks'
 import { encodeEscrowAction } from './escrow'
 import {
+  assertCanPayFee,
   assertActionNetwork,
   classifyWalletError,
   plainError,
@@ -106,5 +107,15 @@ describe('frontend transaction lifecycle boundary', () => {
     expect(plainError(raw)).toBe('You declined it in your wallet. Nothing was sent. You can try again.')
     expect(plainError(new Error('Details: boom Version: viem@2.57.7'))).toBe('The request failed. Nothing was sent.')
     expect(plainError(new Error('The evidence service is unavailable'))).toBe('The evidence service is unavailable')
+  })
+})
+
+describe('assertCanPayFee', () => {
+  test('a wallet holding less than the fee is told it has no USDC for the fee', () => {
+    expect(() => assertCanPayFee(0n, 100_000n, 1_000_000_000n)).toThrow(/no USDC to pay the network fee/)
+    expect(() => assertCanPayFee(99_999n * 1_000_000_000n, 100_000n, 1_000_000_000n)).toThrow(/no USDC/)
+  })
+  test('a wallet holding exactly the fee can send', () => {
+    expect(() => assertCanPayFee(100_000n * 1_000_000_000n, 100_000n, 1_000_000_000n)).not.toThrow()
   })
 })

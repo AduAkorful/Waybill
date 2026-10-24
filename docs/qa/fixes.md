@@ -35,6 +35,37 @@ These come up in retests. Each has a reason. If one of them is wrong *for a diff
 | The wallet-relayed "request limit" wording (WB-QA-001) | It can only be seen when the public RPC actually rate-limits a wallet. The wording is in place and unit-tested. | QA: note it if it happens. |
 | Reduced-motion behaviour | It cannot be checked in headless emulation. | QA: check by eye with the OS "reduce motion" setting on. |
 | A new email wallet cannot accept a deal (first accept fails) | A wallet created by sign-in starts with no USDC, and accepting is an Arc transaction that pays its network fee in USDC. Waybill does not sponsor accepts (it only sponsors claims and refunds). The app now says so in plain words (`/join` and when the wallet has no USDC), and the buyer sends a small amount with the deal link. | Buyer / operator, during testing. |
+| Console lines `Privy logout 400` and `sessions 401` after Sign out (SF-15) | The browser reports a failed network call to the wallet library's own server (the session had already ended there). A page cannot hide a failed request from the console, and the person is signed out either way. | – |
+| NF-19 message seen with Rabby (SF-17) | See batch 13: the app now checks the balance first, so the wallet is not opened. | – |
+
+## Batch 13 — 2026-10-21 (findings from the batch 12 retest, report §19)
+
+Web app rebuilt and restarted; no relayer or contract changes. Checked with a browser at 320, 375 and 1440 px: axe 0 violations on 12 pages at 320 and 1440, no horizontal scroll.
+
+### Fixed
+- **No USDC for the fee, before the wallet opens (SF-16, SF-17, NF-19):** before asking the wallet to sign anything, the app now reads the wallet's USDC balance, estimates the fee, and if the balance cannot cover it shows *"This wallet has no USDC to pay the network fee. Send it a small amount of USDC on Arc first. Nothing was sent."* with a **Copy my wallet address** button. The wallet popup is no longer opened with a greyed-out Sign, and "You declined it" is no longer shown for this case.
+- **Double click on Continue → Accept role (SF-18):** a button that has just appeared ignores clicks for 0.6 s, so a double click cannot reach the wallet.
+- **Create deal gave no feedback (SF-19):** the button is no longer dead while something is still wrong. Clicking it shows the list of problems and scrolls to it.
+- **Signed-in `/d/*` header at 320 px (SF-08, SF-13):** one row (66 px) with logo, EN | 中文, Deals, theme. Spacing and logo size tighten under 360 px.
+- **"Connect wallet" flash on `/operator` (SF-09, SF-14):** the chip stays blank until the sign-in service and the wallet connection have both settled. Direct load polled every 100 ms: never shown.
+- **404 look-up (NF-23, NF-25, NF-26, NF-27):** letters and spaces are dropped as you type ("2 8 4" becomes 284). An empty value says "Type the deal number first". A number that does not exist says "There is no deal 999999 on this network yet. The newest is 290." and stays on the page. The button keeps its full colour.
+- **Phone status card (NF-21, NF-28):** figures are 22 px under 640 px and never wrap, so "USDC" stays on the same line as the amount on iPhone SE.
+- **Record escrow link (NF-29):** 44 px tall.
+- **`/signin` on desktop (NF-30):** the shared header at every width (the split panel sits under it); the email field is 16 px.
+- **Small targets:** the EN pill and the `/legal` "Terms" link are at least 44 px wide.
+
+### Not changed, and why
+- **Privy logout 400 / sessions 401 in the console (SF-15):** see the "not code" table above.
+- **EN/中文 pills 40 px tall on desktop:** deliberate (compact control on a pointer device); phones use 44 px.
+
+### Retest checklist for batch 13
+1. With a wallet that holds 0 USDC (Rabby, address not funded), open a deal that needs its accept: the message above and the copy button appear, and the wallet does not open.
+2. Fund that wallet with a little USDC and repeat: the wallet opens and the accept goes through.
+3. 320 px, signed in, `/d/284`: one-row header.
+4. `/d/abc`: type `2 8 4a` → field shows 284; Open → record 284. Type 999999 → message, stays. Empty → message.
+5. `/app/new` with the form incomplete: press Create deal; the problem list appears.
+6. `/signin` at 1440: shared header, one logo, email field 16 px.
+7. Direct load of `/operator` signed in: no "Connect wallet" flash.
 
 ## Batch 12 — 2026-10-21 (findings from the batch 11 retest, report §17)
 

@@ -195,9 +195,11 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
 function WalletChip({ pauser }: { pauser: string | null }) {
   const { address } = useAccount()
   useReloadOnAccountChange(address)
-  const { ready } = usePrivy()
+  const { ready, authenticated } = usePrivy()
+  const { isConnecting, isReconnecting } = useAccount()
   const { signOut, signingOut } = useSignOut()
-  if (!ready) return <span aria-hidden className="inline-block h-11 w-32" />
+  // blank until the sign-in service and the wallet connection have both settled, so "Connect wallet" never flashes for someone signed in
+  if (!ready || isConnecting || isReconnecting || (authenticated && !address)) return <span aria-hidden className="inline-block h-11 w-32" />
   if (!address) return <Link href="/signin" className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] font-semibold whitespace-nowrap hover:bg-sheet">Connect wallet</Link>
   const isPauser = pauser !== null && address.toLowerCase() === pauser.toLowerCase()
   return (

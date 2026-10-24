@@ -55,7 +55,7 @@ export default function Legal() {
         </p>
         <nav aria-label="On this page" className="mt-5 flex flex-wrap gap-x-5 text-[13.5px]">
           {sections.map((s) => (
-            <a key={s.id} href={`#${s.id}`} className="inline-flex min-h-11 items-center underline">{s.title}</a>
+            <a key={s.id} href={`#${s.id}`} className="inline-flex min-h-11 min-w-11 items-center justify-center underline">{s.title}</a>
           ))}
         </nav>
         {sections.map((s) => (
