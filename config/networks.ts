@@ -58,8 +58,16 @@ function assertManifest(manifest: WaybillNetworkManifest): WaybillNetworkManifes
   if (!Number.isInteger(manifest.chainId) || manifest.chainId <= 0) {
     throw new Error(`Invalid chain id for ${manifest.network}`)
   }
-  if (!manifest.rpcUrl || !manifest.explorerUrl) {
-    throw new Error(`Missing RPC or explorer URL for ${manifest.network}`)
+  for (const [field, value] of [
+    ['rpcUrl', manifest.rpcUrl],
+    ['explorerUrl', manifest.explorerUrl],
+  ] as const) {
+    try {
+      const url = new URL(value)
+      if (!['http:', 'https:'].includes(url.protocol)) throw new Error()
+    } catch {
+      throw new Error(`Invalid ${field} for ${manifest.network}`)
+    }
   }
   if (manifest.usdc.decimals !== 6) {
     throw new Error(`USDC must use 6 decimals for ${manifest.network}`)
