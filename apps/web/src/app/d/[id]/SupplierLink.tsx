@@ -85,8 +85,8 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
           return (
             <>
               <p className="label">{t.eyebrow} {String(d.id)}</p>
-              <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">{t.title}</h1>
-              <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-graphite">{t.intro}</p>
+              <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">{d.state === 'proposed' ? t.title : t.titleOngoing}</h1>
+              <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-graphite">{d.state === 'proposed' ? t.intro : t.introOngoing}</p>
 
               <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-2 rounded-md border border-rule bg-sheet px-4 py-3.5">
                 <div><p className="label">{t.total}</p><p className="mono text-[26px]">{formatAmount(d.totalAmount)} <span className="text-[14px] text-graphite">USDC</span></p></div>
