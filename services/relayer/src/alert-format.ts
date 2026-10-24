@@ -84,14 +84,16 @@ const COLOR: Record<AlertLevel, number> = { critical: 0xe5484d, warning: 0xf5a52
 export function discordMessage(alert: Alert, context: AlertContext, now = new Date()) {
   const value = (f: AlertField) => {
     if (f.kind === 'address') {
+      // in full, in a code span, so it can be copied as is (to fund a wallet, say); the explorer link sits beside it
       const url = link(context.explorerUrl, 'address', f.value)
-      return url ? `[${short(f.value)}](${url})` : f.value
+      return url ? `\`${f.value}\`\n[View on explorer](${url})` : `\`${f.value}\``
     }
     if (f.kind === 'time') return `<t:${f.value}:F> (<t:${f.value}:R>)`
     return f.value
   }
   const txUrl = alert.txHash ? link(context.explorerUrl, 'tx', alert.txHash) : null
-  const fields = (alert.fields ?? []).map((f) => ({ name: f.name, value: value(f), inline: true }))
+  // a full address does not fit a narrow inline column, so address fields take the whole row
+  const fields = (alert.fields ?? []).map((f) => ({ name: f.name, value: value(f), inline: f.kind !== 'address' }))
   if (alert.txHash) fields.push({ name: 'Transaction', value: txUrl ? `[${short(alert.txHash)}](${txUrl})` : alert.txHash, inline: false })
   return {
     username: 'Waybill',
@@ -115,7 +117,7 @@ export function slackText(alert: Alert, context: AlertContext): string {
   const value = (f: AlertField) => {
     if (f.kind === 'address') {
       const url = link(context.explorerUrl, 'address', f.value)
-      return url ? `<${url}|${short(f.value)}>` : f.value
+      return url ? `\`${f.value}\` (<${url}|explorer>)` : `\`${f.value}\``
     }
     return f.kind === 'time' ? utc(BigInt(f.value)) : f.value
   }

@@ -192,7 +192,7 @@ describe('alert formatting', () => {
     expect(embed.title).toBe('🔴 Attestor-registry writer added')
     expect(embed.color).toBe(0xe5484d)
     expect(embed.url).toBe(`${EXPLORER}/tx/0xa60f3e8fe807bebbe57e947304f2cea6a7368e1b1c090b09b7f9b1f3668dc3d7`)
-    expect(embed.fields[0]).toEqual({ name: 'Writer', value: `[0x8a13…C5ff](${EXPLORER}/address/0x8a13ff4FbfBd67cE10e1Fd015bD4a8De3179C5ff)`, inline: true })
+    expect(embed.fields[0]).toEqual({ name: 'Writer', value: `\`0x8a13ff4FbfBd67cE10e1Fd015bD4a8De3179C5ff\`\n[View on explorer](${EXPLORER}/address/0x8a13ff4FbfBd67cE10e1Fd015bD4a8De3179C5ff)`, inline: false })
     expect(embed.fields.at(-1)!.name).toBe('Transaction')
 
     const eta = alertForEvent(event('CapsRaiseScheduled', { payload: { maxDealAmount: '5000000000', maxLocked: '50000000000', eta: '1800172800' } }), true, NOW)!
@@ -203,7 +203,7 @@ describe('alert formatting', () => {
   test('Slack gets bullets and its own link syntax', () => {
     const text = slackText(writer, { network: 'mainnet', explorerUrl: EXPLORER })
     expect(text.split('\n')[0]).toBe('🔴 *Attestor-registry writer added* (Waybill mainnet)')
-    expect(text).toContain(`• Writer: <${EXPLORER}/address/0x8a13ff4FbfBd67cE10e1Fd015bD4a8De3179C5ff|0x8a13…C5ff>`)
+    expect(text).toContain(`• Writer: \`0x8a13ff4FbfBd67cE10e1Fd015bD4a8De3179C5ff\` (<${EXPLORER}/address/0x8a13ff4FbfBd67cE10e1Fd015bD4a8De3179C5ff|explorer>)`)
     expect(text).toContain('|View transaction>')
   })
 
