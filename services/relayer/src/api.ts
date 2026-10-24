@@ -141,7 +141,7 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
   }
   const evidenceRoute = /^\/v1\/deals\/([0-9]+)\/evidence(?:\/([0-9a-fA-F-]{36}|[0-9]{1,3}))?$/.exec(url.pathname)
   const termsRoute = /^\/v1\/deals\/([0-9]+)\/terms$/.exec(url.pathname)
-  if (termsRoute) return dealTerms(request, options, BigInt(termsRoute[1]!))
+  if (termsRoute) return dealTerms(request, options, BigInt(termsRoute[1]!), url.searchParams.get('public') === '1')
   if (evidenceRoute) return evidence(request, options, BigInt(evidenceRoute[1]!), evidenceRoute[2])
   if (url.pathname === '/v1/operator/labels') return setLabels(request, options)
   if (url.pathname === '/v1/contacts' || url.pathname === '/v1/contacts/verify') return contacts(request, options, url.pathname)
@@ -256,12 +256,14 @@ async function setLabels(request: ApiRequest, options: WaybillApiOptions): Promi
 }
 
 /** Body for POST: {"terms": {...}, "public": false}. GET returns public terms to anyone and private ones to a signed party. */
-async function dealTerms(request: ApiRequest, options: WaybillApiOptions, dealId: bigint): Promise<ApiResponse> {
+async function dealTerms(request: ApiRequest, options: WaybillApiOptions, dealId: bigint, publicOnly: boolean): Promise<ApiResponse> {
   const service = options.terms
   if (!service) return { status: 503, body: { error: 'terms_unavailable' } }
   const signed = signedRequest(request)
   const auth = signed ? { signer: signed.signer, signature: signed.signature, signedAt: signed.signedAt } : null
   try {
+    // `?public=1` always answers 200 (terms or null), so a page that only wants public details logs no error for a private deal
+    if (request.method === 'GET' && publicOnly) return { status: 200, body: { terms: await service.readPublic(dealId) } }
     if (request.method === 'GET') {
       const found = await service.read(dealId, auth)
       return found ? { status: 200, body: found } : { status: 404, body: { error: 'no_terms' } }

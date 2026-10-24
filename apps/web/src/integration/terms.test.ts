@@ -41,9 +41,9 @@ describe('terms client', () => {
     expect(JSON.parse(String(sent!.body))).toEqual({ terms: goods, public: false })
   })
   test('public reads need no signature and treat private or missing as none', async () => {
-    expect(await readPublicTerms(7n, reply(404, {}))).toBeNull()
-    expect(await readPublicTerms(7n, reply(401, { error: 'missing_signature' }))).toBeNull()
-    expect((await readPublicTerms(7n, reply(200, { terms: goods, isPublic: true, setBy: '0x', updatedAt: 1 })))?.terms.units).toBe(5000)
+    expect(await readPublicTerms(7n, reply(200, { terms: null }))).toBeNull()
+    expect((await readPublicTerms(7n, reply(200, { terms: { terms: goods, isPublic: true, setBy: '0x', updatedAt: 1 } })))?.terms.units).toBe(5000)
+    await expect(readPublicTerms(7n, reply(503, { error: 'terms_unavailable' }))).rejects.toThrow('not available')
   })
   test('refusals read as plain sentences', async () => {
     await expect(readTermsSigned({ dealId: 7n, signer: '0xabc', sign: async () => '0xs' as `0x${string}`, fetcher: reply(403, { error: 'not_a_party' }) })).rejects.toThrow('not named in the deal')

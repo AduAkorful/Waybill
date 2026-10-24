@@ -81,11 +81,11 @@ export async function saveTerms(input: { dealId: bigint; signer: string; terms: 
   return response.ok ? ((await response.json()) as StoredTerms) : fail(response)
 }
 
-/** Public details, with no signature. Null when none are set or they are private. */
+/** Public details, with no signature. Null when none are set or they are private (the relayer answers 200 either way). */
 export async function readPublicTerms(dealId: bigint, fetcher: typeof fetch = fetch): Promise<StoredTerms | null> {
-  const response = await fetcher(`${loadBrowserApiBaseUrl()}/v1/deals/${dealId}/terms`)
-  if (response.status === 404 || response.status === 401) return null
-  return response.ok ? ((await response.json()) as StoredTerms) : fail(response)
+  const response = await fetcher(`${loadBrowserApiBaseUrl()}/v1/deals/${dealId}/terms?public=1`)
+  if (!response.ok) return fail(response)
+  return ((await response.json()) as { terms: StoredTerms | null }).terms
 }
 
 /** Private details, readable by a party of the deal with one signature. Null when none are set. */

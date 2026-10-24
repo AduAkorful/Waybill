@@ -108,6 +108,15 @@ describe('terms routes', () => {
     const got = await handleApiRequest({ method: 'GET', url: '/v1/deals/7/terms' }, o)
     expect(got).toMatchObject({ status: 200, body: { isPublic: true, terms: { goods: 'Cotton t-shirts' } } })
   })
+  test('?public=1 answers 200 with the terms only when public, and null otherwise', async () => {
+    const { service } = setup()
+    const o = base(service)
+    expect(await handleApiRequest({ method: 'GET', url: '/v1/deals/7/terms?public=1' }, o)).toMatchObject({ status: 200, body: { terms: null } })
+    await handleApiRequest({ method: 'POST', url: '/v1/deals/7/terms', headers: hdr(await signSet(buyer, goods, false)), body: json({ terms: goods, public: false }) }, o)
+    expect(await handleApiRequest({ method: 'GET', url: '/v1/deals/7/terms?public=1' }, o)).toMatchObject({ status: 200, body: { terms: null } })
+    await handleApiRequest({ method: 'POST', url: '/v1/deals/7/terms', headers: hdr(await signSet(buyer, goods, true)), body: json({ terms: goods, public: true }) }, o)
+    expect(await handleApiRequest({ method: 'GET', url: '/v1/deals/7/terms?public=1' }, o)).toMatchObject({ status: 200, body: { terms: { isPublic: true } } })
+  })
   test('unavailable without a service, 404 when none set, 401 unsigned write, 400 bad body', async () => {
     const { service } = setup()
     expect((await handleApiRequest({ method: 'GET', url: '/v1/deals/7/terms' }, base(null))).status).toBe(503)

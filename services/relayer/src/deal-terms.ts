@@ -193,6 +193,12 @@ export class DealTermsService {
     return (await this.options.store.get(this.options.network, dealId))!
   }
 
+  /** Only terms the buyer made public. Never throws for private or missing ones: the answer is just null. */
+  async readPublic(dealId: bigint): Promise<StoredTerms | null> {
+    const stored = await this.options.store.get(this.options.network, dealId)
+    return stored?.isPublic ? stored : null
+  }
+
   /** Public terms need no signature. Private ones need a signature from a party of the deal. Null when none are set. */
   async read(dealId: bigint, signed: SignedTerms | null): Promise<StoredTerms | null> {
     const stored = await this.options.store.get(this.options.network, dealId)

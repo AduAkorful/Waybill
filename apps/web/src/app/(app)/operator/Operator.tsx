@@ -64,7 +64,7 @@ export function Operator() {
       </header>
       <main className="mx-auto max-w-6xl px-4 pt-6 pb-20 md:px-8 md:pt-10">
         <h1 className="text-[28px] leading-tight font-semibold tracking-tight">Operator console</h1>
-        <p className="mt-1 max-w-2xl text-[13.5px] text-graphite">Read-only. Nobody at Waybill can move, freeze or redirect money in escrow, and nothing here can. The only control is the pause on new deals.</p>
+        <p className="mt-1 max-w-2xl text-[13.5px] text-graphite">A monitor, plus three controls for the pauser wallet: pause new deals, label deals, and manage the approved-arbiter list. Nobody at Waybill can move, freeze or redirect money in escrow, and none of these can.</p>
         {read.kind === 'loading' ? <p role="status" className="mt-8 text-[14px] text-graphite">Reading the deployment…</p> : null}
         {read.kind === 'error' ? <p role="alert" className="mt-8 text-[14px] text-hold">The monitor could not be loaded, so no figures are shown: {read.message}</p> : null}
         {read.kind === 'ready' ? <Monitor summary={read.summary} health={read.health} onChanged={() => setRefresh((n) => n + 1)} /> : null}
@@ -123,7 +123,7 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-[12px] text-graphite">Only the deals the index has recorded are counted. Team and test deals show here only once they carry a label; this console does not set labels, so unlabelled volume must not be presented as third-party volume.</p>
+        <p className="mt-2 text-[12px] text-graphite">Only the deals the index has recorded are counted. A deal counts under a label only once the pauser has labelled it (see Label deals above), so unlabelled volume must not be presented as third-party volume.</p>
       </section>
 
       <section className="mt-8 grid gap-6 lg:grid-cols-2" aria-label="Health">
