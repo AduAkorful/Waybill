@@ -1,7 +1,11 @@
+import { DealReader, NetworkReadiness, WalletPanel } from './components'
+
 export default function App() {
   return (
-    <div className="min-h-dvh">
-      {/* Build your app here */}
-    </div>
+    <main className="min-h-dvh">
+      <WalletPanel />
+      <NetworkReadiness />
+      <DealReader dealId={0n} />
+    </main>
   )
 }
