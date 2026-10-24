@@ -3,6 +3,9 @@ import type { FeePayer, MilestoneInput, ReleaseCondition } from '@/integration/c
 import type { DealTerms } from './types'
 
 export const INDEPENDENT = 65_535
+
+/** Product rule: a deal must total at least 1 USDC. Below this the rounded-up fee can exceed the money being protected. */
+export const MIN_TOTAL = 1_000_000n
 const DAY = 86_400
 const HOUR = 3_600
 
@@ -234,6 +237,7 @@ export function buildDeal(
 
   const total = parseAmount(form.total)
   if (total === null || total === 0n) errors.push(form.total.includes(',') ? 'Enter the total with a dot for decimals, like 1500.50 (no commas).' : 'Enter the total in USDC, with up to six decimals.')
+  else if (total < MIN_TOTAL) errors.push('The total must be at least 1 USDC.')
   else if (total > limits.maxDealAmount) errors.push(`The total is above the early-access limit per deal.`)
 
   const feeBps = wholeNumber(form.feeBps, limits.minFeeBps, limits.maxFeeBps)

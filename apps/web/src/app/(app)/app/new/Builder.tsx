@@ -1,14 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { parseEventLogs, parseAbi, type Hex } from 'viem'
 import { useAccount, usePublicClient } from 'wagmi'
 import { useArbiterCheck, useArbiterChoices, useAttestorChoices, useBuilderLimits } from '@/data/builder-reads'
 import { encodeCurrentEscrowAction, type FeePayer, type ReleaseCondition } from '@/integration/current-actions'
+import { readUsdcBalance } from '@/integration/escrow'
 import { getBrowserNetwork } from '@/integration/network'
 import { Modal } from '@/ui/Modal'
 import { LineItems } from '@/ui/Sheet'
+import { Combobox } from '@/ui/Combobox'
 import { TxFlow } from '@/ui/TxFlow'
 import { feeShares, partAmount, buildDeal, buildTerms, CONDITION_LABEL, emptyDetails, emptyForm, feeFor, TEMPLATES, type BuilderForm, type DetailsForm, type PartForm, type Template } from '@/view/builder'
 import { formatAmount, shortAddress } from '@/view/format'
@@ -47,6 +49,13 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   const panelChecks = panelRead.map((r) => (r?.status === 'ready' ? r.value : null))
   // The deal as it was when Create was pressed. The form behind the dialog keeps re-reading the chain, and a failed
   // re-read must not close or change a dialog the wallet is waiting on.
+  const [balance, setBalance] = useState<bigint | null>(null)
+  useEffect(() => {
+    if (!client) return
+    let cancelled = false
+    readUsdcBalance(client, buyer as `0x${string}`).then((b) => !cancelled && setBalance(b)).catch(() => !cancelled && setBalance(null))
+    return () => { cancelled = true }
+  }, [client, buyer])
   const [frozen, setFrozen] = useState<Extract<typeof built, { ok: true }> | null>(null)
   const [created, setCreated] = useState<bigint | null>(null)
   const [lookup, setLookup] = useState('')
@@ -144,11 +153,6 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
 
         <section className="mt-8" aria-label="Parts">
           <h2 className="label mb-2">Payments</h2>
-          <datalist id="attestors">
-            {directory.attestors.map((a) => (
-              <option key={a.address} value={a.address}>{a.profile?.name ?? shortAddress(a.address)}</option>
-            ))}
-          </datalist>
           <ol className="space-y-3">
             {form.parts.map((p, i) => (
               <li key={i} className="rounded-md border border-rule bg-paper p-3.5">
@@ -182,7 +186,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                     <p className="label">Attestors (all must confirm)</p>
                     {p.attestors.map((a, k) => (
                       <div key={k} className="mt-1.5 flex gap-2">
-                        <input aria-label={`Attestor ${k + 1} for part ${i + 1}`} list="attestors" className={`${input} mono mt-0`} value={a} onChange={(e) => setPart(i, { attestors: p.attestors.map((x, j) => (j === k ? e.target.value : x)) })} placeholder="0x…" spellCheck={false} />
+                        <Combobox label={`Attestor ${k + 1} for part ${i + 1}`} className={`${input} mono mt-0`} value={a} onChange={(v) => setPart(i, { attestors: p.attestors.map((x, j) => (j === k ? v : x)) })} placeholder="0x… or a name" options={directory.attestors.map((d) => ({ value: d.address, label: d.profile?.name ?? shortAddress(d.address) }))} />
                         {p.attestors.length > 1 ? <button type="button" onClick={() => setPart(i, { attestors: p.attestors.filter((_, j) => j !== k) })} aria-label={`Remove attestor ${k + 1} from part ${i + 1}`} className="text-[12.5px] text-graphite hover:text-hold">Remove</button> : null}
                       </div>
                     ))}
@@ -272,6 +276,14 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                 totalLabel="At most you lock"
               />
               <p className="mt-2 text-[12px] text-graphite">The exact figure is fixed when you fund. Nothing is locked until then.</p>
+              {(() => {
+                const lock = total + feeShares(feeFor(total, Number(form.feeBps)), form.feePayer).buyer + arbiterFee
+                return balance !== null && balance < lock ? (
+                  <p role="status" className="mt-2 rounded-md border border-hold/50 bg-hold-wash px-3 py-2 text-[12.5px]">
+                    Your wallet holds {formatAmount(balance)} USDC and funding will lock up to {formatAmount(lock)}. You can still create the deal, but you will need to add USDC before you can fund it.
+                  </p>
+                ) : null
+              })()}
             </div>
           ) : (
             <p className="mt-2 text-[13px] text-graphite">Fill in the total, supplier and arbiter to see what you would lock.</p>

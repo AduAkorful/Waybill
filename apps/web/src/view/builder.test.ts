@@ -180,3 +180,13 @@ describe('fee shares', () => {
     expect(feeShares(7_501n, 2)).toEqual({ buyer: 3_751n, supplier: 3_750n })
   })
 })
+
+describe('minimum total', () => {
+  const run = (total: string) => buildDeal(form({ total }), buyer, limits, { allowed: true, fee: 0n } as never, NOW)
+  test('below 1 USDC is refused, 1 USDC is accepted', () => {
+    const low = run('0.99') as { ok: boolean; errors?: string[] }
+    expect(low.ok).toBe(false)
+    expect(low.errors?.join(' ')).toContain('at least 1 USDC')
+    expect(run('1').ok).toBe(true)
+  })
+})

@@ -5,6 +5,37 @@ After each batch the web app on port 3000 is rebuilt and restarted; retest again
 "Fixed" means changed in code, covered by a unit test where the logic is pure, and the page answers as described below.
 It does not mean a signed transaction was re-run in a browser — that is what QA is for.
 
+## Batch 5 — 2026-10-20 (minimum total, create warning, rounding, combobox, API)
+
+Web app and relayer restarted on the new code. axe: 0 violations on the public pages and `/operator` at 375 and 1440 px, light and dark.
+
+### Builder (WB-QA-031 dust, 077, 060)
+- **Minimum total: 1 USDC.** Anything lower is refused: *"The total must be at least 1 USDC."* This is a product rule set in the app (not read from the contract); 1 USDC exactly is accepted. It applies when creating a deal; existing deals are unchanged (deal 288 and others stay as they are).
+- **Create-time balance warning:** when the wallet holds less than funding will lock, the summary shows *"Your wallet holds X USDC and funding will lock up to Y. You can still create the deal, but you will need to add USDC before you can fund it."* Creating is still allowed; funding is still blocked until the balance is enough.
+- **Attestor field is a real combobox:** type a name or address and pick from suggestions with the arrow keys and Enter; Escape closes the list. Suggestions show the registry name with the address underneath (all campaign attestors are named "Waybill test" in the registry, so names still look alike).
+
+### Numbers and wording (WB-QA-015 rounding, 083, 028)
+- The big counters stay rounded to the cent. When any figure has sub-cent digits, an **"Exact: released … · held … · refunded … USDC"** line appears under them, so a record showing 1.01 also shows 1.0075.
+- Address-change history lines now say **"after the 48-hour delay unless the other side rejects it"** (no more "buyer's/supplier's review delay").
+
+### API (WB-QA-016, 017)
+- `GET /v1/deals/<id never issued>` now answers **404 `deal_not_found`** (was 200 with zero addresses).
+- `GET /v1/network` now includes **`indexStartBlock`** (currently `"68143000"`): deals created before it have no indexed history, so an empty events list for them means "not indexed", not "no events".
+- Not changed: 401 vs 405 order on evidence routes (WB-QA-085).
+
+### Reduced motion (WB-QA-072)
+- With `prefers-reduced-motion: reduce` the code skips the stub tear, counter roll and dialog animations, and a global rule stops CSS animations. Automated browser emulation showed no running animations and no style changes after load in either mode, so it cannot show the difference on its own: **QA should verify by eye** (OS "reduce motion" on: counters appear at their final value, parts do not tear).
+
+### Retest checklist for batch 5
+1. `/app/new`: total 0.99 refused, 1 accepted; with a low-balance wallet the warning appears and Create still works.
+2. Attestor field: type "Way", arrow down, Enter; Escape closes the list.
+3. A record or deal with a fee like 0.0075 shows the "Exact:" line.
+4. `curl <api>/v1/deals/999999` is 404; `curl <api>/v1/network` shows `indexStartBlock`.
+5. Reduced motion on: open `/record/284`, `/app/deals/<id>`.
+
+### Still open
+Arbiter and attestor pickers show registry names only as far as the registry has them (data); 401 vs 405 ordering; enforcing a script-source CSP (waiting for clean report-only data); Privy's own stray tab stops (third party); Chinese and legal text review; signed-in axe run.
+
 ## Batch 4 — 2026-10-20 (fee amounts, operator role, wallet timeout, evidence reads)
 
 Web app restarted on the new build. axe: 0 violations on the public pages and `/operator` at 375 and 1440 px, light and dark.

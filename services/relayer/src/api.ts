@@ -25,6 +25,8 @@ export interface ApiResponse {
 
 export interface WaybillApiOptions {
   network: WaybillNetwork
+  /** First block the deal indexer reads from; deals created before it have no indexed history. */
+  indexStartBlock?: bigint
   /** Exact browser origins allowed to call this API. Empty means no cross-origin access. */
   allowedOrigins?: readonly string[]
   health(): Promise<HealthResult>
@@ -151,7 +153,7 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
   }
   if (url.pathname === '/v1/network') {
     // which optional services this relayer runs, so a page can say so before asking anyone to sign
-    return { status: 200, body: { network: options.network, features: { email: Boolean(options.emails), evidence: Boolean(options.evidence) } } }
+    return { status: 200, body: { network: options.network, features: { email: Boolean(options.emails), evidence: Boolean(options.evidence) }, ...(options.indexStartBlock !== undefined ? { indexStartBlock: options.indexStartBlock.toString() } : {}) } }
   }
   if (url.pathname.startsWith('/v1/wallets/')) {
     const match = /^\/v1\/wallets\/(0x[0-9a-fA-F]{40})\/deals$/.exec(url.pathname)
@@ -208,6 +210,11 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
     }
     try {
       const deal = await options.readDeal(parsed.dealId)
+      // an id the escrow has not issued reads as an all-zero deal; say so instead of serving it as a deal
+      const live = (deal as { live?: { buyer?: unknown } } | null)?.live
+      if (live && typeof live.buyer === 'string' && /^0x0{40}$/i.test(live.buyer)) {
+        return { status: 404, body: { error: 'deal_not_found' } }
+      }
       return { status: 200, body: jsonValue(deal) }
     } catch {
       return { status: 503, body: { error: 'chain_read_unavailable' } }

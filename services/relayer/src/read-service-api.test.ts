@@ -268,3 +268,25 @@ describe('parseAllowedOrigins', () => {
     }
   })
 })
+
+describe('unknown deal ids', () => {
+  const options = {
+    network: 'testnet' as const,
+    health: async () => ({ live: true, ready: true, components: [] }),
+    readDeal: async () => ({}),
+    readDealEvents: async () => [],
+    listAttestors: async () => [],
+    readAttestor: async () => null,
+    listWalletDeals: async () => [],
+  } as never as Parameters<typeof handleApiRequest>[1]
+  test('an all-zero live deal is answered 404, a real one 200', async () => {
+    const zero = { ...options, readDeal: async () => ({ live: { buyer: '0x0000000000000000000000000000000000000000' } }) }
+    await expect(handleApiRequest({ method: 'GET', url: '/v1/deals/999999' }, zero)).resolves.toEqual({ status: 404, body: { error: 'deal_not_found' } })
+    const real = { ...options, readDeal: async () => ({ live: { buyer: '0x00000000000000000000000000000000000000b1' } }) }
+    expect((await handleApiRequest({ method: 'GET', url: '/v1/deals/4' }, real)).status).toBe(200)
+  })
+  test('the network answer says where the index starts', async () => {
+    const r = await handleApiRequest({ method: 'GET', url: '/v1/network' }, { ...options, indexStartBlock: 68_143_000n })
+    expect((r.body as { indexStartBlock: string }).indexStartBlock).toBe('68143000')
+  })
+})

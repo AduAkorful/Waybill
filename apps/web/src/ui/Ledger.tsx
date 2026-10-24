@@ -63,7 +63,12 @@ export function Ledger({ deal, voice = "buyer" }: { deal: DealView; voice?: "buy
           {decided > 0 ? ` The split on ${decided} arbiter-decided part${decided > 1 ? "s" : ""} is not in these figures.` : ""}
         </p>
       </dl>
-      <div className="mt-3 flex h-2.5 gap-[3px]" role="img" aria-label="Deal total split by stub">
+      {[released, held, refunded].some((v) => v % 10_000n !== 0n) ? (
+        <p data-exact className="mono mt-2 text-[11.5px] text-graphite">
+          Exact: released {formatAmount(released)} · held {formatAmount(held)} · refunded {formatAmount(refunded)} USDC. The large figures above are rounded to the cent.
+        </p>
+      ) : null}
+      <div className="mt-3 flex h-2.5 gap-[3px]" role="img" aria-label="Deal total split by part">
         {deal.tranches.map((t) => (
           <span key={t.index} data-ledger-seg={t.index} className={`h-full rounded-[2px] ${seg[t.state]}`} style={{ flexGrow: t.bps, flexBasis: 0 }} />
         ))}

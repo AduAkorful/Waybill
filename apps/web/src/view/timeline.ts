@@ -60,13 +60,13 @@ export function describeEvent(e: DealEvent): string {
     case 'DealCancelled':
       return 'Deal cancelled before funding'
     case 'PayoutChangeProposed':
-      return 'A new payout wallet was proposed; it takes effect after the buyer’s review delay'
+      return 'A new payout wallet was proposed; it takes effect after the 48-hour delay unless the other side rejects it'
     case 'PayoutChangeRejected':
       return 'The proposed payout wallet change was rejected'
     case 'PayoutChangeApplied':
       return 'The supplier’s payout wallet changed'
     case 'RefundChangeProposed':
-      return 'A new refund wallet was proposed; it takes effect after the supplier’s review delay'
+      return 'A new refund wallet was proposed; it takes effect after the 48-hour delay unless the other side rejects it'
     case 'RefundChangeRejected':
       return 'The proposed refund wallet change was rejected'
     case 'RefundChangeApplied':

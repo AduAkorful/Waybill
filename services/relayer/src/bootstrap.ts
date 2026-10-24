@@ -185,6 +185,7 @@ export function createBackendApplication(
         terms,
         emails,
         network: config.network.network,
+        indexStartBlock: config.startBlock,
         allowedOrigins: apiConfig.allowedOrigins,
         health: () =>
           checkHealth([
