@@ -12,6 +12,7 @@ import type { WaybillNetworkManifest } from '../../../config/networks'
 import type { RelayerPrivateKey } from './config'
 import type { RelayerCandidate } from './chain'
 import type { EligibilityResult } from './eligibility'
+import { SerializedNonceManager } from './nonce-manager'
 
 export const RELAYER_WRITE_ABI = parseAbi([
   'function claim(uint256 dealId, uint8 milestoneIndex)',
@@ -24,10 +25,12 @@ type TransactionHash = `0x${string}`
 
 export interface RelayerWriteClient {
   readonly escrow: `0x${string}`
+  getPendingNonce(): Promise<number>
   writeContract(parameters: {
     abi: typeof RELAYER_WRITE_ABI
     functionName: RelayerFunctionName
     args: readonly [bigint, number]
+    nonce: number
   }): Promise<TransactionHash>
   waitForTransactionReceipt(parameters: {
     hash: TransactionHash
@@ -67,6 +70,11 @@ export function createRelayerSubmissionClient(
 
   return {
     escrow: manifest.contracts.escrow,
+    getPendingNonce: () =>
+      publicClient.getTransactionCount({
+        address: account.address,
+        blockTag: 'pending',
+      }),
     writeContract: (parameters) =>
       wallet.writeContract({
         ...parameters,
@@ -85,6 +93,7 @@ export async function submitEligibleCandidate(
   client: RelayerWriteClient,
   candidate: RelayerCandidate,
   eligibility: EligibilityResult,
+  nonceManager: SerializedNonceManager,
 ): Promise<SubmissionResult> {
   if (eligibility.eligible === false) {
     throw new Error(`Refusing ineligible relayer candidate: ${eligibility.reason}`)
@@ -99,11 +108,14 @@ export async function submitEligibleCandidate(
           throw new Error('Unknown relayer operation')
         })()
 
-  const hash = await client.writeContract({
-    abi: RELAYER_WRITE_ABI,
-    functionName,
-    args: [candidate.dealId, candidate.milestoneIndex],
-  })
+  const hash = await nonceManager.run((nonce) =>
+    client.writeContract({
+      abi: RELAYER_WRITE_ABI,
+      functionName,
+      args: [candidate.dealId, candidate.milestoneIndex],
+      nonce,
+    }),
+  )
   const receipt = await client.waitForTransactionReceipt({ hash, confirmations: 1 })
   return { hash, status: receipt.status }
 }
