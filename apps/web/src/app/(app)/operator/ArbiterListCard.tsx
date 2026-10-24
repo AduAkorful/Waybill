@@ -13,7 +13,7 @@ import { formatAmount, formatDateTime, shortAddress } from '@/view/format'
 import { parseAmount } from '@/view/builder'
 import type { OperatorSummary } from '@/view/operator'
 
-const input = 'mt-1.5 w-full rounded-md border border-rule bg-paper px-3 py-2.5 text-[14px] outline-none focus:border-held'
+const input = 'mt-1.5 w-full rounded-md border border-rule bg-paper px-3 py-2.5 text-[14px] focus:border-held'
 
 const TITLES: Record<ArbiterListAction['kind'], string> = {
   scheduleAddArbiter: 'Schedule adding this arbiter',
@@ -73,8 +73,8 @@ export function ArbiterListCard({ summary: s, onChanged }: { summary: OperatorSu
                 <span>
                   <span className="mono text-[12.5px]">{shortAddress(a.address)}</span>{' '}
                   <span className={a.allowed ? 'font-semibold text-released' : 'text-graphite'}>{a.allowed ? `On the list · fee ${formatAmount(a.fee)} USDC` : 'Not on the list'}</span>
-                  {a.pendingAdd ? <span className="block text-[12px] text-graphite">Addition scheduled for {formatDateTime(a.pendingAdd.eta)} UTC · fee {formatAmount(a.pendingAdd.fee)} USDC</span> : null}
-                  {a.pendingRemove ? <span className="block text-[12px] text-graphite">Removal scheduled for {formatDateTime(a.pendingRemove.eta)} UTC</span> : null}
+                  {a.pendingAdd ? <span className="block text-[12px] text-graphite">Addition scheduled for {formatDateTime(a.pendingAdd.eta)} · fee {formatAmount(a.pendingAdd.fee)} USDC</span> : null}
+                  {a.pendingRemove ? <span className="block text-[12px] text-graphite">Removal scheduled for {formatDateTime(a.pendingRemove.eta)}</span> : null}
                 </span>
                 {isPauser ? (
                   <span className="flex gap-2">

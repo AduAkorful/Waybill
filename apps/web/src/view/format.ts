@@ -56,8 +56,8 @@ export function formatDay(seconds: bigint): string {
   return parts(seconds).day
 }
 
-/** "19 Oct 2026, 09:40 GMT" */
+/** "19 Oct 2026, 09:40 UTC" */
 export function formatDateTime(seconds: bigint): string {
   const p = parts(seconds)
-  return `${p.day}, ${p.time} GMT`
+  return `${p.day}, ${p.time} UTC`
 }

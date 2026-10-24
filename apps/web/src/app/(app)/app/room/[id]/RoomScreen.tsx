@@ -117,7 +117,7 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
           <p className="label">Part {part.index} · {formatAmount(part.amount)} USDC · {open ? 'open' : 'decided'}</p>
           {open ? (
             <p className="mt-1 text-[14px]">
-              Disputed by the {raiser} on {formatDateTime(part.disputeTime)} UTC. Other parts are not affected.
+              Disputed by the {raiser} on {formatDateTime(part.disputeTime)}. Other parts are not affected.
             </p>
           ) : null}
         </header>
@@ -148,7 +148,7 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
                 <li key={`${e.blockNumber}-${e.logIndex}`}>
                   {describeEvent(e)}
                   <span className="mono ml-2 text-[11.5px] text-graphite">
-                    {e.time === null ? 'time unknown' : `${formatDateTime(e.time)} UTC`} ·{' '}
+                    {e.time === null ? 'time unknown' : `${formatDateTime(e.time)}`} ·{' '}
                     <a className="underline" href={`${explorer}/tx/${e.txHash}`} target="_blank" rel="noreferrer">{shortHash(e.txHash)} ↗</a>
                   </span>
                 </li>
@@ -171,7 +171,7 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
           stage === 'response_open' ? (
             <div role="status" className="rounded-md border border-rule bg-sheet p-4 text-[13.5px]">
               <p className="font-semibold">The other side is still within their response window</p>
-              <p className="mt-1 text-graphite">You can decide from {formatDateTime(part.responseDeadline + 1n)} UTC, once it closes.</p>
+              <p className="mt-1 text-graphite">You can decide from {formatDateTime(part.responseDeadline + 1n)}, once it closes.</p>
             </div>
           ) : deal.arbiterAccepted ? (
             <DecidePanel deal={deal} part={part} owner={owner} onDone={onDone} />
@@ -216,7 +216,7 @@ function Clock({ label, value, active }: { label: string; value: bigint; active:
   return (
     <div className={`px-3 py-2.5 ${active ? 'bg-paper' : 'bg-sheet'}`}>
       <dt className="label">{label}</dt>
-      <dd className={`mono mt-0.5 text-[13px] ${active ? 'marked font-semibold' : ''}`}>{formatDateTime(value)} UTC</dd>
+      <dd className={`mono mt-0.5 text-[13px] ${active ? 'marked font-semibold' : ''}`}>{formatDateTime(value)}</dd>
     </div>
   )
 }

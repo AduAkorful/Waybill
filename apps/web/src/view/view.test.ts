@@ -46,7 +46,7 @@ describe('fee split', () => {
 
 describe('time and address', () => {
   test('formats UTC', () => {
-    expect(formatDateTime(1_792_962_911n)).toBe('25 Oct 2026, 21:15 GMT')
+    expect(formatDateTime(1_792_962_911n)).toBe('25 Oct 2026, 21:15 UTC')
   })
   test('shortens long values only', () => {
     expect(shortAddress('0x4632A278FEb0a4D249561e7fC3f3708C4329D0F1')).toBe('0x4632…D0F1')

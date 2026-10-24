@@ -160,7 +160,7 @@ export function SignIn() {
                       if (e.key === 'Backspace' && !digits[i] && i > 0) boxes.current[i - 1]?.focus()
                       if (e.key === 'Enter') void verify()
                     }}
-                    className={`mono h-14 w-full min-w-0 rounded-md border bg-sheet text-center text-[22px] outline-none focus:border-held ${codeErr ? 'border-hold' : 'border-rule'}`}
+                    className={`mono h-14 w-full min-w-0 rounded-md border bg-sheet text-center text-[22px] focus:border-held ${codeErr ? 'border-hold' : 'border-rule'}`}
                   />
                 ))}
               </div>
@@ -204,7 +204,7 @@ export function SignIn() {
                 onKeyDown={(e) => e.key === 'Enter' && void send()}
                 aria-invalid={!!emailErr}
                 aria-describedby={emailErr ? 'email-err' : undefined}
-                className={`mt-1.5 w-full rounded-md border bg-sheet px-3.5 py-3 text-[15px] outline-none focus:border-held ${emailErr ? 'border-hold' : 'border-rule'}`}
+                className={`mt-1.5 w-full rounded-md border bg-sheet px-3.5 py-3 text-[15px] focus:border-held ${emailErr ? 'border-hold' : 'border-rule'}`}
               />
               {emailErr ? (
                 <p id="email-err" role="alert" className="mt-1.5 text-[12.5px] text-hold">

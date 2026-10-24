@@ -104,7 +104,21 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
 
       <section className="mt-8" aria-label="Volume">
         <h2 className="label mb-2">Volume by label</h2>
-        <div className="overflow-x-auto rounded-md border border-rule">
+        <ul className="space-y-2 sm:hidden">
+          {s.index.volume.length === 0 ? <li className="text-[13px] text-graphite">No deals indexed yet.</li> : null}
+          {s.index.volume.map((v) => (
+            <li key={`m-${v.label}-${v.isTest}`} className="rounded-md border border-rule bg-sheet px-3.5 py-3 text-[13px]">
+              <p className="font-semibold">{v.label ?? 'No label set'}{v.isTest ? <span className="ml-1.5 rounded border border-dashed border-graphite/60 px-1 text-[10px] font-normal text-graphite">TEST</span> : null}</p>
+              <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1">
+                <dt className="text-graphite">Deals created</dt><dd className="mono text-right">{v.created.deals}</dd>
+                <dt className="text-graphite">Created USDC</dt><dd className="mono text-right">{formatAmount(v.created.amount)}</dd>
+                <dt className="text-graphite">Deals funded</dt><dd className="mono text-right">{v.funded.deals}</dd>
+                <dt className="text-graphite">Funded USDC</dt><dd className="mono text-right">{formatAmount(v.funded.amount)}</dd>
+              </dl>
+            </li>
+          ))}
+        </ul>
+        <div className="hidden overflow-x-auto rounded-md border border-rule sm:block">
           <table className="w-full min-w-[34rem] text-left text-[13px]">
             <thead className="bg-sheet text-graphite">
               <tr><th className="px-3 py-2 font-medium">Label</th><th className="px-3 py-2 font-medium">Deals created</th><th className="px-3 py-2 font-medium">Created USDC</th><th className="px-3 py-2 font-medium">Deals funded</th><th className="px-3 py-2 font-medium">Funded USDC</th></tr>
@@ -123,7 +137,7 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-[12px] text-graphite">Only the deals the index has recorded are counted. A deal counts under a label only once the pauser has labelled it (see Label deals above), so unlabelled volume must not be presented as third-party volume.</p>
+        <p className="mt-2 text-[12px] text-graphite">Only the deals the index has recorded are counted; the index does not start at the first deal, so this can be lower than “Deals created, all time”, which is read from the escrow. A deal counts under a label only once the pauser has labelled it (see Label deals above), so unlabelled volume must not be presented as third-party volume.</p>
       </section>
 
       <section className="mt-8 grid gap-6 lg:grid-cols-2" aria-label="Health">
@@ -167,7 +181,7 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
               <li key={`${e.block}-${e.txHash}-${e.name}`} className="flex flex-wrap justify-between gap-2 px-3 py-2.5">
                 <span>{describeChange(e.name)}</span>
                 <span className="mono text-[12px] text-graphite">
-                  {e.time === null ? `block ${String(e.block)}` : `${formatDateTime(BigInt(e.time))} UTC`} · <a className="underline" href={`${explorer}/tx/${e.txHash}`} target="_blank" rel="noreferrer">{shortHash(e.txHash)} ↗</a>
+                  {e.time === null ? `block ${String(e.block)}` : `${formatDateTime(BigInt(e.time))}`} · <a className="underline" href={`${explorer}/tx/${e.txHash}`} target="_blank" rel="noreferrer">{shortHash(e.txHash)} ↗</a>
                 </span>
               </li>
             ))}

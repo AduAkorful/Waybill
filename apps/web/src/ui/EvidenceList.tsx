@@ -73,7 +73,7 @@ export function EvidenceList({ dealId, owner, part }: { dealId: bigint; owner: `
               <p className="truncate font-semibold">{f.fileName ?? 'Unnamed file'}</p>
               <p className="text-[12px] text-graphite">
                 Part {f.part + 1} · {kb(f.byteSize)} · {shortAddress(f.uploadedBy)}
-                {f.uploadedAt ? ` · ${formatDateTime(BigInt(f.uploadedAt))} UTC` : ''}
+                {f.uploadedAt ? ` · ${formatDateTime(BigInt(f.uploadedAt))}` : ''}
               </p>
             </div>
             <button type="button" onClick={() => void open(f)} disabled={opening === f.id} className="text-[12.5px] underline disabled:opacity-60">{opening === f.id ? 'Opening…' : 'Download'}</button>

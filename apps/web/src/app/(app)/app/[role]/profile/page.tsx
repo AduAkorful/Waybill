@@ -10,7 +10,7 @@ import { Modal } from '@/ui/Modal'
 import { TxFlow } from '@/ui/TxFlow'
 import { shortAddress } from '@/view/format'
 
-const input = 'mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] outline-none focus:border-held'
+const input = 'mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] focus:border-held'
 
 /** The name and city shown beside an attestor's address in the public directory. Written to the registry by the attestor alone. */
 export default function ProfilePage() {

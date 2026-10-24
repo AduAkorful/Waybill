@@ -5,6 +5,42 @@ After each batch the web app on port 3000 is rebuilt and restarted; retest again
 "Fixed" means changed in code, covered by a unit test where the logic is pure, and the page answers as described below.
 It does not mean a signed transaction was re-run in a browser — that is what QA is for.
 
+## Batch 2 — 2026-10-20 (accessibility, layout, copy)
+
+Web app rebuilt and restarted on port 3000. Automated check: axe-core found **0 violations** on `/`, `/attestors`, `/record/*`, `/d/<id>`, `/signin`, `/join`, `/legal`, `/operator` at 375 px and 1440 px, light and dark. Signed-in pages (`/app/*`) cannot be audited without a session — QA should run axe there.
+
+### Titles, language, chrome (WB-QA-018 part, 019, 020, 038, 039, 061, 071)
+- Page titles no longer double the brand: **"Your deals · Waybill"**, not "· Waybill · Waybill". Every page now has one "· Waybill" suffix.
+- The supplier page sets `lang="zh-Hans"` when 中文 is chosen (English otherwise). The language defaults to English; it switches to 中文 only if that was chosen earlier **in the same browser profile** (it is remembered), which explains the "first visit in Chinese" report — use a clean profile to confirm.
+- Times show one zone label: **"21:15 UTC"** (was "GMT UTC").
+- Public header has a **Sign in** button. `/d/<id>` has the same footer text and a Terms/privacy link.
+- `/join` copy now says "Sign in with your email… or connect a wallet you already have", button "Sign in or connect a wallet".
+
+### Accessibility (WB-QA-021, 023, 030, 032 part, 034, 046 no, 060 no, 090)
+- Text boxes no longer hide the keyboard focus ring (`outline-none` removed; the global ring shows).
+- On phones (≤640 px) buttons, selects and text inputs are at least 44 px tall.
+- Balance/odometer figures are one image-role element with the full amount (no per-digit reading).
+- Builder: every field has an `id` and `name`; supplier, total and refund get `aria-invalid` when they have a problem; the problem list is no longer an alert region (it no longer re-announces on every keystroke) and the Create button points at it with `aria-describedby`; "Remove" buttons say which part or attestor ("Remove part 2", "Remove attestor 2 from part 1").
+- Attestor portal: the conflict radios and the file/notes fields are unique per part ("Files Files Files" and the shared radio group are gone).
+- Not done: attestor suggestion list is still a plain datalist (060), Privy's stray tab stops (046, third-party), reduced-motion verification (072).
+
+### Layout (WB-QA-022 part, 025, 035)
+- Attestor profile uses two columns on desktop (identity and counts left, registry history right) and stays one column on phones.
+- Operator volume table becomes stacked cards on phones (no clipped columns); its note now says the index does not start at the first deal.
+- Builder on phones has a fixed **Create deal** bar at the bottom (also shows "fix the problems above" when disabled). Desktop keeps the sticky summary.
+- Not done: skeleton loaders (022/037), per-part USDC amounts in the builder.
+
+### Dialogs (WB-QA-036 part)
+- Change-address dialog keeps **Cancel** when the typed address is invalid and says what is wrong.
+- Could not reproduce the truncated "Write at le…" message (062); the text is a normal paragraph. Retest and send the viewport if it recurs.
+
+### Retest checklist for batch 2
+1. Titles of `/app`, `/signin`, `/operator`, `/join`, `/d/<id>`: one "· Waybill" only (the home page is just "Waybill").
+2. Tab through `/app/new` at 375 px: each field shows a focus ring, controls are tall enough, the Create bar stays at the bottom.
+3. `/operator` at 375 px: volume appears as cards. `/attestors/<address>` at 1440 px: two columns.
+4. `/d/284` in 中文: footer and statuses in Chinese, `html`/wrapper `lang=zh-Hans`.
+5. Run axe on `/app/new`, `/app/deals/<id>`, `/app/attest/<id>`, `/app/room/<id>` with a signed-in session.
+
 ## Batch 1 — 2026-10-20
 
 ### Transactions and errors (WB-QA-001, 008, 065, 066, 079, 098, 105)
@@ -62,4 +98,4 @@ It does not mean a signed transaction was re-run in a browser — that is what Q
 10. Press Create, then let the wallet sit → dialog stays open with Stop waiting; no silent close.
 
 ### Next batch (not started)
-Accessibility (labels, focus rings, tap targets, alert strategy), layout (attestor profile, sticky create, operator mobile table), copy (titles, `lang`, default language), receipt strip, OG image, aggregate remaining items from the report.
+Builder amounts and validation polish (per-part USDC, dust, 1-part custom, fee strings), receipt strip and explorer links after each step, skeleton loaders, OG image, email-off notice before signing, remaining copy items.

@@ -7,7 +7,7 @@ import { SupplierLink } from './SupplierLink'
 // The preview carries no deal terms: the link is the invitation. The page itself shows the terms, read from the
 // escrow at render time so they are in the first HTML, before any script runs.
 export const metadata: Metadata = {
-  title: 'Review and accept a deal · Waybill',
+  title: 'Review and accept a deal',
   description: 'You have been invited to a Waybill deal. Review the terms and accept.',
   robots: { index: false },
 }

@@ -67,11 +67,11 @@ export function WorkPanel({ deal, part, owner, onDone }: { deal: DealView; part:
   return (
     <div className="rounded-md border border-rule bg-sheet p-4">
       <p className="text-[15px] font-semibold">Upload your evidence and sign</p>
-      <label className="label mt-3 block" htmlFor="files">Files</label>
-      <input id="files" type="file" multiple disabled={stage.kind === 'working'} onChange={(e) => setFiles(Array.from(e.target.files ?? []))} className="mt-1.5 block w-full text-[13px]" />
+      <label className="label mt-3 block" htmlFor={`files-${part.index}`}>Files</label>
+      <input id={`files-${part.index}`} name={`files-${part.index}`} aria-label={`Evidence files for part ${part.index}`} type="file" multiple disabled={stage.kind === 'working'} onChange={(e) => setFiles(Array.from(e.target.files ?? []))} className="mt-1.5 block w-full text-[13px]" />
       <p className="mt-1 text-[12px] text-graphite">Photos, inspection reports, documents. Up to {MAX_FILES} files, 10 MB each. They are encrypted before they are stored; only the people named in this deal can read them.</p>
-      <label className="label mt-3 block" htmlFor="notes">Notes (optional)</label>
-      <textarea id="notes" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={stage.kind === 'working'} className="mt-1.5 w-full rounded-md border border-rule bg-paper p-2 text-[13px]" />
+      <label className="label mt-3 block" htmlFor={`notes-${part.index}`}>Notes (optional)</label>
+      <textarea id={`notes-${part.index}`} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={stage.kind === 'working'} className="mt-1.5 w-full rounded-md border border-rule bg-paper p-2 text-[13px]" />
       {error ? <p role="alert" className="mt-2 text-[12.5px] text-hold">{error}</p> : null}
       {stage.kind === 'working' ? <p role="status" className="mt-2 text-[12.5px] text-graphite">{stage.text}</p> : null}
       <button type="button" onClick={() => void submit()} disabled={stage.kind === 'working'} className="mt-4 w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet disabled:opacity-60">

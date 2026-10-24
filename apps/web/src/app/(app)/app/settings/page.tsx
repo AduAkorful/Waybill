@@ -6,7 +6,7 @@ import { readEmailSettings, saveEmailSettings, type EmailSettings } from '@/inte
 import { getBrowserNetwork } from '@/integration/network'
 import { shortAddress } from '@/view/format'
 
-const input = 'mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] outline-none focus:border-held'
+const input = 'mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] focus:border-held'
 
 type Read = { kind: 'idle' } | { kind: 'working' } | { kind: 'ready'; settings: EmailSettings | null } | { kind: 'error'; message: string }
 

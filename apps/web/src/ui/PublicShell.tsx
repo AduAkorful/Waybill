@@ -13,6 +13,9 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
           <Link href="/attestors" className="text-[13.5px] text-graphite hover:text-ink">
             Attestors
           </Link>
+          <Link href="/signin" className="rounded-md border border-rule px-3 py-1.5 text-[13px] font-semibold hover:bg-sheet">
+            Sign in
+          </Link>
           <ThemeToggle />
         </div>
       </header>

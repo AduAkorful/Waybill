@@ -54,10 +54,10 @@ export function AcceptPanel({ deal, part, owner, onDone }: { deal: DealView; par
       <fieldset className="mt-3" disabled={stage !== 'form'}>
         <legend className="label">Any financial relationship with the buyer or supplier?</legend>
         <label className="mt-1.5 flex items-center gap-2 text-[13.5px]">
-          <input type="radio" name="conflict" checked={conflict === 'none'} onChange={() => setConflict('none')} className="accent-[var(--held)]" /> None
+          <input type="radio" name={`conflict-${part.index}`} checked={conflict === 'none'} onChange={() => setConflict('none')} className="accent-[var(--held)]" /> None
         </label>
         <label className="mt-1 flex items-center gap-2 text-[13.5px]">
-          <input type="radio" name="conflict" checked={conflict === 'declare'} onChange={() => setConflict('declare')} className="accent-[var(--held)]" /> Yes, I&apos;ll declare it
+          <input type="radio" name={`conflict-${part.index}`} checked={conflict === 'declare'} onChange={() => setConflict('declare')} className="accent-[var(--held)]" /> Yes, I&apos;ll declare it
         </label>
         {conflict === 'declare' ? (
           <textarea rows={2} value={declaration} onChange={(e) => setDeclaration(e.target.value)} aria-label="Declaration" placeholder="Stored with the deal; the buyer and supplier can read it." className="mt-2 w-full rounded-md border border-rule bg-paper p-2 text-[13px]" />

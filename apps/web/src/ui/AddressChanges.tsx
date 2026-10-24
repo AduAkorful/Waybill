@@ -12,7 +12,7 @@ type Which = 'payout' | 'refund'
 type Who = 'buyer' | 'supplier'
 type Dialog = { propose: Which } | { reject: Which } | { apply: Which } | null
 
-const input = 'mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] mono outline-none focus:border-held'
+const input = 'mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] mono focus:border-held'
 
 const RULES: Record<Which, { title: string; proposer: Who; rejecter: Who; current: (d: DealView) => string | null; pending: (d: DealView) => PendingChange | null }> = {
   payout: { title: 'Where the supplier is paid', proposer: 'supplier', rejecter: 'buyer', current: (d) => d.supplierPayout, pending: (d) => d.pendingPayout },
@@ -52,7 +52,7 @@ export function AddressChanges({ deal, viewer, onChanged }: { deal: DealView; vi
               <div className="mt-2 rounded-md border border-held/40 bg-paper px-3 py-2 text-[12.5px]">
                 <p>
                   Change to <span className="mono font-semibold">{shortAddress(pending.proposed)}</span> is waiting.{' '}
-                  {ready ? 'The delay is over, so it can be applied.' : `It can be applied after ${formatDateTime(pending.eta)} UTC.`}
+                  {ready ? 'The delay is over, so it can be applied.' : `It can be applied after ${formatDateTime(pending.eta)}.`}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {isRejecter ? (
@@ -94,7 +94,10 @@ export function AddressChanges({ deal, viewer, onChanged }: { deal: DealView; vi
               onDone={done}
             />
           ) : (
-            <p className="text-[12.5px] text-graphite">Enter a full wallet address to continue.</p>
+            <>
+              <p className="text-[12.5px] text-graphite">{next.trim() === '' ? 'Enter a full wallet address to continue.' : 'That is not a full wallet address (0x followed by 40 characters).'}</p>
+              <button type="button" onClick={close} className="mt-2 w-full py-2 text-[13px] text-graphite hover:text-ink">Cancel</button>
+            </>
           )}
         </Modal>
       ) : null}

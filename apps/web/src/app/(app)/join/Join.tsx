@@ -29,11 +29,11 @@ export function Join() {
       </div>
       <h1 className="text-[26px] leading-tight font-semibold tracking-tight">Get a wallet to be paid</h1>
       <p className="mt-2 text-[14px] leading-relaxed text-graphite">
-        Sign in with your email. We create a wallet for you. Send its address to your buyer so they can name you in the deal. The address is not secret; it only receives money.
+        Sign in with your email and we create a wallet for you, or connect a wallet you already have. Send its address to your buyer so they can name you in the deal. The address is not secret; it only receives money.
       </p>
       {!authenticated ? (
         <button type="button" disabled={!ready} onClick={() => login({ loginMethods: ['email', 'wallet'] })} className="mt-6 rounded-md bg-ink px-4 py-3 text-[14px] font-semibold text-paper disabled:opacity-60">
-          {ready ? 'Continue with email' : 'Loading…'}
+          {ready ? 'Sign in or connect a wallet' : 'Loading…'}
         </button>
       ) : address ? (
         <div className="mt-6 rounded-md border border-rule bg-sheet p-4">

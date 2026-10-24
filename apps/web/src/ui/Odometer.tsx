@@ -32,7 +32,7 @@ export function Odometer({
   let seen = 0;
 
   return (
-    <span data-odo data-to={to} className={`mono inline-flex leading-none ${className}`} aria-label={label ?? `${formatCents(to)} USDC`}>
+    <span data-odo data-to={to} role="img" className={`mono inline-flex leading-none ${className}`} aria-label={label ?? `${formatCents(to)} USDC`}>
       {text.split("").map((ch, i) => {
         if (!/\d/.test(ch)) {
           // A comma belongs to the digit on its left

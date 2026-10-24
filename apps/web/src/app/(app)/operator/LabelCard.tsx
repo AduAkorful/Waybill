@@ -6,7 +6,7 @@ import { DEAL_LABELS, parseDealRanges, setDealLabels, type DealLabel } from '@/i
 import { shortAddress } from '@/view/format'
 import type { OperatorSummary } from '@/view/operator'
 
-const input = 'mt-1.5 w-full rounded-md border border-rule bg-paper px-3 py-2.5 text-[14px] outline-none focus:border-held'
+const input = 'mt-1.5 w-full rounded-md border border-rule bg-paper px-3 py-2.5 text-[14px] focus:border-held'
 
 type Outcome = { kind: 'idle' } | { kind: 'working' } | { kind: 'done'; labelled: number; label: DealLabel } | { kind: 'error'; message: string }
 

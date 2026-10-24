@@ -32,20 +32,21 @@ export default async function AttestorProfile({ params }: { params: Promise<{ ad
 
   return (
     <PublicShell>
-      <main className="mx-auto max-w-3xl px-4 pt-6 pb-20 md:px-8">
+      <main className="mx-auto max-w-5xl px-4 pt-6 pb-20 md:px-8">
         <Link href="/attestors" className="text-[13px] text-graphite hover:text-ink">← All attestors</Link>
         {read.status === 'unconfigured' ? <p className="mt-6 text-graphite">This site has no attestor source configured.</p> : null}
         {read.status === 'error' ? <p role="alert" className="mt-6 text-hold">This profile is unavailable right now: {read.message}</p> : null}
         {read.status === 'ready' ? (
-          <>
-            <h1 className="mt-3 text-[30px] font-semibold tracking-tight">{attestorName(read.value) ?? shortAddress(read.value.address)}</h1>
-            <p className="mono mt-1 text-[12.5px] text-graphite">
+          <div className="mt-3 grid gap-x-10 gap-y-6 lg:grid-cols-[19rem_1fr]">
+          <div>
+            <h1 className="text-[30px] font-semibold tracking-tight">{attestorName(read.value) ?? shortAddress(read.value.address)}</h1>
+            <p className="mono mt-1 break-all text-[12.5px] text-graphite">
               {read.value.profile?.city ? `${read.value.profile.city} · ` : ''}
               <a className="underline" href={`${explorer}/address/${read.value.address}`} target="_blank" rel="noreferrer">
                 {read.value.address} ↗
               </a>
             </p>
-            <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule sm:grid-cols-4">
+            <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule">
               {[
                 ['Signed', read.value.attested],
                 ['Upheld against', read.value.upheld],
@@ -64,7 +65,9 @@ export default async function AttestorProfile({ params }: { params: Promise<{ ad
                 {read.value.pending.automatic ? ', triggered by repeated upheld disputes' : ''}.
               </p>
             ) : null}
-            <h2 className="mt-8 text-[17px] font-semibold tracking-tight">Registry history</h2>
+          </div>
+          <div>
+            <h2 className="text-[17px] font-semibold tracking-tight lg:mt-2">Registry history</h2>
             <ol className="mt-3 divide-y divide-rule rounded-md border border-rule bg-sheet text-[13.5px]">
               {(read.value.events ?? []).map((e) => (
                 <li key={`${e.blockNumber}-${e.logIndex}`} className="flex flex-wrap items-baseline justify-between gap-2 px-3.5 py-2.5">
@@ -78,7 +81,8 @@ export default async function AttestorProfile({ params }: { params: Promise<{ ad
                 </li>
               ))}
             </ol>
-          </>
+          </div>
+          </div>
         ) : null}
       </main>
     </PublicShell>

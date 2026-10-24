@@ -72,10 +72,11 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   const isPanel = form.panel.length > 0
   const leader = isPanel ? panelChecks[0] : checked
   const arbiterFee = leader?.allowed ? leader.fee : 0n
+  const bad = (prefix: string) => (showErrors && !built.ok && built.errors.some((e) => e.startsWith(prefix))) || undefined
   const showErrors = form.total !== '' || form.supplier !== '' || form.arbiter !== '' || form.panel.some((m) => m !== '')
 
   return (
-    <main className="mx-auto grid max-w-6xl gap-8 px-4 pt-6 pb-20 md:px-8 md:pt-10 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <main className="mx-auto grid max-w-6xl gap-8 px-4 pt-6 pb-28 md:px-8 md:pt-10 lg:pb-20 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0">
         <p className="label">New deal</p>
         <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">Set the terms</h1>
@@ -96,18 +97,18 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
         <section className="mt-8 grid gap-4 sm:grid-cols-2" aria-label="People">
           <div className="sm:col-span-2">
             <label className="label block" htmlFor="supplier">Supplier&apos;s wallet</label>
-            <input id="supplier" className={`${input} mono`} value={form.supplier} onChange={(e) => set({ supplier: e.target.value })} placeholder="0x…" spellCheck={false} />
+            <input id="supplier" name="supplier" aria-invalid={bad('The supplier')} className={`${input} mono`} value={form.supplier} onChange={(e) => set({ supplier: e.target.value })} placeholder="0x…" spellCheck={false} />
             <p className="mt-1 text-[12px] text-graphite">
               No wallet yet? Ask them to open <Link href="/join" className="underline" target="_blank">the sign-up page</Link> and send you the address it shows.
             </p>
           </div>
           <div>
             <label className="label block" htmlFor="total">Total, USDC</label>
-            <input id="total" className={`${input} mono`} inputMode="decimal" value={form.total} onChange={(e) => set({ total: e.target.value })} />
+            <input id="total" name="total" aria-invalid={bad('Enter the total')} className={`${input} mono`} inputMode="decimal" value={form.total} onChange={(e) => set({ total: e.target.value })} />
           </div>
           <div>
             <label className="label block" htmlFor="refund">Refunds go to</label>
-            <input id="refund" className={`${input} mono`} value={form.refund} onChange={(e) => set({ refund: e.target.value })} spellCheck={false} />
+            <input id="refund" name="refund" aria-invalid={bad('The refund')} className={`${input} mono`} value={form.refund} onChange={(e) => set({ refund: e.target.value })} spellCheck={false} />
           </div>
           <div className="sm:col-span-2">
             <fieldset>
@@ -155,7 +156,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                   <span className="mono pb-2 text-[13px] text-graphite">{i + 1}</span>
                   <div className="w-24">
                     <label className="label block" htmlFor={`pct-${i}`}>Share, %</label>
-                    <input id={`pct-${i}`} className={`${input} mono`} inputMode="decimal" value={p.percent} onChange={(e) => setPart(i, { percent: e.target.value })} />
+                    <input id={`pct-${i}`} name={`pct-${i}`} className={`${input} mono`} inputMode="decimal" value={p.percent} onChange={(e) => setPart(i, { percent: e.target.value })} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <label className="label block" htmlFor={`cond-${i}`}>Paid when</label>
@@ -172,7 +173,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                     </select>
                   </div>
                   {form.parts.length > 1 ? (
-                    <button type="button" onClick={() => set({ parts: form.parts.filter((_, j) => j !== i) })} className="pb-2 text-[12.5px] text-graphite hover:text-hold">Remove</button>
+                    <button type="button" onClick={() => set({ parts: form.parts.filter((_, j) => j !== i) })} aria-label={`Remove part ${i + 1}`} className="pb-2 text-[12.5px] text-graphite hover:text-hold">Remove</button>
                   ) : null}
                 </div>
                 {p.condition === 1 ? (
@@ -181,7 +182,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                     {p.attestors.map((a, k) => (
                       <div key={k} className="mt-1.5 flex gap-2">
                         <input aria-label={`Attestor ${k + 1} for part ${i + 1}`} list="attestors" className={`${input} mono mt-0`} value={a} onChange={(e) => setPart(i, { attestors: p.attestors.map((x, j) => (j === k ? e.target.value : x)) })} placeholder="0x…" spellCheck={false} />
-                        {p.attestors.length > 1 ? <button type="button" onClick={() => setPart(i, { attestors: p.attestors.filter((_, j) => j !== k) })} className="text-[12.5px] text-graphite hover:text-hold">Remove</button> : null}
+                        {p.attestors.length > 1 ? <button type="button" onClick={() => setPart(i, { attestors: p.attestors.filter((_, j) => j !== k) })} aria-label={`Remove attestor ${k + 1} from part ${i + 1}`} className="text-[12.5px] text-graphite hover:text-hold">Remove</button> : null}
                       </div>
                     ))}
                     {p.attestors.length < 5 ? <button type="button" onClick={() => setPart(i, { attestors: [...p.attestors, ''] })} className="mt-1.5 text-[12.5px] underline">Add another attestor</button> : null}
@@ -190,7 +191,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                 ) : null}
                 <div className="mt-3">
                   <label className="label block" htmlFor={`title-${i}`}>What this part is for (optional)</label>
-                  <input id={`title-${i}`} className={input} value={p.title} maxLength={80} onChange={(e) => setPart(i, { title: e.target.value })} placeholder="Deposit, production, delivery…" />
+                  <input id={`title-${i}`} name={`title-${i}`} className={input} value={p.title} maxLength={80} onChange={(e) => setPart(i, { title: e.target.value })} placeholder="Deposit, production, delivery…" />
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-3">
                   <Small label="Due in, days" value={p.dueDays} onChange={(v) => setPart(i, { dueDays: v })} />
@@ -211,25 +212,25 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="label block" htmlFor="goods">Goods</label>
-              <input id="goods" className={input} value={details.goods} maxLength={300} onChange={(e) => setDetails({ ...details, goods: e.target.value })} placeholder="e.g. Cotton t-shirts, 5,000 units" />
+              <input id="goods" name="goods" className={input} value={details.goods} maxLength={300} onChange={(e) => setDetails({ ...details, goods: e.target.value })} placeholder="e.g. Cotton t-shirts, 5,000 units" />
             </div>
             <Small label="Units" value={details.units} onChange={(v) => setDetails({ ...details, units: v })} />
             <Small label="Cartons" value={details.cartons} onChange={(v) => setDetails({ ...details, cartons: v })} />
             <div>
               <label className="label block" htmlFor="origin-code">Ships from (country code, city)</label>
-              <div className="flex gap-2"><input id="origin-code" className={`${input} mono w-20`} maxLength={3} value={details.originCode} onChange={(e) => setDetails({ ...details, originCode: e.target.value })} placeholder="CN" /><input aria-label="Origin city" className={input} value={details.originCity} onChange={(e) => setDetails({ ...details, originCity: e.target.value })} placeholder="Shenzhen" /></div>
+              <div className="flex gap-2"><input id="origin-code" name="origin-code" className={`${input} mono w-20`} maxLength={3} value={details.originCode} onChange={(e) => setDetails({ ...details, originCode: e.target.value })} placeholder="CN" /><input aria-label="Origin city" className={input} value={details.originCity} onChange={(e) => setDetails({ ...details, originCity: e.target.value })} placeholder="Shenzhen" /></div>
             </div>
             <div>
               <label className="label block" htmlFor="destination-code">Ships to (country code, city)</label>
-              <div className="flex gap-2"><input id="destination-code" className={`${input} mono w-20`} maxLength={3} value={details.destinationCode} onChange={(e) => setDetails({ ...details, destinationCode: e.target.value })} placeholder="GH" /><input aria-label="Destination city" className={input} value={details.destinationCity} onChange={(e) => setDetails({ ...details, destinationCity: e.target.value })} placeholder="Accra" /></div>
+              <div className="flex gap-2"><input id="destination-code" name="destination-code" className={`${input} mono w-20`} maxLength={3} value={details.destinationCode} onChange={(e) => setDetails({ ...details, destinationCode: e.target.value })} placeholder="GH" /><input aria-label="Destination city" className={input} value={details.destinationCity} onChange={(e) => setDetails({ ...details, destinationCity: e.target.value })} placeholder="Accra" /></div>
             </div>
             <div>
               <label className="label block" htmlFor="buyer-name">Your name or company</label>
-              <input id="buyer-name" className={input} value={details.buyerName} maxLength={120} onChange={(e) => setDetails({ ...details, buyerName: e.target.value })} />
+              <input id="buyer-name" name="buyer-name" className={input} value={details.buyerName} maxLength={120} onChange={(e) => setDetails({ ...details, buyerName: e.target.value })} />
             </div>
             <div>
               <label className="label block" htmlFor="supplier-name">Supplier’s name or company</label>
-              <input id="supplier-name" className={input} value={details.supplierName} maxLength={120} onChange={(e) => setDetails({ ...details, supplierName: e.target.value })} />
+              <input id="supplier-name" name="supplier-name" className={input} value={details.supplierName} maxLength={120} onChange={(e) => setDetails({ ...details, supplierName: e.target.value })} />
             </div>
             <label className="flex items-start gap-2 text-[13px] sm:col-span-2">
               <input type="checkbox" className="mt-1" checked={details.isPublic} onChange={(e) => setDetails({ ...details, isPublic: e.target.checked })} />
@@ -242,13 +243,13 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
         <section className="mt-8 grid gap-4 sm:grid-cols-2" aria-label="Fees and timing">
           <div>
             <label className="label block" htmlFor="payer">Who pays the Waybill fee</label>
-            <select id="payer" className={input} value={form.feePayer} onChange={(e) => set({ feePayer: Number(e.target.value) as FeePayer })}>
+            <select id="payer" name="payer" className={input} value={form.feePayer} onChange={(e) => set({ feePayer: Number(e.target.value) as FeePayer })}>
               {FEE_PAYERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
             </select>
           </div>
           <div>
             <label className="label block" htmlFor="bps">Fee, basis points ({limits.minFeeBps} to {limits.maxFeeBps})</label>
-            <input id="bps" className={`${input} mono`} inputMode="numeric" value={form.feeBps} onChange={(e) => set({ feeBps: e.target.value })} />
+            <input id="bps" name="bps" className={`${input} mono`} inputMode="numeric" value={form.feeBps} onChange={(e) => set({ feeBps: e.target.value })} />
           </div>
           <Small label="Days to accept" value={form.acceptDays} onChange={(v) => set({ acceptDays: v })} />
           <Small label="Hours the arbiter has to decide" value={form.decisionHours} onChange={(v) => set({ decisionHours: v })} />
@@ -275,11 +276,11 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
             <p className="mt-2 text-[13px] text-graphite">Fill in the total, supplier and arbiter to see what you would lock.</p>
           )}
           {!built.ok && showErrors ? (
-            <ul role="alert" className="mt-4 list-disc space-y-1 pl-4 text-[12.5px] text-hold">
+            <ul id="build-problems" aria-label="Problems to fix before creating" className="mt-4 list-disc space-y-1 pl-4 text-[12.5px] text-hold">
               {built.errors.map((e) => <li key={e}>{e}</li>)}
             </ul>
           ) : null}
-          <button type="button" disabled={!built.ok} onClick={() => built.ok && setFrozen(built)} className="mt-4 w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet disabled:cursor-not-allowed disabled:opacity-40">
+          <button type="button" disabled={!built.ok} aria-describedby={!built.ok && showErrors ? "build-problems" : undefined} onClick={() => built.ok && setFrozen(built)} className="mt-4 w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet disabled:cursor-not-allowed disabled:opacity-40">
             Create deal
           </button>
           <p className="mt-3 text-[12px] text-graphite">Terms freeze when you fund. Nobody, including Waybill, can move the money except by these rules.</p>
@@ -287,6 +288,11 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
         </div>
       </aside>
 
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-paper px-4 py-2.5 lg:hidden">
+        <button type="button" disabled={!built.ok} aria-label="Create deal" onClick={() => built.ok && setFrozen(built)} className="w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet disabled:cursor-not-allowed disabled:opacity-40">
+          {built.ok ? 'Create deal' : 'Create deal · fix the problems above'}
+        </button>
+      </div>
       <Modal open={frozen !== null} onClose={() => setFrozen(null)} label="Create this deal">
         {frozen ? (
           <>

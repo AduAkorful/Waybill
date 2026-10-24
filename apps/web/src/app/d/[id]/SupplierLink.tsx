@@ -61,7 +61,7 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
   }, [])
 
   return (
-    <div translate="no" className="min-h-dvh">
+    <div translate="no" lang={lang === 'zh' ? 'zh-Hans' : 'en'} className="min-h-dvh">
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 md:px-8">
         <Link href="/" aria-label="Waybill home"><Wordmark /></Link>
         <div className="flex items-center gap-2">
@@ -124,11 +124,15 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
                   </section>
                 </>
               ) : null}
-              <p className="mt-8 text-[12px] text-graphite">{formatDateTime(d.chainTime)} UTC · {getBrowserNetwork().network}</p>
+              <p className="mt-8 text-[12px] text-graphite">{formatDateTime(d.chainTime)} · {getBrowserNetwork().network}</p>
             </>
           )
         })() : null}
       </main>
+      <footer className="mx-auto max-w-3xl border-t border-rule px-4 py-6 text-[12px] text-graphite md:px-8">
+        <p>{t.footer}</p>
+        <p className="mt-1"><Link href="/legal" className="underline">{t.legal}</Link></p>
+      </footer>
     </div>
   )
 }

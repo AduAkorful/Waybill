@@ -230,3 +230,12 @@ body {
     break-inside: avoid;
   }
 }
+
+/* Phones: controls are at least 44px tall so they can be tapped reliably. */
+@media (max-width: 640px) {
+  button,
+  select,
+  input:not([type="radio"]):not([type="checkbox"]) {
+    min-height: 44px;
+  }
+}

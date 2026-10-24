@@ -105,7 +105,7 @@ export function DisputeDialog({ deal, part, owner, mode = 'dispute', onCancel, o
               onChange={(e) => setReason(e.target.value)}
               disabled={stage.kind === 'working'}
               rows={4}
-              className="mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] outline-none focus:border-held"
+              className="mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] focus:border-held"
             />
           </div>
           <div>
