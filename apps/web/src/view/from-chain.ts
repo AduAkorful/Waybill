@@ -1,6 +1,6 @@
-import type { PublicClient } from 'viem'
+import type { Address, PublicClient } from 'viem'
 import type { WaybillNetworkManifest } from '@waybill/network/networks'
-import { readDeal, readMilestone, readPendingChange, readTrancheFee } from '@/integration/escrow'
+import { readDeal, readMilestone, readPartAttestors, readPendingChange, readTrancheFee } from '@/integration/escrow'
 import {
   CONDITIONS,
   DEAL_STATES,
@@ -54,6 +54,7 @@ export function toDealView(
   chainTime: bigint,
   terms?: DealTerms,
   pending: { payout: PendingChange | null; refund: PendingChange | null } = { payout: null, refund: null },
+  attestors: readonly (readonly Address[])[] = [],
 ): DealView {
   if (milestones.length !== deal.milestoneCount || fees.length !== deal.milestoneCount) {
     throw new Error(`Deal ${id}: expected ${deal.milestoneCount} milestones, read ${milestones.length}`)
@@ -70,6 +71,7 @@ export function toDealView(
     fee: fees[i]!,
     condition: word(CONDITIONS, m.condition, 'release condition'),
     attestor: addressOrNull(m.attestor),
+    attestors: [...(attestors[i] ?? [])],
     threshold: m.threshold,
     attestCount: m.attestCount,
     attestorAccepted: m.attestorAccepted,
@@ -124,12 +126,13 @@ export async function loadDealView(
 ): Promise<DealView> {
   const [deal, block] = await Promise.all([readDeal(client, id, network), client.getBlock()])
   const positions = Array.from({ length: deal.milestoneCount }, (_, i) => i)
-  const [milestones, fees, payout, refund] = await Promise.all([
+  const [milestones, fees, payout, refund, listed] = await Promise.all([
     Promise.all(positions.map((i) => readMilestone(client, id, i, network))),
     Promise.all(positions.map((i) => readTrancheFee(client, id, i, network))),
     readPendingChange(client, id, 'payout', network),
     readPendingChange(client, id, 'refund', network),
+    Promise.all(positions.map((i) => readPartAttestors(client, id, i, network))),
   ])
   const waiting = (c: { proposed: `0x${string}`; eta: bigint }): PendingChange | null => (c.proposed.toLowerCase() === ZERO ? null : c)
-  return toDealView(id, deal, milestones, fees, block.timestamp, terms, { payout: waiting(payout), refund: waiting(refund) })
+  return toDealView(id, deal, milestones, fees, block.timestamp, terms, { payout: waiting(payout), refund: waiting(refund) }, listed)
 }

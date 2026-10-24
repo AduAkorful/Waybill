@@ -11,6 +11,7 @@ import { Acceptances } from '@/ui/Acceptances'
 import { LiveLedger, LiveWaybill } from '@/ui/Live'
 import { AddressChanges } from '@/ui/AddressChanges'
 import { DisputeDialog } from '@/ui/DisputeDialog'
+import { EvidenceList } from '@/ui/EvidenceList'
 import { Modal } from '@/ui/Modal'
 import { TxFlow, type TxStep } from '@/ui/TxFlow'
 import { fundingTotal, reviewEnds } from '@/view/derive'
@@ -19,7 +20,7 @@ import { describeEvent } from '@/view/timeline'
 import type { DealView, Tranche } from '@/view/types'
 import { FundDialog } from './FundDialog'
 
-type Dialog = { kind: 'fund' } | { kind: 'dispute'; t: Tranche } | { kind: 'withdraw'; t: Tranche } | { kind: 'approve'; t: Tranche } | { kind: 'refund'; t: Tranche } | { kind: 'cancel' } | null
+type Dialog = { kind: 'fund' } | { kind: 'evidence'; t: Tranche } | { kind: 'dispute'; t: Tranche } | { kind: 'withdraw'; t: Tranche } | { kind: 'approve'; t: Tranche } | { kind: 'refund'; t: Tranche } | { kind: 'cancel' } | null
 
 const stateLabel: Record<DealView['state'], string> = {
   proposed: 'Waiting for acceptance',
@@ -64,6 +65,9 @@ export function DealScreen({ idText }: { idText: string }) {
               Confirmed. Your review closes <span className="mono font-semibold">{formatDateTime(ends)}</span>; the part releases then if you do nothing.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
+              <button onClick={() => setDialog({ kind: 'evidence', t })} className="rounded-md border border-rule px-3.5 py-2 text-[13px] font-semibold hover:bg-sheet">
+                Review evidence
+              </button>
               <button onClick={() => setDialog({ kind: 'approve', t })} className="rounded-md bg-held px-3.5 py-2 text-[13px] font-semibold text-sheet hover:opacity-90">
                 Approve and release
               </button>
@@ -206,6 +210,14 @@ export function DealScreen({ idText }: { idText: string }) {
             onCancel={close}
             onDone={finished}
           />
+        </Modal>
+      ) : null}
+
+      {dialog?.kind === 'evidence' && address ? (
+        <Modal open onClose={close} label="Evidence">
+          <p className="label">Part {dialog.t.index}</p>
+          <h2 className="mt-1 mb-3 text-[19px] font-semibold">Evidence for this part</h2>
+          <EvidenceList dealId={d.id} owner={address} part={dialog.t.position} />
         </Modal>
       ) : null}
 

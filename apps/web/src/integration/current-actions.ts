@@ -60,6 +60,7 @@ export const CURRENT_ESCROW_ACTION_ABI = ([
   },
   ...[
     ['cancelUnaccepted', [{ name: 'dealId', type: 'uint256' }]],
+    ['withdrawFees', []],
     ['withdrawDispute', [
       { name: 'dealId', type: 'uint256' },
       { name: 'milestoneIndex', type: 'uint8' },
@@ -209,6 +210,7 @@ export type CurrentEscrowAction =
   | ({ kind: 'createDeal' } & CreateDealFields)
   | ({ kind: 'createDealWithPanel'; panel: Address[] } & CreateDealFields)
   | { kind: 'cancelUnaccepted'; dealId: bigint }
+  | { kind: 'withdrawFees' }
   | { kind: 'attest'; dealId: bigint; milestoneIndex: number; evidenceHash: Hex; signedAt: bigint; expiry: bigint; signer: Address; signature: Hex }
   | { kind: 'respondToDispute'; evidenceHash: Hex } & MilestoneAction
   | { kind: 'appendDisputeEvidence'; evidenceHash: Hex } & MilestoneAction
@@ -393,6 +395,8 @@ export function encodeCurrentEscrowAction(
         action.milestoneIndex,
         action.supplierBps,
       ], network)
+    case 'withdrawFees':
+      return encode('withdrawFees', [], network)
     case 'castPanelVote':
       assertMilestoneAction(action)
       assertUint(action.vote, 10_002n, 'vote')

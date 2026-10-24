@@ -16,6 +16,12 @@ export function RoleShell({ address, children }: { address: string; children: Re
   const shells = read.status === 'ready' ? heldShells(read.deals) : []
   const nav = [
     ...shells.map((s) => ({ href: `/app/${s}`, label: shellLabel[s], active: path.startsWith(`/app/${s}`) })),
+    ...(shells.includes('attestor')
+      ? [
+          { href: '/app/attestor/fees', label: 'Fees', active: path.startsWith('/app/attestor/fees') },
+          { href: '/app/attestor/profile', label: 'Profile', active: path.startsWith('/app/attestor/profile') },
+        ]
+      : []),
     { href: '/app/new', label: 'New deal', active: path.startsWith('/app/new') },
     { href: '/attestors', label: 'Attestors', active: false },
   ]

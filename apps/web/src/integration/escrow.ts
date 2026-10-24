@@ -96,6 +96,23 @@ export const WAYBILL_ESCROW_ABI = [
   })),
   {
     type: 'function',
+    name: 'getAttestors',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'dealId', type: 'uint256' },
+      { name: 'milestoneIndex', type: 'uint8' },
+    ],
+    outputs: [{ name: '', type: 'address[]' }],
+  },
+  {
+    type: 'function',
+    name: 'feeBalance',
+    stateMutability: 'view',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    type: 'function',
     name: 'nextDealId',
     stateMutability: 'view',
     inputs: [],
@@ -376,6 +393,36 @@ export function readMilestone(
     functionName: 'getMilestone',
     args: [dealId, milestoneIndex],
   })
+}
+
+/** The wallets named to confirm one part. */
+export function readPartAttestors(
+  publicClient: PublicClient,
+  dealId: bigint,
+  milestoneIndex: number,
+  network: WaybillNetworkManifest = getBrowserNetwork(),
+) {
+  assertMilestoneIndex(milestoneIndex)
+  return publicClient.readContract({
+    address: network.contracts.escrow,
+    abi: WAYBILL_ESCROW_ABI,
+    functionName: 'getAttestors',
+    args: [dealId, milestoneIndex],
+  }) as Promise<readonly `0x${string}`[]>
+}
+
+/** Fees an account has earned and not yet withdrawn, raw 6-decimal USDC units. */
+export function readFeeBalance(
+  publicClient: PublicClient,
+  account: `0x${string}`,
+  network: WaybillNetworkManifest = getBrowserNetwork(),
+) {
+  return publicClient.readContract({
+    address: network.contracts.escrow,
+    abi: WAYBILL_ESCROW_ABI,
+    functionName: 'feeBalance',
+    args: [account],
+  }) as Promise<bigint>
 }
 
 /** A delayed payout or refund address change that is waiting, if any. */

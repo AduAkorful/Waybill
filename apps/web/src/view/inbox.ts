@@ -22,7 +22,7 @@ export function needsFrom(shell: Shell, d: DealView, wallet: Address): string | 
       }
       return null
     case 'attestor': {
-      const mine = d.tranches.filter((t) => t.attestor !== null && same(t.attestor, wallet))
+      const mine = d.tranches.filter((t) => t.attestors.some((a) => same(a, wallet)))
       if (d.state === 'proposed' && mine.some((t) => !t.attestorAccepted)) return 'Accept'
       if (d.state === 'funded' && mine.some((t) => !t.attested && (t.state === 'waiting' || t.state === 'overdue'))) return 'Sign'
       return null

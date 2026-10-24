@@ -159,7 +159,7 @@ describe('wallet deals', () => {
 describe('inbox', () => {
   const wallet = '0x00000000000000000000000000000000000000aa' as `0x${string}`
   const other = '0x00000000000000000000000000000000000000bb' as `0x${string}`
-  const tranche = (over: Partial<Tranche>): Tranche => ({ index: 1, position: 0, state: 'waiting', attestor: null, attestorAccepted: false, attested: false, responseSubmitted: false, disputeRaiser: null, responseDeadline: 0n, amount: 1_000_000n, ...over }) as Tranche
+  const tranche = (over: Partial<Tranche>): Tranche => ({ index: 1, attestors: over.attestor ? [over.attestor] : [], position: 0, state: 'waiting', attestor: null, attestorAccepted: false, attested: false, responseSubmitted: false, disputeRaiser: null, responseDeadline: 0n, amount: 1_000_000n, ...over }) as Tranche
   const deal = (over: Partial<DealView>, parts: Tranche[]): DealView =>
     ({ state: 'funded', supplierPayout: other, arbiter: other, chainTime: 100n, tranches: parts, ...over }) as DealView
 

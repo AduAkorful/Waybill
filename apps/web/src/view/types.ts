@@ -36,6 +36,8 @@ export interface Tranche {
   fee: bigint
   condition: Condition
   attestor: Address | null
+  /** Every wallet named to confirm this part (empty unless it is released by attestation) */
+  attestors: Address[]
   threshold: number
   attestCount: number
   attestorAccepted: boolean

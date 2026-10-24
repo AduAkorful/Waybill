@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { evidenceCommitment, evidenceMessage, sha256Hex, uploadEvidence } from './evidence'
+import { evidenceCommitment, evidenceMessage, evidenceReader, sha256Hex, uploadEvidence } from './evidence'
 
 describe('evidence client', () => {
   test('the signed text is exactly what the relayer verifies', () => {
@@ -78,5 +78,36 @@ describe('evidence client', () => {
         fetcher: (async () => new Response(JSON.stringify({ error: 'not_a_party' }), { status: 403 })) as unknown as typeof fetch,
       }),
     ).rejects.toMatchObject({ code: 'not_a_party', status: 403 })
+  })
+
+  test('reading lists and downloads with a single signature', async () => {
+    process.env.NEXT_PUBLIC_WAYBILL_API_BASE_URL = 'http://localhost:3001'
+    process.env.NEXT_PUBLIC_WAYBILL_NETWORK = 'testnet'
+    let signs = 0
+    const seen: string[] = []
+    const reader = evidenceReader({
+      dealId: 7n,
+      signer: '0x00000000000000000000000000000000000000aa',
+      sign: async (message) => {
+        signs++
+        expect(message).toContain('action: read')
+        expect(message).toContain('part: all')
+        return '0xabcd'
+      },
+      now: () => 1_800_000_000,
+      fetcher: (async (url: string, init: RequestInit) => {
+        seen.push(url)
+        expect((init.headers as Record<string, string>)['x-waybill-signed-at']).toBe('1800000000')
+        if (url.endsWith('/evidence')) {
+          return new Response(JSON.stringify([{ id: 'a', part: 0, fileName: 'x.pdf', mimeType: 'application/pdf', byteSize: 3, sha256: '0x12', uploadedBy: '0xaa', uploadedAt: 5 }]), { status: 200 })
+        }
+        return new Response(new Uint8Array([1, 2, 3]), { status: 200 })
+      }) as unknown as typeof fetch,
+    })
+    const files = await reader.list()
+    expect(files[0]).toMatchObject({ id: 'a', part: 0, fileName: 'x.pdf', byteSize: 3 })
+    expect((await reader.download('a')).size).toBe(3)
+    expect(signs).toBe(1)
+    expect(seen).toEqual(['http://localhost:3001/v1/deals/7/evidence', 'http://localhost:3001/v1/deals/7/evidence/a'])
   })
 })

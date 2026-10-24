@@ -133,3 +133,65 @@ export function describeUploadError(error: unknown): string {
   if (error instanceof EvidenceUploadError) return MESSAGES[error.code] ?? `The upload was refused (${error.code}).`
   return error instanceof Error ? error.message : String(error)
 }
+
+export interface StoredEvidence {
+  id: string
+  part: number
+  fileName: string | null
+  mimeType: string
+  byteSize: number
+  sha256: Hex
+  uploadedBy: string
+  uploadedAt: number | null
+}
+
+async function signedReadHeaders(dealId: bigint, signer: string, sign: SignText, now: () => number): Promise<Record<string, string>> {
+  const network = getBrowserNetwork()
+  const signedAt = now()
+  const signature = await sign(
+    evidenceMessage({ network: network.network, chainId: network.chainId, escrow: network.contracts.escrow, dealId, action: 'read', signedAt, part: null, files: [] }),
+  )
+  return { 'x-waybill-signer': signer, 'x-waybill-signature': signature, 'x-waybill-signed-at': String(signedAt) }
+}
+
+async function failure(response: Response): Promise<EvidenceUploadError> {
+  let code = `http_${response.status}`
+  try {
+    const body = (await response.json()) as { error?: unknown }
+    if (typeof body.error === 'string') code = body.error
+  } catch {
+    // keep the status-based code
+  }
+  return new EvidenceUploadError(code, response.status)
+}
+
+/** A reader the parties of a deal can use to list and open its evidence. One signature covers every call it makes in a few minutes. */
+export function evidenceReader(input: { dealId: bigint; signer: string; sign: SignText; fetcher?: typeof fetch; now?: () => number }) {
+  const base = loadBrowserApiBaseUrl()
+  const fetcher = input.fetcher ?? fetch
+  const now = input.now ?? (() => Math.floor(Date.now() / 1000))
+  let headers: Promise<Record<string, string>> | null = null
+  const auth = () => (headers ??= signedReadHeaders(input.dealId, input.signer, input.sign, now))
+  return {
+    async list(): Promise<StoredEvidence[]> {
+      const response = await fetcher(`${base}/v1/deals/${input.dealId}/evidence`, { headers: await auth() })
+      if (!response.ok) throw await failure(response)
+      const rows = (await response.json()) as Record<string, unknown>[]
+      return rows.map((r) => ({
+        id: String(r.id),
+        part: Number(r.part),
+        fileName: typeof r.fileName === 'string' ? r.fileName : null,
+        mimeType: String(r.mimeType),
+        byteSize: Number(r.byteSize),
+        sha256: String(r.sha256) as Hex,
+        uploadedBy: String(r.uploadedBy),
+        uploadedAt: typeof r.uploadedAt === 'number' ? r.uploadedAt : null,
+      }))
+    },
+    async download(id: string): Promise<Blob> {
+      const response = await fetcher(`${base}/v1/deals/${input.dealId}/evidence/${id}`, { headers: await auth() })
+      if (!response.ok) throw await failure(response)
+      return response.blob()
+    },
+  }
+}
