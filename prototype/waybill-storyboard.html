@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Waybill — Prototype storyboard</title>
+  <style>
+    :root {
+      --ink: #17222c;
+      --muted: #68737b;
+      --paper: #f4f1eb;
+      --surface: #fffdf8;
+      --line: #d9d5cb;
+      --blue: #315f77;
+      --blue-soft: #e4eef1;
+      --green: #2c735f;
+      --green-soft: #e4f0ea;
+      --amber: #986a24;
+      --amber-soft: #f5ecd9;
+      --red: #a1493f;
+      --red-soft: #f5e5e1;
+      --dark: #24343d;
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --radius-sm: 9px;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: Georgia, "Times New Roman", serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font: 15px/1.5 var(--sans);
+    }
+    button { font: inherit; }
+    button:focus-visible, a:focus-visible {
+      outline: 3px solid #88b9ca;
+      outline-offset: 3px;
+    }
+    .prototype-bar {
+      min-height: 38px;
+      padding: 9px 32px;
+      color: #f9fbfb;
+      background: var(--dark);
+      letter-spacing: .01em;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .prototype-bar strong { color: #cbe1e5; }
+    .prototype-bar span:last-child { color: #aac0c7; }
+    header {
+      padding: 34px 5vw 26px;
+      border-bottom: 1px solid var(--line);
+      background: #f8f6f0;
+    }
+    .header-inner, main { max-width: 1360px; margin: 0 auto; }
+    .eyebrow {
+      color: var(--blue);
+      text-transform: uppercase;
+      letter-spacing: .15em;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 {
+      max-width: 720px;
+      margin: 10px 0 12px;
+      font: 500 clamp(32px, 4vw, 56px)/1.02 var(--serif);
+      letter-spacing: -.035em;
+    }
+    .lede {
+      max-width: 690px;
+      margin-bottom: 22px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+    .header-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag, .status, .role {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 99px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 750;
+    }
+    .tag { color: var(--blue); background: var(--blue-soft); }
+    .tag.neutral { color: var(--muted); background: #ebe8e0; }
+    main { padding: 32px 5vw 72px; }
+    .storyboard {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      margin-bottom: 26px;
+    }
+    .story-card {
+      cursor: pointer;
+      text-align: left;
+      padding: 14px;
+      min-height: 118px;
+      color: var(--ink);
+      background: rgba(255, 253, 248, .72);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      transition: border-color .18s ease, background .18s ease, transform .18s ease;
+    }
+    .story-card:hover { transform: translateY(-2px); border-color: #9ab4bd; }
+    .story-card.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .story-card.done { border-color: #87ab9a; }
+    .story-index {
+      display: block;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .1em;
+    }
+    .story-card.active .story-index { color: #c7e2e7; }
+    .story-card strong { display: block; font-size: 14px; }
+    .story-card small { display: block; margin-top: 5px; color: var(--muted); }
+    .story-card.active small { color: #d7e5e7; }
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 22px;
+      align-items: start;
+    }
+    .app-frame, .contract-rail {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+    }
+    .app-frame { overflow: hidden; }
+    .app-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 15px 22px;
+      border-bottom: 1px solid var(--line);
+    }
+    .wordmark {
+      font: 700 22px/1 var(--serif);
+      letter-spacing: -.04em;
+    }
+    .nav-right { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }
+    .network-dot {
+      width: 8px;
+      height: 8px;
+      display: inline-block;
+      border-radius: 50%;
+      background: var(--green);
+    }
+    .account {
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      color: var(--ink);
+      font-weight: 700;
+    }
+    .app-body { padding: clamp(24px, 5vw, 54px); }
+    .screen-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 30px;
+    }
+    .screen-heading h2 {
+      margin: 8px 0 8px;
+      font: 500 clamp(28px, 3.2vw, 44px)/1.05 var(--serif);
+      letter-spacing: -.035em;
+    }
+    .screen-heading p { max-width: 560px; color: var(--muted); }
+    .screen-number {
+      flex: 0 0 auto;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+    }
+    .layout-two {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(250px, .65fr);
+      gap: 18px;
+    }
+    .panel {
+      padding: 20px;
+      background: #faf8f2;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+    }
+    .panel.white { background: var(--surface); }
+    .panel h3 { margin-bottom: 14px; font-size: 15px; }
+    .panel-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .panel-title h3 { margin: 0; }
+    .small { color: var(--muted); font-size: 12px; }
+    .amount {
+      margin: 7px 0 18px;
+      font: 500 clamp(30px, 4vw, 48px)/1 var(--serif);
+      letter-spacing: -.04em;
+    }
+    .amount small {
+      color: var(--muted);
+      font: 600 13px var(--sans);
+      letter-spacing: 0;
+    }
+    .party-list, .check-list, .timeline, .evidence-list { display: grid; gap: 11px; }
+    .party, .check, .timeline-row, .evidence {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      padding: 11px 0;
+      border-bottom: 1px solid #e6e2d9;
+    }
+    .party:last-child, .check:last-child, .timeline-row:last-child, .evidence:last-child { border-bottom: 0; }
+    .avatar {
+      flex: 0 0 auto;
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      color: var(--blue);
+      background: var(--blue-soft);
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .party strong, .check strong, .timeline-row strong, .evidence strong { display: block; font-size: 13px; }
+    .party span, .check span, .timeline-row span, .evidence span { display: block; color: var(--muted); font-size: 12px; }
+    .check-mark {
+      width: 20px;
+      height: 20px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border: 1px solid #9faaa7;
+      border-radius: 50%;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 900;
+    }
+    .check-mark.pending { color: var(--amber); border-color: #c7a768; }
+    .status { padding: 4px 8px; }
+    .status.green { color: var(--green); background: var(--green-soft); }
+    .status.blue { color: var(--blue); background: var(--blue-soft); }
+    .status.amber { color: var(--amber); background: var(--amber-soft); }
+    .status.red { color: var(--red); background: var(--red-soft); }
+    .milestone {
+      padding: 16px 0;
+      border-bottom: 1px solid #e6e2d9;
+    }
+    .milestone:last-child { border-bottom: 0; }
+    .milestone-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 7px;
+    }
+    .milestone-top strong { font-size: 14px; }
+    .milestone-meta { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 12px; }
+    .progress {
+      height: 7px;
+      margin-top: 11px;
+      overflow: hidden;
+      background: #e4e0d7;
+      border-radius: 99px;
+    }
+    .progress i { display: block; height: 100%; background: var(--blue); border-radius: inherit; }
+    .notice {
+      padding: 13px 15px;
+      color: var(--blue);
+      background: var(--blue-soft);
+      border: 1px solid #c5d9de;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+    }
+    .notice.amber { color: var(--amber); background: var(--amber-soft); border-color: #e4d4ae; }
+    .notice.green { color: var(--green); background: var(--green-soft); border-color: #c2dacd; }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .button {
+      cursor: pointer;
+      min-height: 42px;
+      padding: 10px 15px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      background: var(--blue);
+      font-weight: 800;
+      transition: background .18s ease, transform .18s ease;
+    }
+    .button:hover { background: #274d61; transform: translateY(-1px); }
+    .button.secondary { color: var(--blue); background: transparent; border-color: #a9bdc4; }
+    .button.secondary:hover { background: var(--blue-soft); }
+    .button.danger { color: var(--red); background: transparent; border-color: #d6aaa2; }
+    .button.danger:hover { background: var(--red-soft); }
+    .contract-rail {
+      position: sticky;
+      top: 18px;
+      padding: 20px;
+    }
+    .contract-rail h2 { margin-bottom: 6px; font-size: 18px; }
+    .contract-rail > p { margin-bottom: 18px; color: var(--muted); font-size: 12px; }
+    .contract-row {
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+    }
+    .contract-row strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--blue);
+      font-size: 11px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .contract-row span { color: var(--muted); font-size: 13px; }
+    .rail-note {
+      margin-top: 14px;
+      padding: 12px;
+      color: var(--muted);
+      background: #f0ede5;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+    }
+    .toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      max-width: 340px;
+      padding: 13px 16px;
+      color: #fff;
+      background: var(--dark);
+      border-radius: var(--radius-sm);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .footer-note {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .receipt {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 15px;
+      background: var(--green-soft);
+      border: 1px solid #c0d8ca;
+      border-radius: var(--radius-sm);
+    }
+    .receipt-icon {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--green);
+      font-weight: 900;
+    }
+    .quote {
+      padding: 18px 20px;
+      border-left: 3px solid var(--blue);
+      color: var(--dark);
+      background: #f4f1e9;
+      font: italic 16px/1.45 var(--serif);
+    }
+    .quote small { display: block; margin-top: 10px; color: var(--muted); font: 12px var(--sans); }
+    .vote-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+    .vote {
+      padding: 12px 8px;
+      text-align: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+    }
+    .vote strong { display: block; font-size: 14px; }
+    .vote span { color: var(--muted); font-size: 11px; }
+    @media (max-width: 980px) {
+      .storyboard { grid-template-columns: repeat(3, 1fr); }
+      .workspace { grid-template-columns: 1fr; }
+      .contract-rail { position: static; }
+    }
+    @media (max-width: 640px) {
+      .prototype-bar { padding-inline: 18px; }
+      header, main { padding-left: 18px; padding-right: 18px; }
+      .storyboard { grid-template-columns: repeat(2, 1fr); }
+      .layout-two { grid-template-columns: 1fr; }
+      .app-nav { padding: 13px 16px; }
+      .nav-right span:not(.network-dot), .account { display: none; }
+      .app-body { padding: 24px 18px; }
+      .screen-heading { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <div class="prototype-bar">
+    <span><strong>Prototype only</strong> · simulated data and actions</span>
+    <span>Waybill behavior contract · October 2026</span>
+  </div>
+  <header>
+    <div class="header-inner">
+      <div class="eyebrow">Storyboard / round one</div>
+      <h1>One deal. One shared timeline. No surprises.</h1>
+      <p class="lede">A clickable storyboard for validating the Waybill experience across buyer, supplier, attestor, and arbiter moments. The visual language is calm and operational; the protocol states stay visible.</p>
+      <div class="header-meta">
+        <span class="tag">6 connected scenes</span>
+        <span class="tag neutral">Arc · USDC · non-custodial</span>
+        <span class="tag neutral">No wallet connection in prototype</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <nav class="storyboard" aria-label="Storyboard scenes">
+      <button class="story-card active" data-scene="0">
+        <span class="story-index">01 · SUPPLIER</span>
+        <strong>Review the deal</strong>
+        <small>A link, not a learning curve.</small>
+      </button>
+      <button class="story-card" data-scene="1">
+        <span class="story-index">02 · BUYER</span>
+        <strong>Fund with confidence</strong>
+        <small>Acceptance before money moves.</small>
+      </button>
+      <button class="story-card" data-scene="2">
+        <span class="story-index">03 · ATTESTOR</span>
+        <strong>Confirm what happened</strong>
+        <small>Evidence before signing.</small>
+      </button>
+      <button class="story-card" data-scene="3">
+        <span class="story-index">04 · BUYER</span>
+        <strong>Review a milestone</strong>
+        <small>Approve or raise a dispute.</small>
+      </button>
+      <button class="story-card" data-scene="4">
+        <span class="story-index">05 · ARBITER</span>
+        <strong>Resolve one tranche</strong>
+        <small>Bounded decision, visible reason.</small>
+      </button>
+      <button class="story-card" data-scene="5">
+        <span class="story-index">06 · RECORD</span>
+        <strong>Close the loop</strong>
+        <small>Settlement becomes proof.</small>
+      </button>
+    </nav>
+
+    <section class="workspace">
+      <article class="app-frame" aria-live="polite">
+        <div class="app-nav">
+          <div class="wordmark">waybill</div>
+          <div class="nav-right">
+            <span><i class="network-dot"></i> Arc testnet prototype</span>
+            <span class="account">Demo role</span>
+          </div>
+        </div>
+        <div class="app-body" id="screen"></div>
+      </article>
+
+      <aside class="contract-rail" aria-label="Behavior contract">
+        <h2>Behavior contract</h2>
+        <p>The screen is judged against these four questions before it becomes UI.</p>
+        <div id="contract"></div>
+        <div class="rail-note">Nothing here signs a wallet transaction. Buttons advance the storyboard and expose the intended confirmation state.</div>
+      </aside>
+    </section>
+
+    <p class="footer-note">Validation prompt: Does each role know what happened, what is next, what is irreversible, and where their funds can go?</p>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const scenes = [
+      {
+        eyebrow: "Supplier link / first visit",
+        title: "Review the order before you accept.",
+        intro: "Your buyer has prepared a staged payment. The terms are readable first; the wallet is secondary.",
+        role: "Supplier view",
+        contract: {
+          reads: "Deal terms, milestones, supplier identity, payout address, acceptance deadline.",
+          checks: "You are the named supplier; the proposal is still open; payout address is valid.",
+          action: "Accept terms · simulated acceptSupplier(dealId, payoutAddress).",
+          effect: "Supplier acceptance is recorded. No funds move yet."
+        },
+        body: `
+          <div class="layout-two">
+            <div class="panel white">
+              <div class="panel-title"><h3>Order summary</h3><span class="status blue">Proposed</span></div>
+              <div class="small">Deal WB-1048 · Ghana → Shenzhen</div>
+              <div class="amount">$12,450 <small>USDC total</small></div>
+              <div class="party-list">
+                <div class="party"><div class="avatar">B</div><div><strong>Buyer</strong><span>Accra Trading Co.</span></div></div>
+                <div class="party"><div class="avatar">A</div><div><strong>Attestors</strong><span>Inspector Lin · Forwarder Chen</span></div></div>
+                <div class="party"><div class="avatar">R</div><div><strong>Arbiter</strong><span>Trade Resolve · fixed fee shown before funding</span></div></div>
+              </div>
+              <div class="notice">You will be paid to your payout address only when each release condition is met.</div>
+            </div>
+            <div class="panel">
+              <div class="panel-title"><h3>Payment plan</h3><span class="small">3 milestones</span></div>
+              <div class="milestone"><div class="milestone-top"><strong>Supplier acceptance</strong><span class="status green">20%</span></div><div class="milestone-meta"><span>Released after all accepts</span><span>$2,490</span></div></div>
+              <div class="milestone"><div class="milestone-top"><strong>Pre-shipment inspection</strong><span class="status blue">30%</span></div><div class="milestone-meta"><span>Two attestor signatures</span><span>$3,735</span></div></div>
+              <div class="milestone"><div class="milestone-top"><strong>Arrival confirmed</strong><span class="status amber">50%</span></div><div class="milestone-meta"><span>48h buyer review</span><span>$6,225</span></div></div>
+            </div>
+          </div>
+          <div class="actions"><button class="button" data-next>Accept terms</button><button class="button secondary" data-toast="The summary stays available; no action was sent.">Read later</button></div>
+        `
+      },
+      {
+        eyebrow: "Buyer dashboard / funding gate",
+        title: "Fund only when the deal is fully accepted.",
+        intro: "The buyer sees the last missing acceptance, the exact amount, and the irreversible consequence before approving USDC.",
+        role: "Buyer view",
+        contract: {
+          reads: "All acceptance flags, USDC balance, allowance, funding amount, pause state.",
+          checks: "Supplier, attestors, and arbiter accepted; allowance and balance cover the exact total.",
+          action: "Approve USDC, then fund deal · simulated approve + fund.",
+          effect: "USDC locks in escrow; terms and recipients freeze."
+        },
+        body: `
+          <div class="panel white">
+            <div class="panel-title"><h3>Ready to fund</h3><span class="status blue">Accepted</span></div>
+            <div class="layout-two">
+              <div>
+                <div class="amount">$12,450 <small>USDC to lock</small></div>
+                <div class="check-list">
+                  <div class="check"><div class="check-mark">✓</div><div><strong>Supplier accepted</strong><span>Payout address ending · 7D91</span></div><span class="status green">Done</span></div>
+                  <div class="check"><div class="check-mark">✓</div><div><strong>Attestors accepted</strong><span>2 of 2 named attestors</span></div><span class="status green">Done</span></div>
+                  <div class="check"><div class="check-mark">✓</div><div><strong>Arbiter accepted</strong><span>Trade Resolve · $18 fixed fee</span></div><span class="status green">Done</span></div>
+                  <div class="check"><div class="check-mark">✓</div><div><strong>USDC allowance</strong><span>Exact amount approved</span></div><span class="status green">Ready</span></div>
+                </div>
+              </div>
+              <div>
+                <div class="notice amber"><strong>Funding is irreversible.</strong><br>Terms, recipients, milestones, deadlines, and fee rules freeze after confirmation.</div>
+                <div class="panel" style="margin-top:12px"><div class="small">Escrow holds</div><strong>$12,450 principal + $18 arbiter fee</strong><p class="small" style="margin:8px 0 0">The supplier is not paid at funding.</p></div>
+              </div>
+            </div>
+          </div>
+          <div class="actions"><button class="button" data-next>Review and fund</button><button class="button secondary" data-toast="Funding stays blocked until this confirmation is complete.">Check balances</button></div>
+        `
+      },
+      {
+        eyebrow: "Attestor portal / evidence",
+        title: "Confirm what you saw, not more than that.",
+        intro: "The statement is narrow, evidence is required, and the signature is visibly bound to this deal, milestone, chain, and contract.",
+        role: "Attestor view",
+        contract: {
+          reads: "Named attestor list, milestone statement, evidence digest, chain, escrow address, expiry.",
+          checks: "Active wallet matches signer; evidence is stored; digest is unused; milestone is eligible.",
+          action: "Upload evidence, sign typed statement, submit attestation.",
+          effect: "Evidence hash is recorded; threshold may start the buyer review window."
+        },
+        body: `
+          <div class="layout-two">
+            <div class="panel white">
+              <div class="panel-title"><h3>Pre-shipment inspection</h3><span class="status blue">Awaiting attestation</span></div>
+              <div class="quote">“I confirm that the sampled goods matched the agreed specification and quantity at the stated inspection stage.”<small>Statement version · 2026.10 · Does not cover unsampled units or later transit damage.</small></div>
+              <div class="evidence-list" style="margin-top:15px">
+                <div class="evidence"><div class="check-mark">✓</div><div><strong>Inspection report.pdf</strong><span>Encrypted · 2.4 MB · digest anchored after signing</span></div><span class="status green">Added</span></div>
+                <div class="evidence"><div class="check-mark">✓</div><div><strong>Carton count photos</strong><span>6 files · dated 18 Oct 2026</span></div><span class="status green">Added</span></div>
+              </div>
+            </div>
+            <div class="panel">
+              <h3>Signature details</h3>
+              <div class="party"><div class="avatar">A</div><div><strong>Inspector Lin</strong><span>0x8a…4c21 · active wallet</span></div></div>
+              <div class="panel" style="margin-top:12px"><div class="small">Expires</div><strong>20 Oct 2026 · 18:00 UTC</strong><p class="small" style="margin:6px 0 0">One use · this milestone only</p></div>
+              <div class="notice" style="margin-top:12px">Signing is not payment. Your statement becomes public protocol evidence.</div>
+            </div>
+          </div>
+          <div class="actions"><button class="button" data-next>Sign and submit</button><button class="button secondary" data-toast="Evidence must be complete before the signing prompt opens.">Review statement</button></div>
+        `
+      },
+      {
+        eyebrow: "Buyer review / milestone",
+        title: "You have evidence. Decide what happens next.",
+        intro: "A confirmed milestone stays in review until the buyer approves, the window closes, or the buyer raises a dispute.",
+        role: "Buyer view",
+        contract: {
+          reads: "Milestone state, evidence pointers, review deadline, dispute status, supplier payout address.",
+          checks: "Milestone threshold met; review window open; tranche not disputed or settled.",
+          action: "Approve early or raise dispute with evidence.",
+          effect: "Approval makes the tranche claimable; dispute freezes only this tranche."
+        },
+        body: `
+          <div class="panel white">
+            <div class="panel-title"><h3>Pre-shipment inspection · 30%</h3><span class="status amber">In review</span></div>
+            <div class="notice amber">Review closes in <strong>11h 42m</strong>. You can approve early or raise a dispute with evidence.</div>
+            <div class="layout-two" style="margin-top:18px">
+              <div class="panel">
+                <div class="panel-title"><h3>Evidence received</h3><span class="small">2 attestors</span></div>
+                <div class="evidence-list">
+                  <div class="evidence"><div class="avatar">IL</div><div><strong>Inspector Lin</strong><span>Report and sample photos · signed</span></div><span class="status green">Valid</span></div>
+                  <div class="evidence"><div class="avatar">FC</div><div><strong>Forwarder Chen</strong><span>Carton count and packing list · signed</span></div><span class="status green">Valid</span></div>
+                </div>
+              </div>
+              <div class="panel">
+                <h3>What happens</h3>
+                <p class="small">Approve now: $3,735 becomes claimable by the supplier.</p>
+                <p class="small">Dispute: only this tranche freezes while evidence is exchanged.</p>
+                <div class="panel" style="margin-top:12px"><div class="small">Supplier payout</div><strong>0x91…7D91</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="actions"><button class="button" data-next>Approve milestone</button><button class="button danger" data-scene="4">Raise a dispute</button></div>
+        `
+      },
+      {
+        eyebrow: "Arbiter console / dispute room",
+        title: "Resolve one frozen tranche, with a reason.",
+        intro: "The arbiter sees both sides, the immutable evidence order, and only the outcomes permitted by the protocol.",
+        role: "Arbiter view",
+        contract: {
+          reads: "Dispute state, evidence hashes/order, response deadline, arbiter deadline, party addresses.",
+          checks: "You are the named arbiter; dispute is open; decision deadline has not passed.",
+          action: "Resolve to supplier, resolve to buyer, or split when enabled.",
+          effect: "One tranche reaches its final fate; funds can go only to the two parties."
+        },
+        body: `
+          <div class="layout-two">
+            <div class="panel white">
+              <div class="panel-title"><h3>Dispute · pre-shipment inspection</h3><span class="status red">Frozen</span></div>
+              <div class="timeline">
+                <div class="timeline-row"><div class="avatar">B</div><div><strong>Buyer filed dispute</strong><span>“Carton count differs from packing list.” · evidence 01</span></div><span class="small">Yesterday</span></div>
+                <div class="timeline-row"><div class="avatar">S</div><div><strong>Supplier responded</strong><span>Rebuttal and warehouse receipt · evidence 02</span></div><span class="small">8h ago</span></div>
+                <div class="timeline-row"><div class="avatar">A</div><div><strong>Evidence append window</strong><span>Closes in 2d 14h · decision deadline 6d 14h</span></div><span class="status amber">Open</span></div>
+              </div>
+              <div class="quote" style="margin-top:14px">“The evidence shows the sampled cartons match the agreed packing list. The discrepancy concerns cartons outside the sampled set.”<small>Decision reasoning · required before resolution</small></div>
+            </div>
+            <div class="panel">
+              <h3>Choose an outcome</h3>
+              <div class="panel" style="margin-bottom:10px"><div class="small">Frozen tranche</div><strong>$3,735 USDC</strong><p class="small" style="margin:6px 0 0">No other milestone is affected.</p></div>
+              <div class="vote-grid"><div class="vote"><strong>Buyer</strong><span>Refund tranche</span></div><div class="vote"><strong>Supplier</strong><span>Release tranche</span></div><div class="vote"><strong>Split</strong><span>If enabled</span></div></div>
+            </div>
+          </div>
+          <div class="actions"><button class="button" data-next>Resolve to supplier</button><button class="button secondary" data-toast="A written reason is required before the final decision.">Add reasoning</button></div>
+        `
+      },
+      {
+        eyebrow: "Settlement record / shared proof",
+        title: "The deal closes with a record everyone can verify.",
+        intro: "The final view makes money movement, milestone fates, evidence, and transaction links legible without exposing private commercial detail.",
+        role: "Shared view",
+        contract: {
+          reads: "Deal state, final milestone fates, receipts, fee records, evidence commitments, public visibility choice.",
+          checks: "Every tranche has exactly one final fate; no pending liability remains; settlement is confirmed.",
+          action: "Open public record or download the deal summary.",
+          effect: "No new protocol action. The record is read-only and shareable."
+        },
+        body: `
+          <div class="receipt"><div class="receipt-icon">✓</div><div><strong>Deal settled</strong><span>All 3 milestones have a final fate · confirmed on Arc</span></div></div>
+          <div class="layout-two" style="margin-top:18px">
+            <div class="panel white">
+              <div class="panel-title"><h3>Final payment record</h3><span class="status green">Settled</span></div>
+              <div class="milestone"><div class="milestone-top"><strong>Supplier acceptance</strong><span class="status green">Released</span></div><div class="milestone-meta"><span>Supplier payout · tx 0x8b…92a</span><span>$2,490</span></div></div>
+              <div class="milestone"><div class="milestone-top"><strong>Pre-shipment inspection</strong><span class="status green">Released</span></div><div class="milestone-meta"><span>Arbiter decision · tx 0x6e…31c</span><span>$3,735</span></div></div>
+              <div class="milestone"><div class="milestone-top"><strong>Arrival confirmed</strong><span class="status green">Released</span></div><div class="milestone-meta"><span>Buyer approval · tx 0x4f…77d</span><span>$6,225</span></div></div>
+            </div>
+            <div class="panel">
+              <h3>Shared record</h3>
+              <div class="timeline">
+                <div class="timeline-row"><div class="avatar">01</div><div><strong>Terms committed</strong><span>Hash recorded at creation</span></div></div>
+                <div class="timeline-row"><div class="avatar">02</div><div><strong>Evidence anchored</strong><span>4 statement commitments</span></div></div>
+                <div class="timeline-row"><div class="avatar">03</div><div><strong>Funds delivered</strong><span>Recipients fixed by protocol</span></div></div>
+              </div>
+              <div class="notice green" style="margin-top:12px">Onchain addresses are public. Commercial details remain private unless shared.</div>
+            </div>
+          </div>
+          <div class="actions"><button class="button" data-toast="Public record preview opened.">Open public record</button><button class="button secondary" data-scene="0">Replay storyboard</button></div>
+        `
+      }
+    ];
+
+    let current = 0;
+    const screen = document.getElementById("screen");
+    const contract = document.getElementById("contract");
+    const toast = document.getElementById("toast");
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 2600);
+    }
+
+    function render(index) {
+      current = Math.max(0, Math.min(scenes.length - 1, index));
+      const scene = scenes[current];
+      screen.innerHTML = `
+        <div class="screen-heading">
+          <div><div class="eyebrow">${scene.eyebrow}</div><h2>${scene.title}</h2><p>${scene.intro}</p></div>
+          <div class="screen-number">SCENE ${String(current + 1).padStart(2, "0")} / 06<br><span class="small">${scene.role}</span></div>
+        </div>
+        ${scene.body}
+      `;
+      contract.innerHTML = `
+        <div class="contract-row"><strong>Reads</strong><span>${scene.contract.reads}</span></div>
+        <div class="contract-row"><strong>Checks</strong><span>${scene.contract.checks}</span></div>
+        <div class="contract-row"><strong>Action</strong><span>${scene.contract.action}</span></div>
+        <div class="contract-row"><strong>Effect</strong><span>${scene.contract.effect}</span></div>
+      `;
+      document.querySelectorAll(".story-card").forEach((card, i) => {
+        card.classList.toggle("active", i === current);
+        card.classList.toggle("done", i < current);
+        card.setAttribute("aria-current", i === current ? "step" : "false");
+      });
+      screen.querySelectorAll("[data-next]").forEach(button => {
+        button.addEventListener("click", () => {
+          showToast("Simulated confirmation recorded. Moving to the next scene.");
+          render(current + 1);
+        });
+      });
+      screen.querySelectorAll("[data-scene]").forEach(button => {
+        button.addEventListener("click", () => render(Number(button.dataset.scene)));
+      });
+      screen.querySelectorAll("[data-toast]").forEach(button => {
+        button.addEventListener("click", () => showToast(button.dataset.toast));
+      });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    document.querySelectorAll(".story-card").forEach(card => {
+      card.addEventListener("click", () => render(Number(card.dataset.scene)));
+    });
+    render(0);
+  </script>
+</body>
+</html>
