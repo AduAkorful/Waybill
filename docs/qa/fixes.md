@@ -38,6 +38,12 @@ These come up in retests. Each has a reason. If one of them is wrong *for a diff
 | Console lines `Privy logout 400` and `sessions 401` after Sign out (SF-15) | The browser reports a failed network call to the wallet library's own server (the session had already ended there). A page cannot hide a failed request from the console, and the person is signed out either way. | – |
 | NF-19 message seen with Rabby (SF-17) | See batch 13: the app now checks the balance first, so the wallet is not opened. | – |
 
+## Logo — 2026-10-23
+
+Waybill now has a mark: a waybill sheet with its tear-off stub, the stub in highlighter yellow with a check (the part released). It sits beside the name "WAYBILL" in every header and footer, and is the browser-tab icon (`/icon.svg`, also `public/logo-mark.svg`). It follows the light and dark themes. Under 360 px wide the header shows the mark alone (the name stays for screen readers) so the header keeps one row. axe 0 violations, 133 tests pass.
+
+QA: check the header at 320, 375 and 1440 in light and dark, the footer, and the tab icon. Header heights are unchanged (60 px public, 66 px `/d/*`).
+
 ## Batch 19 — 2026-10-22 (findings from the retest of batches 16–18, report §29)
 
 Web app rebuilt and restarted; no relayer or contract changes. axe 0 violations on 8 pages at 320 and 1440; 133 tests pass.
