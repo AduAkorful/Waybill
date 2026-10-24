@@ -1,0 +1,12 @@
+AGENTS.md
+plans/
+.env
+.env.*
+!.env.example
+.agents/
+.arc-studio/
+node_modules/
+lib/
+contracts/out/
+contracts/cache/
+
