@@ -5,9 +5,11 @@ import type { RuntimeEnvironment } from '@waybill/network/runtime'
 import type { RelayerChain } from './chain'
 import { createRelayerChain, readLiveDeal } from './chain'
 import { REGISTRY_EVENT_ABI, REGISTRY_EVENT_NAMES, readAttestor } from './registry'
+import { privateKeyToAccount } from 'viem/accounts'
 import { createWaybillApi } from './api'
 import { ARBITER_EVENT_ABI, ARBITER_EVENT_NAMES, readArbiter } from './arbiters'
 import { loadApiConfig } from './api-config'
+import { PostgresOperatorStore, readOperatorChain } from './operator'
 import { loadEvidenceService } from './evidence-config'
 import { PostgresEvidenceStore } from './evidence-store'
 import { checkHealth, databaseHealth, rpcHealth } from './health'
@@ -140,6 +142,14 @@ export function createBackendApplication(
         readDeal: (dealId) => readService.getDeal(config.network.network, dealId),
         readDealEvents: (dealId) => readModel.getDealEvents(config.network.network, dealId),
         listWalletDeals: (address) => readModel.getWalletDeals(config.network.network, address),
+        operatorSummary: async () => {
+          const streams = ['escrow-relayer', 'escrow-indexer', 'registry-indexer', 'arbiter-indexer']
+          const [chainState, index] = await Promise.all([
+            readOperatorChain(chain.client, config.network, privateKeyToAccount(config.privateKey).address),
+            new PostgresOperatorStore(pool).summary(config.network.network, streams),
+          ])
+          return { network: config.network.network, chainId: config.network.chainId, escrow: config.network.contracts.escrow, chain: chainState, index }
+        },
         listArbiters: async () => {
           const addresses = await readModel.listArbiterAddresses(config.network.network, ARBITER_EVENT_NAMES)
           return Promise.all(addresses.map((address) => readArbiter(chain.client, config.network, address)))

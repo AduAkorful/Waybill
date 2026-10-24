@@ -32,6 +32,8 @@ export interface WaybillApiOptions {
   listAttestors(): Promise<unknown>
   /** One attestor with live registry state and registry history, or null when the address is unknown. */
   readAttestor(address: string): Promise<unknown | null>
+  /** Monitor figures for the operator console: live chain state plus aggregates over the index. */
+  operatorSummary?(): Promise<unknown>
   /** Every arbiter with a presence on the approved list, with live list state. */
   listArbiters?(): Promise<unknown>
   /** Every deal that names a wallet, with the role it holds in each. */
@@ -144,6 +146,14 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
       return { status: 200, body: jsonValue(await options.listWalletDeals(match[1]!)) }
     } catch {
       return { status: 503, body: { error: 'wallet_deals_unavailable' } }
+    }
+  }
+  if (url.pathname === '/v1/operator') {
+    if (!options.operatorSummary) return { status: 503, body: { error: 'operator_summary_unavailable' } }
+    try {
+      return { status: 200, body: jsonValue(await options.operatorSummary()) }
+    } catch {
+      return { status: 503, body: { error: 'operator_summary_unavailable' } }
     }
   }
   if (url.pathname === '/v1/arbiters') {

@@ -43,6 +43,8 @@ export interface WaybillApiClient {
   getAttestors(): Promise<unknown>
   /** One attestor with registry history; rejects with a 404 WaybillApiError when unknown */
   getAttestor(address: string): Promise<unknown>
+  /** Monitor figures for the operator console */
+  getOperatorSummary(): Promise<unknown>
   /** Every arbiter on or heading to the approved list, with live list state */
   getArbiters(): Promise<unknown>
   /** Every deal that names a wallet, newest first, with the roles it holds in each */
@@ -96,6 +98,9 @@ export function createWaybillApiClient(
     },
     async getAttestors() {
       return getJson('/v1/attestors')
+    },
+    async getOperatorSummary() {
+      return getJson('/v1/operator')
     },
     async getArbiters() {
       return getJson('/v1/arbiters')

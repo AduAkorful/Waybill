@@ -10,6 +10,7 @@ import { dealsInShell, heldShells, parseWalletDeals, rolesIn } from './wallet'
 import { needsFrom, sectionOf } from './inbox'
 import { parseArbiters } from './arbiter'
 import { disputeStage, percentToSplitBps, splitPrincipal } from './room'
+import { describeChange, gasToUsdcUnits, lagOf, parseOperatorSummary } from './operator'
 
 const part = (fee: bigint) => ({ fee }) as Tranche
 
@@ -232,5 +233,39 @@ describe('dispute room', () => {
     expect(percentToSplitBps('0')).toBeNull()
     expect(percentToSplitBps('100')).toBeNull()
     expect(percentToSplitBps('abc')).toBeNull()
+  })
+})
+
+describe('operator summary', () => {
+  const addr = `0x${'ab'.repeat(20)}`
+  const raw = {
+    network: 'testnet',
+    chainId: 5042002,
+    escrow: addr,
+    chain: { totalDeals: '281', currentLocked: '0', maxLocked: '1000', maxDealAmount: '100', newDealsPaused: false, pauser: addr, treasury: addr, relayer: { address: addr, gasBalance: '5000000000000' }, head: '900' },
+    index: {
+      dealsByState: { FUNDED: 2 },
+      volume: [{ label: null, isTest: null, created: { deals: 2, amount: '2000000' }, funded: { deals: 1, amount: '1000000' } }],
+      openDisputes: 1,
+      cursors: [{ stream: 'escrow-indexer', block: '880', updatedAt: 1800000000 }],
+      adminLog: [{ name: 'NewDealsPaused', block: '5', txHash: '0x12', time: null }],
+    },
+  }
+  test('parses amounts to bigint and keeps unlabelled volume as unlabelled', () => {
+    const s = parseOperatorSummary(raw)
+    expect(s.chain.maxLocked).toBe(1000n)
+    expect(s.index.volume[0]).toMatchObject({ label: null, isTest: null, created: { deals: 2, amount: 2_000_000n } })
+    expect(s.index.adminLog[0]!.time).toBeNull()
+  })
+  test('rejects anything it does not understand', () => {
+    expect(() => parseOperatorSummary({ ...raw, chain: { ...raw.chain, newDealsPaused: 'no' } })).toThrow('pause state')
+    expect(() => parseOperatorSummary({ ...raw, chain: { ...raw.chain, maxLocked: 'x' } })).toThrow('cap')
+    expect(() => parseOperatorSummary({})).toThrow()
+  })
+  test('lag never goes negative and gas converts explicitly', () => {
+    expect(lagOf(900n, 880n)).toBe(20n)
+    expect(lagOf(10n, 20n)).toBe(0n)
+    expect(gasToUsdcUnits(5_000_000_000_000n)).toBe(5n)
+    expect(describeChange('Mystery')).toBe('Mystery')
   })
 })
