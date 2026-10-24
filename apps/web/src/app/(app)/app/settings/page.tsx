@@ -69,7 +69,7 @@ export default function SettingsPage() {
 
   const current = read.kind === 'ready' ? read.settings : null
   return (
-    <main className="mx-auto max-w-xl px-4 pt-6 pb-24 md:px-8 md:pt-10">
+    <main className="mx-auto max-w-xl px-4 pt-6 pb-8 md:px-8 md:pt-10">
       <p className="label">Settings · <span className="mono normal-case">{shortAddress(address)}</span> · {getBrowserNetwork().network}</p>
       <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">Email updates</h1>
       <p className="mt-1 text-[13.5px] leading-relaxed text-graphite">

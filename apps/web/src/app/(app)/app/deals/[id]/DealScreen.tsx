@@ -90,9 +90,9 @@ export function DealScreen({ idText }: { idText: string }) {
               {t.buyerRaisedDispute ? 'The supplier' : 'You'} can respond until {formatDateTime(t.responseDeadline)}. Then the arbiter decides; other parts are not affected.
             </p>
             <div className="mt-2.5 flex flex-wrap gap-2">
-              <Link href={`/app/room/${d.id}`} className="rounded-md border border-rule px-3 py-1.5 text-[12.5px] font-semibold">Open dispute room</Link>
+              <Link href={`/app/room/${d.id}`} className="inline-flex min-h-11 items-center rounded-md border border-rule px-3 text-[12.5px] font-semibold md:min-h-0 md:py-1.5">Open dispute room</Link>
               {t.buyerRaisedDispute ? (
-                <button onClick={() => setDialog({ kind: 'withdraw', t })} className="rounded-md px-2.5 py-1.5 text-[12.5px] text-graphite hover:text-ink">
+                <button onClick={() => setDialog({ kind: 'withdraw', t })} className="inline-flex min-h-11 items-center rounded-md border border-rule px-3 text-[12.5px] font-semibold text-ink md:min-h-0 md:py-1.5">
                   Withdraw dispute
                 </button>
               ) : null}

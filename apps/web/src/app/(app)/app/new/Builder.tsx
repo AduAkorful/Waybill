@@ -107,6 +107,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
           <div className="sm:col-span-2">
             <label className="label block" htmlFor="supplier">Supplier&apos;s wallet</label>
             <input id="supplier" name="supplier" aria-invalid={bad('The supplier')} className={`${input} mono`} value={form.supplier} onChange={(e) => set({ supplier: e.target.value })} placeholder="0x…" spellCheck={false} />
+            {form.supplier.trim().length > 12 ? <p className="mono mt-1 text-[12px] text-graphite" aria-hidden>{shortAddress(form.supplier.trim())}</p> : null}
             <p className="mt-1 text-[12px] text-graphite">
               No wallet yet? Ask them to open <Link href="/join" className="underline" target="_blank">the sign-up page</Link> and send you the address it shows.
             </p>
@@ -118,6 +119,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
           <div>
             <label className="label block" htmlFor="refund">Refunds go to</label>
             <input id="refund" name="refund" aria-invalid={bad('The refund')} className={`${input} mono`} value={form.refund} onChange={(e) => set({ refund: e.target.value })} spellCheck={false} />
+            {form.refund.trim().length > 12 ? <p className="mono mt-1 text-[12px] text-graphite" aria-hidden>{shortAddress(form.refund.trim())}</p> : null}
           </div>
           <div className="sm:col-span-2">
             <fieldset>

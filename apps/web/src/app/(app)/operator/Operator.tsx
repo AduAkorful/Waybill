@@ -1,5 +1,6 @@
 'use client'
 
+import { Why } from '@/ui/Why'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
@@ -8,7 +9,7 @@ import { useReloadOnAccountChange } from '@/components/use-account-sync'
 import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api'
 import { encodeOperatorAction } from '@/integration/operator-actions'
 import { getBrowserNetwork } from '@/integration/network'
-import { ThemeToggle, Wordmark } from '@/ui/Chrome'
+import { SiteHeader } from '@/ui/SiteHeader'
 import { Skeleton } from '@/ui/Skeleton'
 import { Modal } from '@/ui/Modal'
 import { ArbiterListCard } from './ArbiterListCard'
@@ -58,16 +59,7 @@ export function Operator() {
 
   return (
     <div className="min-h-dvh">
-      <header className="flex items-center justify-between border-b border-rule px-4 py-2.5 md:px-6">
-        <div className="flex items-baseline gap-3">
-          <Link href="/" aria-label="Waybill home" className="inline-flex min-h-11 items-center"><Wordmark /></Link>
-          <span className="label">Operator</span>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <WalletChip pauser={read.kind === 'ready' ? read.summary.chain.pauser : null} />
-          <ThemeToggle />
-        </div>
-      </header>
+      <SiteHeader signIn={false} extra={<WalletChip pauser={read.kind === 'ready' ? read.summary.chain.pauser : null} />} />
       <main className="mx-auto max-w-6xl px-4 pt-6 pb-20 md:px-8 md:pt-10">
         <h1 className="text-[28px] leading-tight font-semibold tracking-tight">Operator console</h1>
         <p className="mt-1 max-w-2xl text-[13.5px] text-graphite">A monitor, plus three controls for the pauser wallet: pause new deals, label deals, and manage the approved-arbiter list. Nobody at Waybill can move, freeze or redirect money in escrow, and none of these can.</p>
@@ -235,9 +227,9 @@ function PauseCard({ summary: s, onChanged }: { summary: OperatorSummary; onChan
     <section aria-label="New deals" className={`mt-8 rounded-md border p-4 ${paused ? 'border-hold/50 bg-hold-wash' : 'border-rule bg-sheet'}`}>
       <p className="label">New deals</p>
       <p className="mt-1 text-[18px] font-semibold">{paused ? 'Paused' : 'Open'}</p>
-      <p className="mt-1 max-w-2xl text-[13px] leading-relaxed">
+      <Why>
         Pausing stops anyone creating or funding <em>new</em> deals. Claims, refunds, disputes, arbiter decisions, retries and withdrawals on deals that already exist keep working; money already in escrow is untouched.
-      </p>
+      </Why>
       {isPauser ? (
         <button type="button" onClick={() => setOpen(true)} className={`mt-3 rounded-md px-4 py-2.5 text-[14px] font-semibold ${paused ? 'bg-held text-sheet' : 'bg-hold text-sheet'}`}>
           {paused ? 'Resume new deals' : 'Pause new deals'}

@@ -1,6 +1,7 @@
 import { fundingTotal, focusPart } from "@/view/derive";
 import { formatAmount, shortAddress } from "@/view/format";
 import type { DealView, FeePayer, Tranche } from "@/view/types";
+import { footerText } from "@/view/labels";
 import { Stamp } from "./Stamp";
 import { Stub, type Lang, type StubPose } from "./Stub";
 
@@ -257,6 +258,10 @@ export function Waybill({
           <span className="notch -left-[8px]" />
           <span className="notch -right-[8px]" />
         </div>
+
+        {ts.length > 1 && ts.some((t) => t.state === "disputed") ? (
+          <p className="border-x border-rule bg-sheet px-4 pb-2 text-[12.5px] text-hold">{footerText.otherParts[lang]}</p>
+        ) : null}
 
         {ts.length > 4 ? (
           // Many parts do not fit side by side: they wrap into rows, separated by hairlines instead of perforations.

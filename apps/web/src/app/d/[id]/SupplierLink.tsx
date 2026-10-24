@@ -5,8 +5,9 @@ import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useDeal } from '@/data/use-deal'
 import { getBrowserNetwork } from '@/integration/network'
-import { ThemeToggle, Wordmark } from '@/ui/Chrome'
+import { SiteHeader } from '@/ui/SiteHeader'
 import { LiveWaybill } from '@/ui/Live'
+import { heldFor, releasedFor } from '@/view/derive'
 import { formatAmount, formatDateTime, formatDateTimeZh } from '@/view/format'
 import type { DealView } from '@/view/types'
 import { COPY, type Lang } from './copy'
@@ -67,18 +68,18 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
 
   return (
     <div translate="no" lang={lang === 'zh' ? 'zh-Hans' : 'en'} className="min-h-dvh">
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 md:px-8">
-        <Link href="/" aria-label="Waybill home" className="inline-flex min-h-11 items-center"><Wordmark /></Link>
-        <div className="flex items-center gap-2">
+      <SiteHeader
+        max="max-w-5xl"
+        signIn={false}
+        extra={
           <div role="group" aria-label={t.language} className="inline-flex items-center rounded-full border border-rule p-0.5 text-[13px]">
-            <span aria-hidden className="px-2 text-graphite">文 / A</span>
+            <span aria-hidden className="hidden px-2 text-graphite sm:inline">文 / A</span>
             {(['en', 'zh'] as const).map((l) => (
               <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} className={`rounded-full px-3 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-graphite'}`}>{l === 'en' ? 'English' : '中文'}</button>
             ))}
           </div>
-          <ThemeToggle />
-        </div>
-      </header>
+        }
+      />
 
       {suggestZh && lang === 'en' ? (
         <div role="status" className="mx-auto max-w-5xl px-4 md:px-8">
@@ -103,7 +104,8 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
 
               <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-2 rounded-md border border-rule bg-sheet px-4 py-3.5">
                 <div><p className="label">{t.total}</p><p className="mono text-[26px]">{formatAmount(d.totalAmount)} <span className="text-[14px] text-graphite">USDC</span></p></div>
-                <div><p className="label">{t.parts}</p><p className="mono text-[26px]">{d.tranches.length}</p></div>
+                <div><p className="label">{t.releasedTile}</p><p className="mono text-[26px] text-released">{formatAmount(releasedFor(d))}</p></div>
+                <div><p className="label">{t.heldTile}</p><p className="mono text-[26px] text-held">{formatAmount(heldFor(d))}</p></div>
               </div>
 
               <div className="mt-6">

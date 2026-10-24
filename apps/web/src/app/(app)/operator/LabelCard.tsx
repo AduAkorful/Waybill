@@ -1,5 +1,6 @@
 'use client'
 
+import { Why } from '@/ui/Why'
 import { useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import { DEAL_LABELS, parseDealRanges, setDealLabels, type DealLabel } from '@/integration/labels'
@@ -29,10 +30,10 @@ export function LabelCard({ summary: s, onChanged }: { summary: OperatorSummary;
   return (
     <section aria-label="Label deals" className="mt-8 rounded-md border border-rule bg-sheet p-4">
       <p className="label">Label deals</p>
-      <p className="mt-1 max-w-2xl text-[13px] leading-relaxed">
+      <Why>
         Mark deals as team, test, self-dealing or third-party so the volume above is not mistaken for outside use. A label is a note kept by Waybill: it changes nothing on the deal and moves no money, and you can set it again.
         {unlabelled ? ` ${unlabelled.created.deals} of the deals the index has seen carry no label yet.` : ''}
-      </p>
+      </Why>
       {isPauser ? (
         <form
           className="mt-3 max-w-lg"

@@ -5,6 +5,37 @@ After each batch the web app on port 3000 is rebuilt and restarted; retest again
 "Fixed" means changed in code, covered by a unit test where the logic is pure, and the page answers as described below.
 It does not mean a signed transaction was re-run in a browser — that is what QA is for.
 
+## Batch 10 — 2026-10-21 (the remaining open findings)
+
+Web app rebuilt and restarted; no relayer or contract changes.
+
+### Fixed
+- **One header (MW-20):** the public pages, supplier page and operator page use one header component: logo, Attestors, the page's own control (the language switch on `/d/*`, the wallet chip on `/operator`), Sign in, theme. Same logo size everywhere.
+- **Sign in while signed in (M-S13):** on public pages the header link reads "Your deals" (and goes to `/app`) when the browser holds a sign-in. It only looks for the token's presence; public pages still load no wallet code.
+- **Frozen note once (MW-18):** each disputed part says only "Frozen until the arbiter decides." and one line above the parts says "Other parts are not affected." (also in Chinese). The held stamp already has room reserved.
+- **Deal status card (MW-19):** the supplier page's summary now shows Total, Paid to you and Held in escrow (Chinese included) instead of repeating the total and the part count.
+- **Record headline (MW-08):** smaller on phones, so "Funded · 3 parts in dispute" fits on fewer lines; the print button was already hidden on phones.
+- **Operator explanations (MW-21):** on phones each long explanation is folded under "What this does", so the controls and status come first. Wide screens show them as before. "Connect wallet" / Sign out came in batch 8.
+- **Attestor and arbiter home (RT-25):** a three-tile summary (Needs you, Waiting on others, Settled) fills the top of the page.
+- **Phone tab bar (M-S09):** it appears once the role read finishes, so it no longer shows three tabs and then jumps to more.
+- **Failed requests (M-S11):** a browser that cannot reach the service now says "Could not reach the Waybill service. Check your connection and try again; nothing was sent." instead of "Failed to fetch".
+- **Dispute buttons (M-S06):** "Open dispute room" and "Withdraw dispute" are the same kind of button, 44 px tall on phones.
+- **Create form addresses (M-S02):** a short form of the typed supplier or refund address ("0x4632…D0F1") shows under the field, because the full address is wider than the field on a phone.
+- **Short addresses (M-S04):** a shortened address no longer breaks across two lines.
+- **Spacing (M-S12, M-S13):** less dead space under Settings and above the footer on the attestor page.
+
+### Not done
+- **MW-05 (language toggle on public pages):** still not added. The home page, record, directory and legal pages have no Chinese text, and a toggle that changes nothing would mislead. It needs the Chinese copy for those pages written and reviewed first; the supplier page keeps its own toggle.
+
+### Retest checklist for batch 10
+1. Header on `/`, `/attestors`, `/d/284`, `/operator`: same slots and logo size. Signed in, the link reads "Your deals".
+2. `/d/284`: one "Other parts are not affected." line above the parts; the status card shows Paid to you and Held in escrow (try 中文).
+3. `/operator` on a phone: explanations folded; open "What this does" to read them.
+4. `/app/attestor` and `/app/arbiter`: the three summary tiles.
+5. `/app/attestor` on a phone: the bottom tab bar appears once and does not change.
+6. Stop the relayer, then open any evidence read: the message says the service could not be reached.
+7. `/app/new` on a phone: type an address and see the short form under the field.
+
 ## Batch 9 — 2026-10-21 (remaining layout and copy items)
 
 Web app rebuilt and restarted; no relayer or contract changes.

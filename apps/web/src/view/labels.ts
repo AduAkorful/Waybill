@@ -39,6 +39,7 @@ export const footerText = {
   released: { en: 'Paid to the supplier', zh: '已付给供应商' },
   refunded: { en: 'Returned to the buyer', zh: '已退还买方' },
   resolved: { en: 'Decided by the arbiter', zh: '已由仲裁人裁决' },
-  disputed: { en: 'Frozen until the arbiter decides. Other parts are not affected.', zh: '冻结，等待仲裁人裁决。其他各期不受影响。' },
+  disputed: { en: 'Frozen until the arbiter decides.', zh: '冻结，等待仲裁人裁决。' },
+  otherParts: { en: 'Other parts are not affected.', zh: '其他各期不受影响。' },
   objectUntil: { en: 'Buyer can object until', zh: '买方可提出异议至' },
 } as const

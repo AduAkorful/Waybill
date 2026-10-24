@@ -1,5 +1,6 @@
 'use client'
 
+import { Why } from '@/ui/Why'
 import { useEffect, useState } from 'react'
 import { isAddress } from 'viem'
 import { useAccount } from 'wagmi'
@@ -57,9 +58,9 @@ export function ArbiterListCard({ summary: s, onChanged }: { summary: OperatorSu
   return (
     <section aria-label="Approved arbiters" className="mt-8 rounded-md border border-rule bg-sheet p-4">
       <p className="label">Approved arbiters</p>
-      <p className="mt-1 max-w-2xl text-[13px] leading-relaxed">
+      <Why>
         Only arbiters on this list can be named on a new deal. The list holds no money and changes nothing on deals that already exist. Each addition or removal is scheduled first and can be carried out only after a 48-hour delay.
-      </p>
+      </Why>
       {error ? <p role="alert" className="mt-2 text-[13px] text-hold">The list could not be read: {error}</p> : null}
       {list === null && !error ? <p role="status" className="mt-2 text-[13px] text-graphite">Reading the list…</p> : null}
       {list ? (

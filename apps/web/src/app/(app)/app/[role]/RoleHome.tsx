@@ -165,6 +165,23 @@ export function RoleHome() {
         </dl>
       ) : null}
 
+      {!showTotals && listed.length > 0 ? (
+        <dl className="mt-6 grid grid-cols-3 gap-px overflow-hidden rounded-md border border-rule bg-rule">
+          {(
+            [
+              ['Needs you', needs.length],
+              ['Waiting on others', waiting.length],
+              ['Settled', finished.length],
+            ] as const
+          ).map(([l, v]) => (
+            <div key={l} className="bg-sheet px-3 py-3 md:px-4">
+              <dt className="label">{l}</dt>
+              <dd className="mono mt-1 text-[17px] md:text-[22px]">{done || loaded.length > 0 ? v : '…'}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+
       {listed.length > 0 ? (
         <>
           {section('needs', 'Needs you', needs, 'Nothing waiting on you.')}

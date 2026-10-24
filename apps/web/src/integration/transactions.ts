@@ -109,6 +109,10 @@ export async function waitForActionReceipt(
 
 /** One plain sentence for any failure of a wallet request, a signature or a call. Raw library text never reaches a person. */
 export function plainError(error: unknown): string {
+  // a browser that could not reach the server at all (offline, or the service restarting)
+  if (error instanceof TypeError && /failed to fetch|load failed|networkerror|fetch failed/i.test(error.message)) {
+    return 'Could not reach the Waybill service. Check your connection and try again; nothing was sent.'
+  }
   const classified = classifyWalletError(error)
   switch (classified.code) {
     case 'user_rejected':

@@ -67,7 +67,7 @@ export function RoleShell({ address, children }: { address: string; children: Re
         </div>
       </header>
       <div className="flex-1">{children}</div>
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-rule bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Main">
+      <nav hidden={read.status === 'loading'} className="fixed inset-x-0 bottom-0 z-30 flex border-t border-rule bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Main">
         {nav.filter((n) => n.href !== '/attestors').map((n) => (
           <Link
             key={n.href}

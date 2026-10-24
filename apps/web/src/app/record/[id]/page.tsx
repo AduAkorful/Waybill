@@ -71,7 +71,7 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
             <p className="label">Public record · deal {deal.id.toString()}</p>
-            <h1 className="mt-1 text-[26px] font-semibold tracking-tight">{dealHeadline(deal)}</h1>
+            <h1 className="mt-1 text-[22px] font-semibold tracking-tight md:text-[26px]">{dealHeadline(deal)}</h1>
           </div>
           <Link href={`/record/${deal.id}/print`} className="hidden rounded-md border border-rule px-3 py-1.5 text-[13px] font-semibold hover:bg-sheet md:inline-block">
             Print or save as PDF
