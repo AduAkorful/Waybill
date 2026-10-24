@@ -74,6 +74,10 @@ Set `WAYBILL_API_PORT` to serve the read-only HTTP API from the same process as 
 
 The indexer fetches logs by address and decodes them itself: the public Arc RPC rejects any filter that lists about 30 or more event topics with "requested range too large", whatever the block range. Keep `WAYBILL_RELAYER_MAX_BLOCK_RANGE` at or below 5,000. Set `WAYBILL_RELAYER_START_BLOCK` to the escrow deployment block (testnet: 67900503) so the first run backfills the whole history.
 
+## Deal labels
+
+`POST /v1/operator/labels` lets the escrow's **pauser** wallet mark deals as `team`, `test`, `self-dealing` or `third-party` (the first three count as test volume) so the operator console can separate volume. Body: `{"ranges": [["0","278"],["281","281"]], "label": "team"}`, with the headers `x-waybill-signer`, `x-waybill-signature`, `x-waybill-signed-at`. One wallet message signature (`labelMessage` in `src/deal-labels.ts`; the web app builds the same text) covers the label and every deal in the request, expires after 10 minutes, and the signer must equal the escrow's live `pauser()`. Deals that do not exist yet are refused; at most 10,000 deals and 100 ranges per request. The signature check is for ordinary wallets (EOAs). A label is a note in the index and changes nothing on the deal. Needs no configuration.
+
 ## Evidence upload
 
 Deal parties (any wallet the escrow names in the deal) can store dispute and attestation evidence. It is opt-in: set

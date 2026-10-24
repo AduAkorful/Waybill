@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 
 import type { WaybillNetwork } from '@waybill/network/networks'
 import { EvidenceError, MAX_EVIDENCE_BYTES, type EvidenceService } from './evidence-service'
+import { LabelError, type DealRange, type LabelService } from './deal-labels'
 import type { HealthResult } from './health'
 
 export interface ApiRequest {
@@ -40,6 +41,8 @@ export interface WaybillApiOptions {
   listWalletDeals(address: string): Promise<unknown>
   /** Evidence upload, listing and download for deal parties. Absent when no storage is configured. */
   evidence?: EvidenceService | null
+  /** Pauser-only deal labelling. Absent when the process cannot read the chain. */
+  labels?: LabelService | null
 }
 
 function jsonValue(value: unknown): unknown {
@@ -132,6 +135,7 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
   }
   const evidenceRoute = /^\/v1\/deals\/([0-9]+)\/evidence(?:\/([0-9a-fA-F-]{36}|[0-9]{1,3}))?$/.exec(url.pathname)
   if (evidenceRoute) return evidence(request, options, BigInt(evidenceRoute[1]!), evidenceRoute[2])
+  if (url.pathname === '/v1/operator/labels') return setLabels(request, options)
   if (request.method !== 'GET') return { status: 405, body: { error: 'method_not_allowed' } }
   if (url.pathname === '/health') {
     return { status: 200, body: await options.health() }
@@ -209,6 +213,37 @@ function signedRequest(request: ApiRequest): { signer: string; signature: string
   if (!signer || !signature || !signedAt || !/^\d+$/.test(signedAt)) return null
   const files = (headerValue(request, 'x-waybill-files') ?? '').split(',').map((f) => f.trim()).filter((f) => f !== '')
   return { signer, signature, signedAt: Number(signedAt), files }
+}
+
+/** Body: {"ranges": [[0, 278], [281, 283]], "label": "team"}. The wallet's signature covers exactly these deals. */
+async function setLabels(request: ApiRequest, options: WaybillApiOptions): Promise<ApiResponse> {
+  if (request.method !== 'POST') return { status: 405, body: { error: 'method_not_allowed' } }
+  const service = options.labels
+  if (!service) return { status: 503, body: { error: 'labels_unavailable' } }
+  const signed = signedRequest(request)
+  if (!signed) return { status: 401, body: { error: 'missing_signature' } }
+  let ranges: DealRange[]
+  let label: unknown
+  try {
+    const parsed = JSON.parse(new TextDecoder().decode(request.body ?? new Uint8Array())) as { ranges?: unknown; label?: unknown }
+    if (!Array.isArray(parsed.ranges)) return { status: 400, body: { error: 'invalid_ranges' } }
+    ranges = parsed.ranges.map((r): DealRange => {
+      if (!Array.isArray(r) || r.length !== 2 || !r.every((n) => typeof n === 'string' ? /^[0-9]{1,30}$/.test(n) : Number.isSafeInteger(n) && n >= 0)) {
+        throw new LabelError('invalid_ranges', 400)
+      }
+      return [BigInt(r[0]), BigInt(r[1])]
+    })
+    label = parsed.label
+  } catch (e) {
+    if (e instanceof LabelError) return { status: e.status, body: { error: e.code } }
+    return { status: 400, body: { error: 'invalid_body' } }
+  }
+  try {
+    return { status: 200, body: await service.set({ signer: signed.signer, signature: signed.signature, signedAt: signed.signedAt, ranges, label }) }
+  } catch (e) {
+    if (e instanceof LabelError) return { status: e.status, body: { error: e.code } }
+    return { status: 503, body: { error: 'labels_unavailable' } }
+  }
 }
 
 async function evidence(request: ApiRequest, options: WaybillApiOptions, dealId: bigint, tail: string | undefined): Promise<ApiResponse> {

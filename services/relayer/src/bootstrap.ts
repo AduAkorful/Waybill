@@ -5,10 +5,12 @@ import type { RuntimeEnvironment } from '@waybill/network/runtime'
 import type { RelayerChain } from './chain'
 import { createRelayerChain, readLiveDeal } from './chain'
 import { REGISTRY_EVENT_ABI, REGISTRY_EVENT_NAMES, readAttestor } from './registry'
+import { parseAbi } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { createWaybillApi } from './api'
 import { ARBITER_EVENT_ABI, ARBITER_EVENT_NAMES, readArbiter } from './arbiters'
 import { loadApiConfig } from './api-config'
+import { LabelService } from './deal-labels'
 import { PostgresOperatorStore, readOperatorChain } from './operator'
 import { loadEvidenceService } from './evidence-config'
 import { PostgresEvidenceStore } from './evidence-store'
@@ -129,9 +131,17 @@ export function createBackendApplication(
         isDealParty: (dealId, address) => readModel.isDealParty(config.network.network, dealId, address),
       })
     : null
+  const escrowReads = parseAbi(['function pauser() view returns (address)', 'function nextDealId() view returns (uint256)'])
+  const labels = new LabelService({
+    context: { network: config.network.network, chainId: config.network.chainId, escrow: config.network.contracts.escrow },
+    store: { setLabels: (ranges, label, isTest) => new PostgresOperatorStore(pool).setLabels(config.network.network, ranges, label, isTest) },
+    readPauser: () => chain.client.readContract({ address: config.network.contracts.escrow, abi: escrowReads, functionName: 'pauser' }),
+    readTotalDeals: () => chain.client.readContract({ address: config.network.contracts.escrow, abi: escrowReads, functionName: 'nextDealId' }),
+  })
   const api = apiConfig
     ? createWaybillApi({
         evidence,
+        labels,
         network: config.network.network,
         allowedOrigins: apiConfig.allowedOrigins,
         health: () =>

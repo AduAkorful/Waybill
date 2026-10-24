@@ -52,6 +52,15 @@ const ADMIN_LOG_SQL = `
   ORDER BY block_number DESC, log_index DESC LIMIT $3
 `
 
+const SET_LABELS_SQL = `
+  INSERT INTO waybill_deal_flags (network, deal_id, label, is_test)
+  SELECT $1, g.id, $4, $5
+  FROM unnest($2::numeric[], $3::numeric[]) AS r(lo, hi), generate_series(r.lo, r.hi) AS g(id)
+  ON CONFLICT (network, deal_id) DO UPDATE
+    SET label = EXCLUDED.label, is_test = EXCLUDED.is_test, updated_at = NOW()
+  RETURNING deal_id
+`
+
 export interface VolumeLine {
   /** The operator's label for these deals, or null when none was set */
   label: string | null
@@ -72,6 +81,18 @@ export interface OperatorIndexSummary {
 /** Aggregates over what the indexer has recorded. Counts are only as complete as the index; the chain figures below are live. */
 export class PostgresOperatorStore {
   constructor(private readonly database: SqlExecutor) {}
+
+  /** Labels every deal in the (already normalized, non-overlapping) ranges in one statement. */
+  async setLabels(network: WaybillNetwork, ranges: readonly (readonly [bigint, bigint])[], label: string, isTest: boolean): Promise<number> {
+    const result = await this.database.query<{ deal_id: string }>(SET_LABELS_SQL, [
+      network,
+      ranges.map(([from]) => from.toString()),
+      ranges.map(([, to]) => to.toString()),
+      label,
+      isTest,
+    ])
+    return result.rows.length
+  }
 
   async summary(network: WaybillNetwork, streams: readonly string[], logLimit = 20): Promise<OperatorIndexSummary> {
     const [states, volume, disputes, cursors, log] = await Promise.all([

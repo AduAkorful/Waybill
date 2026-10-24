@@ -97,3 +97,14 @@ describe('operator route', () => {
     expect((await handleApiRequest({ method: 'GET', url: '/v1/operator' }, { ...base, operatorSummary: never })).status).toBe(503)
   })
 })
+
+describe('setting labels', () => {
+  test('writes every deal of every range in one statement, parameterized', async () => {
+    const db = database({ waybill_deal_flags: [{ deal_id: '0' }, { deal_id: '1' }, { deal_id: '5' }] })
+    const n = await new PostgresOperatorStore(db).setLabels('testnet', [[0n, 1n], [5n, 5n]], 'team', true)
+    expect(n).toBe(3)
+    expect(db.calls).toHaveLength(1)
+    expect(db.calls[0]!.values).toEqual(['testnet', ['0', '5'], ['1', '5'], 'team', true])
+    expect(db.calls[0]!.text).not.toContain('team')
+  })
+})
