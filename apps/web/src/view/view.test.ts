@@ -184,6 +184,12 @@ describe('inbox', () => {
     expect(needsFrom('arbiter', d(50n), wallet)).toBe('Decide')
   })
 
+  test('arbiter: accepts a proposed deal once', () => {
+    const d = (accepted: boolean) => deal({ state: 'proposed', arbiter: wallet, arbiterAccepted: accepted }, [tranche({})])
+    expect(needsFrom('arbiter', d(false), wallet)).toBe('Accept')
+    expect(needsFrom('arbiter', d(true), wallet)).toBeNull()
+  })
+
   test('settled deals are done and need nothing', () => {
     const d = deal({ state: 'settled' }, [tranche({ state: 'released' })])
     expect(sectionOf('buyer', d, wallet)).toBe('done')
