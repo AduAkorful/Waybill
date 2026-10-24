@@ -40,7 +40,7 @@ These come up in retests. Each has a reason. If one of them is wrong *for a diff
 
 ## Logo — 2026-10-23
 
-Waybill now has a mark: a waybill sheet with its tear-off stub, the stub in highlighter yellow with a check (the part released). It sits beside the name "WAYBILL" in every header and footer, and is the browser-tab icon (`/icon.svg`, also `public/logo-mark.svg`). It follows the light and dark themes. Under 360 px wide the header shows the mark alone (the name stays for screen readers) so the header keeps one row. axe 0 violations, 133 tests pass.
+Waybill now has a mark: a waybill sheet with its tear-off stub, the stub in highlighter yellow with a check (the part released). It sits beside the name "WAYBILL" in every header and footer, and is the browser-tab icon (`/favicon.ico`, `/icon.svg`, and `/apple-icon.png` for phone home screens). It follows the light and dark themes. Under 360 px wide the header shows the mark alone (the name stays for screen readers) so the header keeps one row. axe 0 violations, 133 tests pass.
 
 QA: check the header at 320, 375 and 1440 in light and dark, the footer, and the tab icon. Header heights are unchanged (60 px public, 66 px `/d/*`).
 
