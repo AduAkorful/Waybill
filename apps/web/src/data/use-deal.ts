@@ -26,7 +26,7 @@ export type DealRead =
  * One deal, read from the escrow, with its indexed history from the relayer when the API is configured.
  * The escrow read is the truth; a failed or missing history never hides the deal, and is reported next to it.
  */
-export function useDeal(id: bigint | null, refreshKey = 0): DealRead {
+export function useDeal(id: bigint | null, refreshKey = 0, initial?: DealView | null): DealRead {
   const network = useMemo(() => getBrowserNetwork(), [])
   const client = useMemo(
     () =>
@@ -37,8 +37,9 @@ export function useDeal(id: bigint | null, refreshKey = 0): DealRead {
       }) as PublicClient,
     [network],
   )
-  const [read, setRead] = useState<DealRead>({ status: 'loading' })
-  const shownId = useRef<bigint | null>(null)
+  const [read, setRead] = useState<DealRead>(() => (initial ? { status: 'ready', deal: initial, history: { status: 'unconfigured' } } : { status: 'loading' }))
+  // the server-rendered deal counts as already shown, so the first client read replaces it without a loading flash
+  const shownId = useRef<bigint | null>(initial ? initial.id : null)
 
   useEffect(() => {
     if (id === null) return
