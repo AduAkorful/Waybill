@@ -34,7 +34,10 @@ const connect = [
   "'self'",
   origin(process.env.NEXT_PUBLIC_WAYBILL_API_BASE_URL),
   // a path-only setting (/rpc) is this site's own origin, already covered by 'self'
-  process.env.NEXT_PUBLIC_WAYBILL_MAINNET_RPC_URL?.trim().startsWith('/') ? null : (origin(process.env.NEXT_PUBLIC_WAYBILL_MAINNET_RPC_URL) ?? 'https://rpc.testnet.arc.io'),
+  process.env.NEXT_PUBLIC_WAYBILL_MAINNET_RPC_URL?.trim().startsWith('/')
+    ? null
+    : (origin(process.env.NEXT_PUBLIC_WAYBILL_MAINNET_RPC_URL) ??
+      (process.env.NEXT_PUBLIC_WAYBILL_NETWORK === 'mainnet' ? 'https://rpc.mainnet.arc.io' : 'https://rpc.testnet.arc.io')),
   ...providers,
 ].filter((o): o is string => o !== null)
 
