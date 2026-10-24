@@ -10,4 +10,5 @@ node_modules/
 lib/
 contracts/out/
 contracts/cache/
+dist/
 
