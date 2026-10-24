@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from 'wagmi'
+import { useReloadOnAccountChange } from '@/components/use-account-sync'
 import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api'
 import { encodeOperatorAction } from '@/integration/operator-actions'
 import { getBrowserNetwork } from '@/integration/network'
@@ -199,6 +200,7 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
 /** Who is connected here and whether it is the pauser, so it is clear which controls will work. */
 function WalletChip({ pauser }: { pauser: string | null }) {
   const { address } = useAccount()
+  useReloadOnAccountChange(address)
   if (!address) return <span className="text-[12px] text-graphite">No wallet connected</span>
   const isPauser = pauser !== null && address.toLowerCase() === pauser.toLowerCase()
   return (

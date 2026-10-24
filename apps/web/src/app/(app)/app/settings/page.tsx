@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import { readEmailSettings, saveEmailSettings, type EmailSettings } from '@/integration/contacts'
+import { plainError } from '@/integration/transactions'
 import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api'
 import { getBrowserNetwork } from '@/integration/network'
 import { shortAddress } from '@/view/format'
@@ -52,7 +53,7 @@ export default function SettingsPage() {
         setNotify(settings.notificationsEnabled)
       }
     } catch (e) {
-      setRead({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
+      setRead({ kind: 'error', message: plainError(e) })
     }
   }
   const save = async () => {
@@ -62,7 +63,7 @@ export default function SettingsPage() {
       setSaved(settings)
       setRead({ kind: 'ready', settings })
     } catch (e) {
-      setRead({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
+      setRead({ kind: 'error', message: plainError(e) })
     }
   }
 

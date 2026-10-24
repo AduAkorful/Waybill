@@ -5,6 +5,46 @@ After each batch the web app on port 3000 is rebuilt and restarted; retest again
 "Fixed" means changed in code, covered by a unit test where the logic is pure, and the page answers as described below.
 It does not mean a signed transaction was re-run in a browser — that is what QA is for.
 
+## Batch 6 — 2026-10-20 (retest findings)
+
+Fixes for QA's retest of batches 1 to 5 (report §8). Web app and relayer restarted. `WAYBILL_SITE_URL` is now set to the ngrok address, so `og:image` is absolute. axe: 0 violations on the public pages and `/operator` at 375 and 1440 px, light and dark.
+
+### Errors (WB-QA-001, RT-01)
+- **Request limits relayed as a decline:** a request-limit or outage error is now recognised first, even when the wallet wraps it in a rejection code. Wording such as "Request exceeds defined limit", "rate limit exceeded", "429", or codes -32005 / -32603 now gives *"The network is busy or could not be reached… try again in a moment"*. "You declined it in your wallet" appears only for a genuine rejection.
+- **Declined signatures:** every signature path (evidence files, terms, dispute, label, decision, settings, share) now uses the same plain wording, never the library's "User rejected the request… Version: viem@…" text.
+
+### Wallet account switch (RT-02, RT-03)
+- When the account is switched inside the wallet app, the page reloads so the header, open dialogs and role lists belong to the new account. (Applies on `/app/*`, the supplier page and the operator header.) Anything typed but unsent is lost on a switch.
+
+### Evidence reads (RT-04)
+- The read signature is also kept for the tab (session storage, about 8 minutes, then it asks again), so a reload does not ask again. A declined signature is never kept.
+
+### Attestor and arbiter flows (RT-06 to RT-09)
+- The attest page heading shows the part's amount ("Part 1: 20.00 USDC, of a 40.00 USDC deal").
+- **Acceptance banner:** a wallet named as attestor or arbiter who has not accepted sees *"You are named on deal N as … Accept as attestor / Accept as arbiter"* on `/app/deals/<id>` and `/d/<id>`, linking to the right page.
+- The arbiter's room for an unaccepted deal is titled **"Invitation · deal N"** with *"You are invited to be the arbiter"*, not "Dispute room / Nothing is disputed". The arbiter home text explains acceptance first. The list row reads *"You are named here · accept your role so the deal can be funded"*.
+- Part cards say *"Needs 2 attestors to confirm delivery (0 so far)"* / *"To be confirmed by 0x…"*, so signing and accepting no longer read the same. The "Accept" tag on lists is now a button-style tag, not a marker highlight.
+
+### Chinese mode (RT-13)
+- Part cards, the frozen/released footers, the confirmation line, due dates, the waybill labels (供应商, 货物, 交易总额, 条款), the units/cartons line, the fee/arbiter line and the time line are translated. "stubs" is now "parts" in English, and the footer no longer collides with the 冻结 stamp. Names, goods and cities the buyer typed stay as typed. Not translated: the private details block (shown to the signed-in supplier).
+
+### Smaller items (RT-14, 15, 16)
+- Fund dialog shows both amounts with the same decimals ("locks 20.100000 … holds 1.163558").
+- The terms-read signature now says *"terms: none, this only reads"* and *"public: not applicable"* instead of dashes. **The relayer must be the matching version; it has been restarted.**
+- After signing, the button reads "Reading the files…" / "Reading the details…" instead of staying on "Waiting for your wallet…".
+
+### Not done in this batch
+RT-05 (slow reads; the public RPC is the cause, a dedicated RPC is the fix), RT-10 gap in the list row, RT-11 (first click on a deal row did not navigate; could not reproduce, please send steps), RT-12 (attestor history grouping and left column), RT-17 (language toggle prominence).
+
+### Retest checklist for batch 6
+1. Cause an RPC 429 (public RPC under load) during an accept: message says network busy, not declined.
+2. Decline a signature on "Show the files" and "Show the details": plain wording only.
+3. Switch accounts in Rabby on `/app/deals/<id>`: the page reloads under the new account.
+4. Open "Show the files", reload, open again: no second signature within 8 minutes.
+5. As a named attestor open `/app/deals/<id>` and `/d/<id>`: the acceptance banner. As arbiter open `/app/room/<id>`: "Invitation".
+6. `/d/284` in 中文: no English UI text except what the buyer typed.
+7. Fund dialog with a low balance: amounts line up.
+
 ## Batch 5 — 2026-10-20 (minimum total, create warning, rounding, combobox, API)
 
 Web app and relayer restarted on the new code. axe: 0 violations on the public pages and `/operator` at 375 and 1440 px, light and dark.

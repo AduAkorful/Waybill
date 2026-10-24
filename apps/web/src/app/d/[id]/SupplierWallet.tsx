@@ -10,6 +10,8 @@ import { AddressChanges } from '@/ui/AddressChanges'
 import { DisputeDialog } from '@/ui/DisputeDialog'
 import { LiveWaybill } from '@/ui/Live'
 import { PrivateTerms } from '@/ui/PrivateTerms'
+import { useReloadOnAccountChange } from '@/components/use-account-sync'
+import { NamedPartyBanner } from '@/ui/NamedPartyBanner'
 import { Modal } from '@/ui/Modal'
 import { TxFlow } from '@/ui/TxFlow'
 import { formatAmount, shortAddress } from '@/view/format'
@@ -36,6 +38,7 @@ function Inner({ deal: d, lang, autoLogin, onMounted, onChanged }: { deal: DealV
   const t = COPY[lang]
   const { ready, authenticated, login, logout } = usePrivy()
   const { address } = useAccount()
+  useReloadOnAccountChange(address)
   const [payout, setPayout] = useState('')
   const [dialog, setDialog] = useState<'accept' | { respond: Tranche } | { dispute: Tranche } | null>(null)
   const asked = useRef(false)
@@ -85,6 +88,7 @@ function Inner({ deal: d, lang, autoLogin, onMounted, onChanged }: { deal: DealV
 
   return (
     <>
+      {authenticated && address && !isSupplier ? <NamedPartyBanner deal={d} wallet={address} /> : null}
       {authenticated && address && !isSupplier ? (
         <div role="alert" className="mt-6 rounded-md border border-hold/50 bg-hold-wash px-4 py-3">
           <p className="font-semibold">{t.wrongWallet}</p>

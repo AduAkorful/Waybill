@@ -133,3 +133,29 @@ describe('evidence reader signatures', () => {
     expect(signs).toBe(2)
   })
 })
+
+describe('evidence read signature in the tab', () => {
+  test('is reused after a reload while valid, and not once expired', async () => {
+    process.env.NEXT_PUBLIC_WAYBILL_API_BASE_URL = 'http://localhost:3001'
+    process.env.NEXT_PUBLIC_WAYBILL_NETWORK = 'testnet'
+    const store = new Map<string, string>()
+    ;(globalThis as { sessionStorage?: unknown }).sessionStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) }
+    let signs = 0
+    let t = 1_800_000_000
+    const make = () =>
+      evidenceReader({
+        dealId: 9n,
+        signer: '0x00000000000000000000000000000000000000aa',
+        sign: async () => (++signs, '0xabcd'),
+        now: () => t,
+        fetcher: (async () => new Response('[]', { status: 200 })) as unknown as typeof fetch,
+      })
+    await make().list()
+    await make().list() // a "reload": a new reader, same tab
+    expect(signs).toBe(1)
+    t += 9 * 60
+    await make().list()
+    expect(signs).toBe(2)
+    delete (globalThis as { sessionStorage?: unknown }).sessionStorage
+  })
+})

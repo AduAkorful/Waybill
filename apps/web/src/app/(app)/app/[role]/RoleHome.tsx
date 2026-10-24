@@ -29,7 +29,7 @@ const INTRO: Record<Shell, string | null> = {
   supplier: null,
   attestor: null,
   arbiter:
-    'Each dispute is one frozen part of one deal. You can release it to the supplier, refund it to the buyer, or split it. Nothing else, and never to yourself. If you miss the deadline, the default applies and your fee goes back to the buyer.',
+    'You are asked to accept the role on each deal that names you; that only records that you agree and moves no money. After that, each dispute is one frozen part of one deal. You can release it to the supplier, refund it to the buyer, or split it. Nothing else, and never to yourself. If you miss the deadline, the default applies and your fee goes back to the buyer.',
 }
 
 function MiniLedger({ d }: { d: DealView }) {
@@ -61,7 +61,7 @@ function Row({ d, need, shell }: { d: DealView; need: string | null; shell: Shel
             {d.terms?.goods ?? `${d.tranches.length} ${d.tranches.length === 1 ? 'part' : 'parts'}`}{' '}
             <span className="font-normal text-graphite">· {d.terms?.[shell === 'buyer' ? 'supplierName' : 'buyerName'] ?? shortAddress(counterparty)}</span>
           </span>
-          <span className={`block truncate text-[12.5px] ${need ? 'text-ink' : 'text-graphite'}`}>{statusLine(d)}</span>
+          <span className={`block truncate text-[12.5px] ${need ? 'text-ink' : 'text-graphite'}`}>{statusLine(d, need)}</span>
         </span>
         <span className="col-span-2 hidden md:col-span-1 md:block">
           <MiniLedger d={d} />
@@ -74,7 +74,7 @@ function Row({ d, need, shell }: { d: DealView; need: string | null; shell: Shel
         <span className="mono row-start-1 text-right text-[13.5px] md:row-start-auto">{formatAmount(d.totalAmount)}</span>
         <span className="hidden text-right md:block">
           {need ? (
-            <span className="marked text-[12.5px] font-semibold">{need}</span>
+            <span className="rounded-md bg-held px-2.5 py-1 text-[12.5px] font-semibold text-sheet">{need}</span>
           ) : (
             <span className="text-[12.5px] text-graphite group-hover:text-ink">Open →</span>
           )}

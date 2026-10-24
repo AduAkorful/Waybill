@@ -1,7 +1,7 @@
 import type { Hex, PublicClient, TransactionReceipt } from 'viem'
 import type { EncodedWalletAction } from './escrow'
 import { getBrowserNetwork } from './network'
-import { contractErrorName, contractErrorText, isTransportFailure, isUserRejection, revertDataOf } from './tx-errors'
+import { contractErrorName, contractErrorText, isNetworkBusy, isUserRejection, revertDataOf } from './tx-errors'
 
 export type WalletErrorCode =
   | 'user_rejected'
@@ -39,19 +39,21 @@ function errorText(error: unknown): string {
  * called a decline. A revert carries the contract's own error name when the node returned it.
  */
 export function classifyWalletError(error: unknown): WaybillWalletError {
+  // A limit or outage comes first: some wallets relay an RPC error under a rejection code, and calling that a
+  // decline would send people to retry the wrong thing.
+  if (isNetworkBusy(error)) {
+    return new WaybillWalletError(
+      'rpc_error',
+      'The network is busy or could not be reached, so we could not check this',
+      error,
+    )
+  }
   if (isUserRejection(error)) {
     return new WaybillWalletError('user_rejected', 'Wallet signature was rejected', error)
   }
   const revertName = contractErrorName(revertDataOf(error))
   if (revertName) {
     return new WaybillWalletError('reverted', contractErrorText(revertName), error)
-  }
-  if (isTransportFailure(error)) {
-    return new WaybillWalletError(
-      'rpc_error',
-      'The network is busy or could not be reached, so we could not check this',
-      error,
-    )
   }
   const text = errorText(error)
   if (text.includes('wrong network') || text.includes('chain mismatch') || text.includes('expected 5042')) {
@@ -102,5 +104,22 @@ export async function waitForActionReceipt(
     return { status: 'success', hash, receipt }
   } catch (error) {
     return { status: 'unknown', hash, error }
+  }
+}
+
+/** One plain sentence for any failure of a wallet request, a signature or a call. Raw library text never reaches a person. */
+export function plainError(error: unknown): string {
+  const classified = classifyWalletError(error)
+  switch (classified.code) {
+    case 'user_rejected':
+      return 'You declined it in your wallet. Nothing was sent. You can try again.'
+    case 'rpc_error':
+      return 'The network is busy or could not be reached. Nothing was sent; try again in a moment.'
+    case 'reverted':
+    case 'wrong_network':
+    case 'no_account':
+      return `${classified.message}. Nothing was sent.`
+    default:
+      return error instanceof Error && error.message && !/viem@|Version:|Details:/.test(error.message) ? error.message : 'The request failed. Nothing was sent.'
   }
 }

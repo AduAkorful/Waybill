@@ -28,8 +28,8 @@ export function termsMessage(input: { network: string; chainId: number; escrow: 
     `chain: ${input.chainId}`,
     `escrow: ${input.escrow.toLowerCase()}`,
     `deal: ${input.dealId}`,
-    `terms: ${input.action === 'set' ? input.digest : '-'}`,
-    `public: ${input.isPublic === null ? '-' : input.isPublic ? 'yes' : 'no'}`,
+    `terms: ${input.action === 'set' ? input.digest : 'none, this only reads'}`,
+    `public: ${input.isPublic === null ? 'not applicable' : input.isPublic ? 'yes' : 'no'}`,
     `signed: ${input.signedAt}`,
   ].join('\n')
 }

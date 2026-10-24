@@ -21,7 +21,8 @@ export function cancelReadiness(deal: DealView): Readiness {
 }
 
 /** Whether the buyer's USDC covers what funding locks. Never a guess: an unread balance is not ready. */
-export function balanceReadiness(balance: bigint, needed: bigint, format: (v: bigint) => string): Readiness {
+export function balanceReadiness(balance: bigint, needed: bigint, format: (a: bigint, b: bigint) => [string, string]): Readiness {
   if (balance >= needed) return { ok: true }
-  return { ok: false, reason: `Not enough USDC: this deal locks ${format(needed)} and your wallet holds ${format(balance)}.` }
+  const [n, b] = format(needed, balance)
+  return { ok: false, reason: `Not enough USDC: this deal locks ${n} and your wallet holds ${b}.` }
 }

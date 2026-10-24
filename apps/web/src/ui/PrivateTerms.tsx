@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useSignMessage } from 'wagmi'
 import { readTermsSigned } from '@/integration/terms'
+import { plainError } from '@/integration/transactions'
 import type { DealTerms, DealView } from '@/view/types'
 
 const row = (label: string, value: string | undefined) => (value ? <div key={label} className="flex flex-wrap gap-x-2 text-[13px]"><dt className="label">{label}</dt><dd>{value}</dd></div> : null)
@@ -13,7 +14,7 @@ const row = (label: string, value: string | undefined) => (value ? <div key={lab
  */
 export function PrivateTerms({ deal, wallet }: { deal: DealView; wallet: `0x${string}` }) {
   const { signMessageAsync } = useSignMessage()
-  const [state, setState] = useState<{ kind: 'todo' } | { kind: 'working' } | { kind: 'none' } | { kind: 'error'; message: string } | { kind: 'ready'; terms: DealTerms }>({ kind: 'todo' })
+  const [state, setState] = useState<{ kind: 'todo' } | { kind: 'working'; phase: 'wallet' | 'reading' } | { kind: 'none' } | { kind: 'error'; message: string } | { kind: 'ready'; terms: DealTerms }>({ kind: 'todo' })
   const terms = deal.terms ?? (state.kind === 'ready' ? state.terms : undefined)
 
   return (
@@ -39,17 +40,17 @@ export function PrivateTerms({ deal, wallet }: { deal: DealView; wallet: `0x${st
             type="button"
             disabled={state.kind === 'working'}
             onClick={async () => {
-              setState({ kind: 'working' })
+              setState({ kind: 'working', phase: 'wallet' })
               try {
-                const found = await readTermsSigned({ dealId: deal.id, signer: wallet, sign: (message) => signMessageAsync({ message }) })
+                const found = await readTermsSigned({ dealId: deal.id, signer: wallet, sign: async (message) => { const signature = await signMessageAsync({ message }); setState({ kind: 'working', phase: 'reading' }); return signature } })
                 setState(found ? { kind: 'ready', terms: found.terms } : { kind: 'none' })
               } catch (e) {
-                setState({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
+                setState({ kind: 'error', message: plainError(e) })
               }
             }}
             className="mt-2 rounded-md border border-rule px-3 py-1.5 text-[13px] font-semibold disabled:opacity-40"
           >
-            {state.kind === 'working' ? 'Waiting for your wallet…' : 'Show the details'}
+            {state.kind === 'working' ? (state.phase === 'wallet' ? 'Waiting for your wallet…' : 'Reading the details…') : 'Show the details'}
           </button>
           {state.kind === 'error' ? <p role="alert" className="mt-2 text-[12.5px] text-hold">{state.message}</p> : null}
         </>

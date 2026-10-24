@@ -14,3 +14,13 @@ describe('dealHeadline', () => {
     expect(dealHeadline(d('settled', ['released']))).toBe('Settled')
   })
 })
+
+import { statusLine } from './inbox'
+
+describe('statusLine for a named party', () => {
+  const proposed = { state: 'proposed', tranches: [] } as unknown as DealView
+  test('tells a wallet that must accept to accept', () => {
+    expect(statusLine(proposed, 'Accept')).toContain('accept your role')
+    expect(statusLine(proposed, null)).toBe('Waiting for everyone named to accept')
+  })
+})

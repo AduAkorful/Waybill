@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import { DEAL_LABELS, parseDealRanges, setDealLabels, type DealLabel } from '@/integration/labels'
+import { plainError } from '@/integration/transactions'
 import { shortAddress } from '@/view/format'
 import type { OperatorSummary } from '@/view/operator'
 
@@ -44,7 +45,7 @@ export function LabelCard({ summary: s, onChanged }: { summary: OperatorSummary;
               setOutcome({ kind: 'done', labelled, label })
               onChanged()
             } catch (error) {
-              setOutcome({ kind: 'error', message: error instanceof Error ? error.message : String(error) })
+              setOutcome({ kind: 'error', message: plainError(error) })
             }
           }}
         >

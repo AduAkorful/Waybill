@@ -98,8 +98,8 @@ export function termsMessage(context: TermsContext, action: 'set' | 'read', dige
     `chain: ${context.chainId}`,
     `escrow: ${context.escrow.toLowerCase()}`,
     `deal: ${context.dealId}`,
-    `terms: ${action === 'set' ? digest : '-'}`,
-    `public: ${isPublic === null ? '-' : isPublic ? 'yes' : 'no'}`,
+    `terms: ${action === 'set' ? digest : 'none, this only reads'}`,
+    `public: ${isPublic === null ? 'not applicable' : isPublic ? 'yes' : 'no'}`,
     `signed: ${signedAt}`,
   ].join('\n')
 }

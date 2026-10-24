@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth'
 import { useAccount } from 'wagmi'
 import { WalletDealsProvider } from '@/data/wallet-deals'
 import { ChainGate } from '@/ui/NetworkGuard'
+import { useReloadOnAccountChange } from '@/components/use-account-sync'
 import { RoleShell } from './RoleShell'
 
 function Notice({ children }: { children: React.ReactNode }) {
@@ -23,6 +24,7 @@ export function AppGate({ children }: { children: React.ReactNode }) {
   const { ready, authenticated, connectOrCreateWallet } = usePrivy()
   const { address } = useAccount()
   const router = useRouter()
+  useReloadOnAccountChange(address)
 
   useEffect(() => {
     if (ready && !authenticated) router.replace('/signin')

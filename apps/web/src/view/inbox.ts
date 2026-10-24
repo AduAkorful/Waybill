@@ -46,11 +46,11 @@ export function sectionOf(shell: Shell, d: DealView, wallet: Address): Section {
 }
 
 /** One plain line about where a deal stands, from the escrow's own states. */
-export function statusLine(d: DealView): string {
+export function statusLine(d: DealView, needs: string | null = null): string {
   const money = (t: Tranche) => `${formatAmount(t.amount)} USDC`
   if (d.state === 'cancelled') return 'Cancelled before funding'
   if (d.state === 'settled') return 'Settled · every part paid out or refunded'
-  if (d.state === 'proposed') return 'Waiting for everyone named to accept'
+  if (d.state === 'proposed') return needs === 'Accept' ? 'You are named here · accept your role so the deal can be funded' : 'Waiting for everyone named to accept'
   if (d.state === 'accepted') return 'Everyone accepted · waiting to be funded'
   const disputed = d.tranches.find((t) => t.state === 'disputed')
   if (disputed) return `Part ${disputed.index} is disputed · ${money(disputed)} frozen until it is decided`

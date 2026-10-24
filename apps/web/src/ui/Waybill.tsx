@@ -10,6 +10,12 @@ const feeWording: Record<FeePayer, string> = {
   split: "Split between buyer and supplier",
 };
 
+const feeWordingZh: Record<FeePayer, string> = {
+  buyer: "由买方支付",
+  supplier: "从供应商的付款中扣除",
+  split: "买方与供应商分摊",
+};
+
 function Box({ n, label, children, className = "" }: { n: string; label: string; children: React.ReactNode; className?: string }) {
   return (
     <div data-box className={`border-r border-b border-rule bg-sheet px-3.5 py-2.5 ${className}`}>
@@ -98,10 +104,10 @@ export function Waybill({
           <header className="flex items-start justify-between gap-3 border-b border-rule px-4 pt-3.5 pb-3">
             <div>
               <p className="condensed text-[19px] leading-none font-extrabold tracking-[0.18em]">WAYBILL</p>
-              <p className="label mt-1">Escrow waybill</p>
+              <p className="label mt-1">{lang === "zh" ? "托管运单" : "Escrow waybill"}</p>
             </div>
             <div className="text-right">
-              <p className="label">No.</p>
+              <p className="label">{lang === "zh" ? "编号" : "No."}</p>
               <p className="mono text-[15px] leading-tight font-medium">{id}</p>
             </div>
           </header>
@@ -114,7 +120,7 @@ export function Waybill({
                 ) : (
                   <p className="mono text-[15px] leading-tight font-medium">{shortAddress(deal.supplier)}</p>
                 )}
-                <p className="mt-1 text-[12px] text-graphite">{terms?.origin ? terms.origin.city : "Supplier"}</p>
+                <p className="mt-1 text-[12px] text-graphite">{terms?.origin ? terms.origin.city : lang === "zh" ? "供应商" : "Supplier"}</p>
               </div>
               <div className="mb-5 min-w-0 flex-1">
                 {compact ? (
@@ -131,7 +137,7 @@ export function Waybill({
                 ) : (
                   <p className="mono text-[15px] leading-tight font-medium">{shortAddress(deal.buyer)}</p>
                 )}
-                <p className="mt-1 text-[12px] text-graphite">{terms?.destination ? terms.destination.city : "Buyer"}</p>
+                <p className="mt-1 text-[12px] text-graphite">{terms?.destination ? terms.destination.city : lang === "zh" ? "买方" : "Buyer"}</p>
               </div>
             </div>
           </div>
@@ -139,28 +145,31 @@ export function Waybill({
           {detail === "summary" ? (
             <>
               <div className="-mr-px -mb-px grid grid-cols-2 @3xl:grid-cols-3">
-                <Box n="01" label="Supplier">
+                <Box n="01" label={lang === "zh" ? "供应商" : "Supplier"}>
                   {terms?.supplierName ? <span className="block font-semibold">{terms.supplierName}</span> : null}
                   <span className="mono text-[12.5px]">{shortAddress(deal.supplier)}</span>
                 </Box>
                 {terms?.goods ? (
-                  <Box n="02" label="Goods">
+                  <Box n="02" label={lang === "zh" ? "货物" : "Goods"}>
                     {terms.goods}
                     {terms.units !== undefined ? (
                       <span className="block text-graphite">
-                        {terms.units.toLocaleString("en-US")} units{terms.cartons !== undefined ? ` in ${terms.cartons} cartons` : ""}
+                        {lang === "zh"
+                          ? `${terms.units.toLocaleString("en-US")} 件${terms.cartons !== undefined ? `，共 ${terms.cartons} 箱` : ""}`
+                          : `${terms.units.toLocaleString("en-US")} units${terms.cartons !== undefined ? ` in ${terms.cartons} cartons` : ""}`}
                       </span>
                     ) : null}
                   </Box>
                 ) : null}
-                <Box n="03" label="Deal total">
+                <Box n="03" label={lang === "zh" ? "交易总额" : "Deal total"}>
                   <span className="mono text-[17px] font-medium">{formatAmount(deal.totalAmount)}</span>{" "}
                   <span className="condensed text-[11px] font-semibold text-graphite">USDC</span>
                 </Box>
               </div>
               <p className="border-t border-rule px-3.5 py-2.5 text-[12.5px] text-graphite">
-                <span className="label mr-2">Terms</span>
-                {terms?.template ? `${terms.template} · ` : ""}fee {deal.feeBps / 100}% ({formatAmount(feeTotal)}) · {feeWording[deal.feePayer].toLowerCase()} · {deal.panel ? "panel of three" : "arbiter"}{" "}
+                <span className="label mr-2">{lang === "zh" ? "条款" : "Terms"}</span>
+                {terms?.template ? `${terms.template} · ` : ""}
+                {lang === "zh" ? "费用" : "fee"} {deal.feeBps / 100}% ({formatAmount(feeTotal)}) · {lang === "zh" ? feeWordingZh[deal.feePayer] : feeWording[deal.feePayer].toLowerCase()} · {lang === "zh" ? (deal.panel ? "三人仲裁组" : "仲裁人") : deal.panel ? "panel of three" : "arbiter"}{" "}
                 <span className="mono text-[11.5px]">{deal.panel ? deal.panel.members.map(shortAddress).join(", ") : shortAddress(deal.arbiter)}</span>, {formatAmount(deal.arbiterFee)}
               </p>
             </>

@@ -14,6 +14,7 @@ import { PrivateTerms } from '@/ui/PrivateTerms'
 import { DisputeDialog } from '@/ui/DisputeDialog'
 import { EvidenceList } from '@/ui/EvidenceList'
 import { Skeleton } from '@/ui/Skeleton'
+import { NamedPartyBanner } from '@/ui/NamedPartyBanner'
 import { Modal } from '@/ui/Modal'
 import { TxFlow, type TxStep } from '@/ui/TxFlow'
 import { fundingTotal, reviewEnds } from '@/view/derive'
@@ -133,6 +134,8 @@ export function DealScreen({ idText }: { idText: string }) {
             </Link>
           ) : null}
         </div>
+
+        {address && !isBuyer ? <NamedPartyBanner deal={d} wallet={address} /> : null}
 
         {read.history.status === 'error' ? (
           <p role="alert" className="mt-4 text-[12.5px] text-hold">History is unavailable right now: {read.history.message}</p>

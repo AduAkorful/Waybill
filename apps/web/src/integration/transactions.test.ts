@@ -5,6 +5,7 @@ import { encodeEscrowAction } from './escrow'
 import {
   assertActionNetwork,
   classifyWalletError,
+  plainError,
   waitForActionReceipt,
   WaybillWalletError,
 } from './transactions'
@@ -91,5 +92,19 @@ describe('frontend transaction lifecycle boundary', () => {
     const classified = classifyWalletError(error)
     expect(classified.code).toBe('reverted')
     expect(classified.message).toContain('after its acceptance deadline')
+  })
+
+  test('a request limit relayed under a rejection code is still network trouble', () => {
+    const relayed = Object.assign(new Error('Request exceeds defined limit'), { code: 4001 })
+    expect(classifyWalletError(relayed).code).toBe('rpc_error')
+    const limit = Object.assign(new Error('rate limit exceeded'), { code: -32005 })
+    expect(classifyWalletError(limit).code).toBe('rpc_error')
+  })
+
+  test('plain wording for a declined signature never shows library text', () => {
+    const raw = Object.assign(new Error('User rejected the request. Details: x Version: viem@2.57.7'), { code: 4001 })
+    expect(plainError(raw)).toBe('You declined it in your wallet. Nothing was sent. You can try again.')
+    expect(plainError(new Error('Details: boom Version: viem@2.57.7'))).toBe('The request failed. Nothing was sent.')
+    expect(plainError(new Error('The evidence service is unavailable'))).toBe('The evidence service is unavailable')
   })
 })

@@ -269,3 +269,19 @@ describe('operator summary', () => {
     expect(describeChange('Mystery')).toBe('Mystery')
   })
 })
+
+describe('aligned amounts', () => {
+  test('both amounts use the same number of decimals', async () => {
+    const { formatAmountsAligned } = await import('./format')
+    expect(formatAmountsAligned(20_100_000n, 1_163_558n)).toEqual(['20.100000', '1.163558'])
+    expect(formatAmountsAligned(20_100_000n, 1_000_000n)).toEqual(['20.10', '1.00'])
+  })
+})
+
+describe('Chinese dates', () => {
+  test('are written year, month, day in UTC', async () => {
+    const { formatDayZh, formatDateTimeZh } = await import('./format')
+    expect(formatDayZh(1_792_962_911n)).toBe('2026年10月25日')
+    expect(formatDateTimeZh(1_792_962_911n)).toBe('2026年10月25日 21:15 UTC')
+  })
+})

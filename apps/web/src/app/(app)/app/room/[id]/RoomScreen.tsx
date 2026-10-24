@@ -53,9 +53,9 @@ export function RoomScreen({ idText }: { idText: string }) {
   return (
     <main className="mx-auto max-w-4xl px-4 pt-6 pb-24 md:px-8 md:pt-10">
       <Link href={who === 'buyer' ? `/app/deals/${d.id}` : who === 'supplier' ? `/d/${d.id}` : '/app/arbiter'} className="text-[12.5px] text-graphite">← Back</Link>
-      <p className="label mt-4">Dispute room · deal {String(d.id)}</p>
+      <p className="label mt-4">{needsAccept ? 'Invitation' : 'Dispute room'} · deal {String(d.id)}</p>
       <h1 className="mt-1 text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
-        {decided.length === 0 ? 'Nothing is disputed' : `${decided.filter((t) => t.state === 'disputed').length} open, ${decided.filter((t) => t.state === 'resolved').length} decided`}
+        {needsAccept ? (d.panel ? 'You are invited to the arbiter panel' : 'You are invited to be the arbiter') : decided.length === 0 ? 'Nothing is disputed' : `${decided.filter((t) => t.state === 'disputed').length} open, ${decided.filter((t) => t.state === 'resolved').length} decided`}
       </h1>
       <p className="mt-1 text-[13.5px] text-graphite">
         You are {who === 'arbiter' && d.panel ? 'on the panel' : `the ${who}`}. Buyer <span className="mono">{shortAddress(d.buyer)}</span> · supplier <span className="mono">{shortAddress(d.supplier)}</span> · {d.panel ? 'panel' : 'arbiter'} <span className="mono">{d.panel ? d.panel.members.map(shortAddress).join(', ') : shortAddress(d.arbiter)}</span>

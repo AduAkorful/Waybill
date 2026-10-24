@@ -1,5 +1,6 @@
 import { keccak256, type Hex } from 'viem'
 import { loadBrowserApiBaseUrl } from './api'
+import { plainError } from './transactions'
 import { getBrowserNetwork } from './network'
 
 /** One file's SHA-256, as 0x hex. This is the digest the wallet signs and the relayer verifies. */
@@ -131,7 +132,7 @@ const MESSAGES: Record<string, string> = {
 
 export function describeUploadError(error: unknown): string {
   if (error instanceof EvidenceUploadError) return MESSAGES[error.code] ?? `The upload was refused (${error.code}).`
-  return error instanceof Error ? error.message : String(error)
+  return plainError(error)
 }
 
 export interface StoredEvidence {
@@ -173,10 +174,17 @@ export function evidenceReader(input: { dealId: bigint; signer: string; sign: Si
   let headers: Promise<Record<string, string>> | null = null
   const auth = () => {
     // a declined or failed signature must not be remembered: the next try asks again
-    headers ??= signedReadHeaders(input.dealId, input.signer, input.sign, now).catch((error) => {
-      headers = null
-      throw error
-    })
+    headers ??= cachedReadHeaders(input.dealId, input.signer, now) ?
+      Promise.resolve(cachedReadHeaders(input.dealId, input.signer, now)!) :
+      signedReadHeaders(input.dealId, input.signer, input.sign, now)
+        .then((h) => {
+          rememberReadHeaders(input.dealId, input.signer, h, now)
+          return h
+        })
+        .catch((error) => {
+          headers = null
+          throw error
+        })
     return headers
   }
   return {
@@ -214,4 +222,30 @@ export function sharedEvidenceReader(input: { dealId: bigint; signer: string; si
   const reader = evidenceReader(input)
   readers.set(key, { reader, created: Date.now() })
   return reader
+}
+
+const SESSION_LIFETIME_SECONDS = 8 * 60
+
+function sessionKey(dealId: bigint, signer: string): string {
+  return `wb-evidence-read:${getBrowserNetwork().network}:${dealId}:${signer.toLowerCase()}`
+}
+
+/** A read signature made earlier in this tab, if it is still inside its validity window. Lives only in sessionStorage. */
+export function cachedReadHeaders(dealId: bigint, signer: string, now: () => number): Record<string, string> | null {
+  try {
+    const raw = typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(sessionKey(dealId, signer))
+    if (!raw) return null
+    const { headers, signedAt } = JSON.parse(raw) as { headers: Record<string, string>; signedAt: number }
+    return now() - signedAt < SESSION_LIFETIME_SECONDS ? headers : null
+  } catch {
+    return null
+  }
+}
+
+function rememberReadHeaders(dealId: bigint, signer: string, headers: Record<string, string>, now: () => number): void {
+  try {
+    if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(sessionKey(dealId, signer), JSON.stringify({ headers, signedAt: now() }))
+  } catch {
+    // storage may be blocked; the signature then lives only in memory
+  }
 }

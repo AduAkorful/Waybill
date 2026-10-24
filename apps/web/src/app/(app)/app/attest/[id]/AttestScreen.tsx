@@ -38,7 +38,7 @@ export function AttestScreen({ idText }: { idText: string }) {
         You are asked to confirm {mine.length === 1 ? `part ${mine[0]!.index}` : `${mine.length} parts`} of {d.tranches.length}
       </h1>
       <p className="mt-1 text-[14px] text-graphite">
-        {formatAmount(d.totalAmount)} USDC from <span className="mono">{shortAddress(d.buyer)}</span> to <span className="mono">{shortAddress(d.supplier)}</span>
+        {mine.length === 1 ? `Part ${mine[0]!.index}: ${formatAmount(mine[0]!.amount)} USDC, of a ${formatAmount(d.totalAmount)} USDC deal` : `${formatAmount(mine.reduce((sum, p) => sum + p.amount, 0n))} USDC across these parts, of a ${formatAmount(d.totalAmount)} USDC deal`}, from <span className="mono">{shortAddress(d.buyer)}</span> to <span className="mono">{shortAddress(d.supplier)}</span>
       </p>
       <PrivateTerms deal={d} wallet={address} />
       <div className="mt-8 space-y-12">

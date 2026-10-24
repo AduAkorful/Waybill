@@ -18,7 +18,7 @@ describe('readiness', () => {
     expect(cancelReadiness(deal({ state: 'funded' })).ok).toBe(false)
   })
   test('balance must cover the lock', () => {
-    const f = (v: bigint) => String(v)
+    const f = (a: bigint, b: bigint): [string, string] => [String(a), String(b)]
     expect(balanceReadiness(5n, 10n, f).ok).toBe(false)
     expect(balanceReadiness(10n, 10n, f).ok).toBe(true)
   })

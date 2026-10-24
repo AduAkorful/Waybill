@@ -7,7 +7,7 @@ import { useDeal } from '@/data/use-deal'
 import { getBrowserNetwork } from '@/integration/network'
 import { ThemeToggle, Wordmark } from '@/ui/Chrome'
 import { LiveWaybill } from '@/ui/Live'
-import { formatAmount, formatDateTime } from '@/view/format'
+import { formatAmount, formatDateTime, formatDateTimeZh } from '@/view/format'
 import type { DealView } from '@/view/types'
 import { COPY, type Lang } from './copy'
 
@@ -124,7 +124,7 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
                   </section>
                 </>
               ) : null}
-              <p className="mt-8 text-[12px] text-graphite">{formatDateTime(d.chainTime)} · {getBrowserNetwork().network}</p>
+              <p className="mt-8 text-[12px] text-graphite">{lang === "zh" ? formatDateTimeZh(d.chainTime) : formatDateTime(d.chainTime)} · {getBrowserNetwork().network}</p>
             </>
           )
         })() : null}

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useSignMessage } from 'wagmi'
 import { saveTerms } from '@/integration/terms'
+import { plainError } from '@/integration/transactions'
 import { shortAddress } from '@/view/format'
 import type { DealTerms } from '@/view/types'
 
@@ -19,7 +20,7 @@ export function ShareDeal({ dealId, supplier, buyer, terms, isPublic }: { dealId
       await saveTerms({ dealId, signer: buyer, terms, isPublic, sign: (message) => signMessageAsync({ message }) })
       setSaved({ kind: 'done' })
     } catch (e) {
-      setSaved({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
+      setSaved({ kind: 'error', message: plainError(e) })
     }
   }
   const link = typeof window === 'undefined' ? '' : `${window.location.origin}/d/${dealId}`

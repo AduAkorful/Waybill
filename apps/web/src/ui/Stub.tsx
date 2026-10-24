@@ -1,6 +1,6 @@
-import { formatAmount, formatDateTime, formatDay } from "@/view/format";
+import { formatAmount, formatDateTime, formatDay, formatDayZh } from "@/view/format";
 import { reviewEnds } from "@/view/derive";
-import { confirmationText, trancheName } from "@/view/labels";
+import { confirmationText, footerText, trancheName } from "@/view/labels";
 import { tornTop } from "@/view/tear";
 import type { MilestoneState, Tranche } from "@/view/types";
 import { Stamp } from "./Stamp";
@@ -106,25 +106,25 @@ export function Stub({
           <span className="condensed text-[11px] font-semibold text-graphite">USDC</span>
         </p>
 
-        <p className="mt-3 text-[12.5px] leading-snug text-graphite">{confirmationText(t)}</p>
+        <p className="mt-3 text-[12.5px] leading-snug text-graphite">{confirmationText(t, lang)}</p>
 
-        <footer className="mt-auto pt-4">
+        <footer className={`mt-auto pt-4 ${t.state === "released" || t.state === "refunded" || t.state === "disputed" ? "pr-16" : ""}`}>
           {action ??
             (t.state === "released" ? (
-              <p className="text-[12px] text-graphite">Paid to the supplier</p>
+              <p className="text-[12px] text-graphite">{footerText.released[lang]}</p>
             ) : t.state === "refunded" ? (
-              <p className="text-[12px] text-graphite">Returned to the buyer</p>
+              <p className="text-[12px] text-graphite">{footerText.refunded[lang]}</p>
             ) : t.state === "resolved" ? (
-              <p className="text-[12px] text-graphite">Decided by the arbiter</p>
+              <p className="text-[12px] text-graphite">{footerText.resolved[lang]}</p>
             ) : t.state === "disputed" ? (
-              <p className="text-[12px] text-hold">Frozen until the arbiter decides. Other stubs are not affected.</p>
+              <p className="text-[12px] text-hold">{footerText.disputed[lang]}</p>
             ) : ends !== null ? (
               <p className="text-[12px] text-graphite">
-                Buyer can object until <span className="text-ink">{formatDateTime(ends)}</span>
+                {footerText.objectUntil[lang]} <span className="text-ink">{formatDateTime(ends)}</span>
               </p>
             ) : t.deadline > 0n ? (
               <p className="text-[12px] text-graphite">
-                {zh ? "截止" : "Due"} <span className="text-ink">{formatDay(t.deadline)}</span>
+                {zh ? "截止" : "Due"} <span className="text-ink">{zh ? formatDayZh(t.deadline) : formatDay(t.deadline)}</span>
               </p>
             ) : null)}
         </footer>

@@ -19,7 +19,7 @@ describe('terms message', () => {
     expect(termsMessage({ ...base, action: 'set', digest: 'abc', isPublic: true })).toBe(
       ['Waybill deal terms', 'action: set', 'network: testnet', 'chain: 5042002', `escrow: 0x${'cd'.repeat(20)}`, 'deal: 7', 'terms: abc', 'public: yes', 'signed: 1800000000'].join('\n'),
     )
-    expect(termsMessage({ ...base, action: 'read', digest: 'ignored', isPublic: null })).toContain('terms: -\npublic: -')
+    expect(termsMessage({ ...base, action: 'read', digest: 'ignored', isPublic: null })).toContain('terms: none, this only reads\npublic: not applicable')
   })
 })
 

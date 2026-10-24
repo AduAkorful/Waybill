@@ -12,6 +12,19 @@ export function formatAmount(raw: bigint): string {
   return `${negative ? '-' : ''}${whole}.${frac}`
 }
 
+/** Decimals needed to show an amount exactly, at least two. */
+const digitsFor = (raw: bigint): number => Math.max(2, 6 - (raw % UNIT === 0n ? 6 : (raw < 0n ? -raw : raw).toString().length - (raw < 0n ? -raw : raw).toString().replace(/0+$/, '').length))
+
+/** Two amounts written with the same number of decimals, so they can be read side by side ("20.100000" and "1.163558"). */
+export function formatAmountsAligned(...raws: bigint[]): string[] {
+  const digits = Math.max(...raws.map(digitsFor))
+  return raws.map((raw) => {
+    const abs = raw < 0n ? -raw : raw
+    const frac = (abs % UNIT).toString().padStart(USDC_DECIMALS, '0').slice(0, digits).padEnd(digits, '0')
+    return `${raw < 0n ? '-' : ''}${(abs / UNIT).toLocaleString('en-US')}.${frac}`
+  })
+}
+
 /** Raw units → whole cents, half up. For counters that animate at two decimals; exact text lives in aria-labels. */
 export function toCents(raw: bigint): number {
   return Number((raw + 5_000n) / 10_000n)
@@ -60,4 +73,15 @@ export function formatDay(seconds: bigint): string {
 export function formatDateTime(seconds: bigint): string {
   const p = parts(seconds)
   return `${p.day}, ${p.time} UTC`
+}
+
+/** Chinese date in UTC: "2026年10月19日" */
+export function formatDayZh(seconds: bigint): string {
+  const d = new Date(Number(seconds) * 1000)
+  return `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日`
+}
+
+/** Chinese date and time in UTC: "2026年10月19日 09:40 UTC" */
+export function formatDateTimeZh(seconds: bigint): string {
+  return `${formatDayZh(seconds)} ${parts(seconds).time} UTC`
 }

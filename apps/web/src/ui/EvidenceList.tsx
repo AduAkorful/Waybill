@@ -13,13 +13,13 @@ const kb = (n: number) => (n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024)
  */
 export function EvidenceList({ dealId, owner, part }: { dealId: bigint; owner: `0x${string}`; part?: number }) {
   const { signMessageAsync } = useSignMessage()
-  const [state, setState] = useState<{ kind: 'idle' } | { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; files: StoredEvidence[] }>({ kind: 'idle' })
-  const [reader] = useState(() => sharedEvidenceReader({ dealId, signer: owner, sign: (message) => signMessageAsync({ message }) }))
+  const [state, setState] = useState<{ kind: 'idle' } | { kind: 'loading'; phase?: 'wallet' | 'reading' } | { kind: 'error'; message: string } | { kind: 'ready'; files: StoredEvidence[] }>({ kind: 'idle' })
+  const [reader] = useState(() => sharedEvidenceReader({ dealId, signer: owner, sign: async (message) => { const signature = await signMessageAsync({ message }); setState({ kind: 'loading', phase: 'reading' }); return signature } }))
   const [opening, setOpening] = useState<string | null>(null)
   const [openError, setOpenError] = useState('')
 
   const load = async () => {
-    setState({ kind: 'loading' })
+    setState({ kind: 'loading', phase: 'wallet' })
     try {
       setState({ kind: 'ready', files: await reader.list() })
     } catch (e) {
@@ -49,7 +49,7 @@ export function EvidenceList({ dealId, owner, part }: { dealId: bigint; owner: `
     return (
       <div>
         <button type="button" onClick={() => void load()} disabled={state.kind === 'loading'} className="rounded-md border border-rule px-3 py-1.5 text-[13px] font-semibold disabled:opacity-60">
-          {state.kind === 'loading' ? 'Waiting for your wallet…' : 'Show the files'}
+          {state.kind === 'loading' ? (state.phase === 'reading' ? 'Reading the files…' : 'Waiting for your wallet…') : 'Show the files'}
         </button>
         <p className="mt-1.5 text-[12px] text-graphite">Your wallet signs a message to prove you are named in this deal. Nothing is spent.</p>
       </div>

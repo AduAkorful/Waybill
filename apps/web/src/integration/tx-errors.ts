@@ -115,3 +115,20 @@ export function isTransportFailure(error: unknown): boolean {
   }
   return false
 }
+
+/** Wording that means the node or wallet hit a request limit, whatever code it was wrapped in. */
+const LIMIT_WORDING = /rate limit|limit exceeded|exceeds defined limit|too many requests|\b429\b|over rate limit/i
+
+function fullText(error: unknown): string {
+  const parts: string[] = []
+  for (const link of causes(error)) {
+    const e = link as { message?: unknown; shortMessage?: unknown; details?: unknown }
+    for (const v of [e.message, e.shortMessage, e.details]) if (typeof v === 'string') parts.push(v)
+  }
+  return parts.join(' ')
+}
+
+/** True when a request limit or an unreachable network is the cause, even if a wallet relayed it as if it were a rejection. */
+export function isNetworkBusy(error: unknown): boolean {
+  return isTransportFailure(error) || LIMIT_WORDING.test(fullText(error))
+}
