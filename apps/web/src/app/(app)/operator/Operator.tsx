@@ -16,6 +16,7 @@ import { SiteHeader } from '@/ui/SiteHeader'
 import { Skeleton } from '@/ui/Skeleton'
 import { Modal } from '@/ui/Modal'
 import { ArbiterListCard } from './ArbiterListCard'
+import { CapsCard } from './CapsCard'
 import { LabelCard } from './LabelCard'
 import { TxFlow } from '@/ui/TxFlow'
 import { PauserOnly } from './PauserOnly'
@@ -88,7 +89,7 @@ export function Operator() {
       <SiteHeader signIn="signed-in" extraOnOwnRow extra={<WalletChip pauser={read.kind === 'ready' ? read.summary.chain.pauser : null} />} />
       <main className="mx-auto max-w-6xl px-4 pt-6 pb-20 md:px-8 md:pt-10">
         <h1 className="text-[28px] leading-tight font-semibold tracking-tight">Operator console</h1>
-        <p className="mt-1 max-w-2xl text-[13.5px] text-graphite">A monitor, plus three controls for the pauser wallet: pause new deals, label deals, and manage the approved-arbiter list. Nobody at Waybill can move, freeze or redirect money in escrow, and none of these can.</p>
+        <p className="mt-1 max-w-2xl text-[13.5px] text-graphite">A monitor, plus four controls for the pauser wallet: pause new deals, change the deal limits, label deals, and manage the approved-arbiter list. Nobody at Waybill can move, freeze or redirect money in escrow, and none of these can.</p>
         {read.kind === 'loading' ? <Skeleton label="Reading the deployment…" rows={5} /> : null}
         {read.kind === 'error' ? <p role="alert" className="mt-8 text-[14px] text-hold">The monitor could not be loaded, so no figures are shown: {read.message}</p> : null}
         {read.kind === 'ready' && read.stale ? <p role="status" className="mt-4 text-[12.5px] text-graphite">Showing the last reading from this tab while a fresh one loads…</p> : null}
@@ -107,6 +108,7 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
   return (
     <>
       <PauseCard summary={s} onChanged={onChanged} />
+      <CapsCard summary={s} onChanged={onChanged} />
       <LabelCard summary={s} onChanged={onChanged} />
       <ArbiterListCard summary={s} onChanged={onChanged} />
 

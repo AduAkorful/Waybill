@@ -1,4 +1,4 @@
-import { encodeFunctionData, parseAbi } from 'viem'
+import { BaseError, ContractFunctionRevertedError, ContractFunctionZeroDataError, encodeFunctionData, parseAbi, type PublicClient } from 'viem'
 import type { WaybillNetworkManifest } from '@waybill/network/networks'
 import type { EncodedWalletAction } from './escrow'
 import { getBrowserNetwork } from './network'
@@ -52,4 +52,55 @@ export function encodeArbiterListAction(action: ArbiterListAction, network: Wayb
             throw new Error('Unsupported arbiter list action')
           })()
   return { to: network.contracts.arbiterList, data, chainId: network.chainId }
+}
+
+const CAPS_ABI = parseAbi([
+  'function lowerCaps(uint256 newMaxDealAmount, uint256 newMaxLocked)',
+  'function scheduleRaiseCaps(uint256 newMaxDealAmount, uint256 newMaxLocked)',
+  'function executeRaiseCaps()',
+  'function getPendingCaps() view returns (uint256 newMaxDealAmount, uint256 newMaxLocked, uint64 eta)',
+])
+
+/**
+ * The pauser's three cap actions on the escrow. Caps are checked only when a deal is created or funded: lowering
+ * applies at once (and cancels a scheduled raise), raising waits 48 hours on-chain. Neither touches money already held.
+ */
+export type CapsAction =
+  | { kind: 'lowerCaps'; maxDealAmount: bigint; maxLocked: bigint }
+  | { kind: 'scheduleRaiseCaps'; maxDealAmount: bigint; maxLocked: bigint }
+  | { kind: 'executeRaiseCaps' }
+
+export function encodeCapsAction(action: CapsAction, network: WaybillNetworkManifest = getBrowserNetwork()): EncodedWalletAction {
+  const data =
+    action.kind === 'executeRaiseCaps'
+      ? encodeFunctionData({ abi: CAPS_ABI, functionName: 'executeRaiseCaps' })
+      : action.kind === 'lowerCaps' || action.kind === 'scheduleRaiseCaps'
+        ? (() => {
+            if (action.maxDealAmount <= 0n || action.maxLocked <= 0n) throw new Error('caps must be above zero')
+            return encodeFunctionData({ abi: CAPS_ABI, functionName: action.kind, args: [action.maxDealAmount, action.maxLocked] })
+          })()
+        : (() => {
+            throw new Error('Unsupported caps action')
+          })()
+  return { to: network.contracts.escrow, data, chainId: network.chainId }
+}
+
+export type PendingCaps = { maxDealAmount: bigint; maxLocked: bigint; eta: bigint } | null
+
+/**
+ * The scheduled raise, null when none, or 'unsupported' when this escrow was deployed before caps could change (it has
+ * no getPendingCaps, so the call returns no data). Any other failure is thrown, never read as "no raise".
+ */
+export async function readPendingCaps(
+  publicClient: Pick<PublicClient, 'readContract'>,
+  network: WaybillNetworkManifest = getBrowserNetwork(),
+): Promise<PendingCaps | 'unsupported'> {
+  try {
+    const [maxDealAmount, maxLocked, eta] = await publicClient.readContract({ address: network.contracts.escrow, abi: CAPS_ABI, functionName: 'getPendingCaps' })
+    return eta === 0n ? null : { maxDealAmount, maxLocked, eta }
+  } catch (error) {
+    const zeroData = error instanceof BaseError && error.walk((e) => e instanceof ContractFunctionZeroDataError || e instanceof ContractFunctionRevertedError)
+    if (zeroData) return 'unsupported'
+    throw error
+  }
 }
