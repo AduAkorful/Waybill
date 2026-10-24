@@ -9,6 +9,7 @@ import type { DealView, Tranche } from './types'
 import { dealsInShell, heldShells, parseWalletDeals, rolesIn } from './wallet'
 import { needsFrom, sectionOf } from './inbox'
 import { parseArbiters } from './arbiter'
+import { disputeStage, percentToSplitBps, splitPrincipal } from './room'
 
 const part = (fee: bigint) => ({ fee }) as Tranche
 
@@ -180,9 +181,10 @@ describe('inbox', () => {
   })
 
   test('arbiter: decides once the response window has closed', () => {
-    const d = (now: bigint) => deal({ arbiter: wallet, chainTime: now }, [tranche({ state: 'disputed', responseDeadline: 50n })])
-    expect(needsFrom('arbiter', d(49n), wallet)).toBeNull()
-    expect(needsFrom('arbiter', d(50n), wallet)).toBe('Decide')
+    const d = (now: bigint) => deal({ arbiter: wallet, chainTime: now }, [tranche({ state: 'disputed', responseDeadline: 50n, arbiterDeadline: 90n })])
+    expect(needsFrom('arbiter', d(50n), wallet)).toBeNull()
+    expect(needsFrom('arbiter', d(51n), wallet)).toBe('Decide')
+    expect(needsFrom('arbiter', d(91n), wallet)).toBeNull()
   })
 
   test('arbiter: accepts a proposed deal once', () => {
@@ -209,5 +211,26 @@ describe('arbiter list', () => {
     expect(() => parseArbiters({})).toThrow()
     expect(() => parseArbiters([{ ...row, fee: 'x' }])).toThrow('fee')
     expect(() => parseArbiters([{ ...row, address: '0x1' }])).toThrow('address')
+  })
+})
+
+describe('dispute room', () => {
+  const p = { responseDeadline: 100n, arbiterDeadline: 200n }
+  test('stages follow the escrow clocks', () => {
+    expect(disputeStage(p, 100n)).toBe('response_open')
+    expect(disputeStage(p, 101n)).toBe('decision_open')
+    expect(disputeStage(p, 200n)).toBe('decision_open')
+    expect(disputeStage(p, 201n)).toBe('deadline_passed')
+  })
+  test('a split never creates or loses a unit', () => {
+    expect(splitPrincipal(1_000_001n, 6_000)).toEqual({ supplier: 600_000n, buyer: 400_001n })
+    expect(splitPrincipal(7n, 5_000)).toEqual({ supplier: 3n, buyer: 4n })
+    expect(() => splitPrincipal(1n, 10_001)).toThrow()
+  })
+  test('typed percentages become valid split shares only', () => {
+    expect(percentToSplitBps('62.5')).toBe(6250)
+    expect(percentToSplitBps('0')).toBeNull()
+    expect(percentToSplitBps('100')).toBeNull()
+    expect(percentToSplitBps('abc')).toBeNull()
   })
 })

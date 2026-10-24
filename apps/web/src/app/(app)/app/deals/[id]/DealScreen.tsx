@@ -77,16 +77,21 @@ export function DealScreen({ idText }: { idText: string }) {
             </div>
           </div>
         )
-      } else if (t.state === 'disputed' && t.buyerRaisedDispute) {
+      } else if (t.state === 'disputed') {
         actions[t.index] = (
           <div data-action className="text-[13px]">
-            <p className="font-semibold text-hold">You disputed this part.</p>
+            <p className="font-semibold text-hold">{t.buyerRaisedDispute ? 'You disputed this part.' : 'The supplier disputed this part.'}</p>
             <p className="mt-1 text-[12.5px] text-graphite">
-              The supplier can respond until {formatDateTime(t.responseDeadline)}. Then the arbiter decides; other parts are not affected.
+              {t.buyerRaisedDispute ? 'The supplier' : 'You'} can respond until {formatDateTime(t.responseDeadline)}. Then the arbiter decides; other parts are not affected.
             </p>
-            <button onClick={() => setDialog({ kind: 'withdraw', t })} className="mt-2.5 rounded-md px-2.5 py-1.5 text-[12.5px] text-graphite hover:text-ink">
-              Withdraw dispute
-            </button>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              <Link href={`/app/room/${d.id}`} className="rounded-md border border-rule px-3 py-1.5 text-[12.5px] font-semibold">Open dispute room</Link>
+              {t.buyerRaisedDispute ? (
+                <button onClick={() => setDialog({ kind: 'withdraw', t })} className="rounded-md px-2.5 py-1.5 text-[12.5px] text-graphite hover:text-ink">
+                  Withdraw dispute
+                </button>
+              ) : null}
+            </div>
           </div>
         )
       } else if (t.state === 'refundable') {

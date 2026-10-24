@@ -29,7 +29,7 @@ export function needsFrom(shell: Shell, d: DealView, wallet: Address): string | 
     }
     case 'arbiter':
       if (d.state === 'proposed' && same(d.arbiter, wallet) && !d.arbiterAccepted) return 'Accept'
-      if (same(d.arbiter, wallet) && d.tranches.some((t) => t.state === 'disputed' && d.chainTime >= t.responseDeadline)) return 'Decide'
+      if (same(d.arbiter, wallet) && d.tranches.some((t) => t.state === 'disputed' && d.chainTime > t.responseDeadline && d.chainTime <= t.arbiterDeadline)) return 'Decide'
       return null
   }
 }

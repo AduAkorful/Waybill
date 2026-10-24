@@ -22,6 +22,7 @@ export function RoleShell({ address, children }: { address: string; children: Re
           { href: '/app/attestor/profile', label: 'Profile', active: path.startsWith('/app/attestor/profile') },
         ]
       : []),
+    ...(shells.includes('arbiter') ? [{ href: '/app/arbiter/fees', label: 'Fees', active: path.startsWith('/app/arbiter/fees') }] : []),
     { href: '/app/new', label: 'New deal', active: path.startsWith('/app/new') },
     { href: '/attestors', label: 'Attestors', active: false },
   ]

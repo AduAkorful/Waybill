@@ -21,8 +21,9 @@ type Stage = { kind: 'form' } | { kind: 'working'; text: string } | { kind: 'rea
  * A buyer's dispute: the reason and files are stored first (one wallet signature covers the list), then the dispute
  * itself is sent with the digest of exactly those files. If storing fails, nothing is sent and the part stays unfrozen.
  */
-export function DisputeDialog({ deal, part, owner, mode = 'dispute', onCancel, onDone }: { deal: DealView; part: Tranche; owner: `0x${string}`; mode?: 'dispute' | 'respond'; onCancel: () => void; onDone: () => void }) {
+export function DisputeDialog({ deal, part, owner, mode = 'dispute', onCancel, onDone }: { deal: DealView; part: Tranche; owner: `0x${string}`; mode?: 'dispute' | 'respond' | 'append'; onCancel: () => void; onDone: () => void }) {
   const respond = mode === 'respond'
+  const append = mode === 'append'
   const { signMessageAsync } = useSignMessage()
   const [reason, setReason] = useState('')
   const [files, setFiles] = useState<File[]>([])
@@ -30,7 +31,7 @@ export function DisputeDialog({ deal, part, owner, mode = 'dispute', onCancel, o
   const [stage, setStage] = useState<Stage>({ kind: 'form' })
 
   const problem = (() => {
-    if (reason.trim().length < MIN_REASON) return `Write at least ${MIN_REASON} characters.`
+    if (append ? reason.trim().length < 1 && files.length < 1 : reason.trim().length < MIN_REASON) return append ? 'Add a note or at least one file.' : `Write at least ${MIN_REASON} characters.`
     if (files.length > MAX_FILES) return `Attach at most ${MAX_FILES} files.`
     if (files.some((f) => f.size < 1)) return 'One of the files is empty.'
     if (files.some((f) => f.size > MAX_BYTES)) return 'Each file must be 10 MB or smaller.'
@@ -42,9 +43,12 @@ export function DisputeDialog({ deal, part, owner, mode = 'dispute', onCancel, o
     setError('')
     try {
       setStage({ kind: 'working', text: 'Reading your files…' })
-      const text = new TextEncoder().encode(reason.trim())
-      const reasonFile: EvidenceFile = { name: 'reason.txt', mimeType: 'text/plain', bytes: text, sha256: await sha256Hex(text) }
-      const all = [reasonFile, ...(await Promise.all(files.map(readFile)))]
+      const all: EvidenceFile[] = []
+      if (reason.trim()) {
+        const text = new TextEncoder().encode(reason.trim())
+        all.push({ name: append ? 'note.txt' : respond ? 'response.txt' : 'reason.txt', mimeType: 'text/plain', bytes: text, sha256: await sha256Hex(text) })
+      }
+      all.push(...(await Promise.all(files.map(readFile))))
       setStage({ kind: 'working', text: 'Approve the upload in your wallet. This signs a message and costs nothing.' })
       const commitment = await uploadEvidence({
         dealId: deal.id,
@@ -63,11 +67,13 @@ export function DisputeDialog({ deal, part, owner, mode = 'dispute', onCancel, o
   return (
     <>
       <p className="label">Part {part.index}</p>
-      <h2 className="mt-1 text-[19px] leading-tight font-semibold">{respond ? 'Respond to the dispute' : 'Dispute this part'}</h2>
+      <h2 className="mt-1 text-[19px] leading-tight font-semibold">{append ? 'Add evidence' : respond ? 'Respond to the dispute' : 'Dispute this part'}</h2>
       <p className="mt-2 text-[13.5px] leading-relaxed">
-        {respond
+        {append
+          ? 'Add more files or a note to this dispute. The arbiter and the other side can read them. You can add more until the arbiter decides.'
+          : respond
           ? `Tell the arbiter your side. ${formatAmount(part.amount)} USDC stays frozen until they decide. You can respond once.`
-          : `${formatAmount(part.amount)} USDC stays frozen until the arbiter decides. Other parts are not affected. The supplier can respond, and you can withdraw the dispute before it is decided.`}
+          : `${formatAmount(part.amount)} USDC stays frozen until the arbiter decides. Other parts are not affected. The other side can respond; the buyer can withdraw a dispute before it is decided.`}
       </p>
 
       {stage.kind === 'ready' ? (
@@ -76,10 +82,12 @@ export function DisputeDialog({ deal, part, owner, mode = 'dispute', onCancel, o
             Your words and files are stored. Now send them; the record is tied to exactly those files.
           </p>
           <TxFlow
-            confirmLabel={respond ? 'Send response' : 'Send dispute'}
+            confirmLabel={append ? 'Add to the dispute' : respond ? 'Send response' : 'Send dispute'}
             tone="hold"
             steps={[
-              respond
+              append
+                ? { label: 'Add this to the dispute', action: encodeCurrentEscrowAction({ kind: 'appendDisputeEvidence', dealId: deal.id, milestoneIndex: part.position, evidenceHash: stage.commitment }) }
+                : respond
                 ? { label: 'Send your response', action: encodeCurrentEscrowAction({ kind: 'respondToDispute', dealId: deal.id, milestoneIndex: part.position, evidenceHash: stage.commitment }) }
                 : { label: 'Freeze this part and file the dispute', action: encodeEscrowAction({ kind: 'dispute', dealId: deal.id, milestoneIndex: part.position, evidenceHash: stage.commitment }) },
             ]}
@@ -90,7 +98,7 @@ export function DisputeDialog({ deal, part, owner, mode = 'dispute', onCancel, o
       ) : (
         <div className="mt-4 space-y-4">
           <div>
-            <label className="label block" htmlFor="reason">{respond ? 'Your response' : 'What is wrong'}</label>
+            <label className="label block" htmlFor="reason">{append ? 'Note (optional if you attach files)' : respond ? 'Your response' : 'What is wrong'}</label>
             <textarea
               id="reason"
               value={reason}

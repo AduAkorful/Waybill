@@ -106,6 +106,13 @@ export const WAYBILL_ESCROW_ABI = [
   },
   {
     type: 'function',
+    name: 'arbiterFeeBalance',
+    stateMutability: 'view',
+    inputs: [{ name: 'arbiter', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    type: 'function',
     name: 'feeBalance',
     stateMutability: 'view',
     inputs: [{ name: 'account', type: 'address' }],
@@ -422,6 +429,20 @@ export function readFeeBalance(
     abi: WAYBILL_ESCROW_ABI,
     functionName: 'feeBalance',
     args: [account],
+  }) as Promise<bigint>
+}
+
+/** What an arbiter has earned across deals and not yet withdrawn, raw 6-decimal USDC units. */
+export function readArbiterFeeBalance(
+  publicClient: PublicClient,
+  arbiter: `0x${string}`,
+  network: WaybillNetworkManifest = getBrowserNetwork(),
+) {
+  return publicClient.readContract({
+    address: network.contracts.escrow,
+    abi: WAYBILL_ESCROW_ABI,
+    functionName: 'arbiterFeeBalance',
+    args: [arbiter],
   }) as Promise<bigint>
 }
 

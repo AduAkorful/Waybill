@@ -49,7 +49,7 @@ export function SupplierLink({ idText }: { idText: string }) {
   const { ready, authenticated, login, logout } = usePrivy()
   const { address } = useAccount()
   const [payout, setPayout] = useState('')
-  const [dialog, setDialog] = useState<'accept' | { respond: Tranche } | null>(null)
+  const [dialog, setDialog] = useState<'accept' | { respond: Tranche } | { dispute: Tranche } | null>(null)
 
   return (
     <div translate="no" className="min-h-dvh">
@@ -78,14 +78,23 @@ export function SupplierLink({ idText }: { idText: string }) {
           if (isSupplier) {
             for (const p of d.tranches) {
               if (p.state === 'disputed') {
+                const mine = p.disputeRaiser !== null && p.disputeRaiser.toLowerCase() === address!.toLowerCase()
                 actions[p.index] = (
                   <div data-action className="text-[13px]">
-                    <p className="font-semibold text-hold">{t.disputedNote}</p>
-                    {p.responseSubmitted ? (
+                    <p className="font-semibold text-hold">{mine ? t.youDisputed : t.disputedNote}</p>
+                    {mine ? null : p.responseSubmitted ? (
                       <p className="mt-1 text-graphite">{t.responded}</p>
                     ) : (
                       <button onClick={() => setDialog({ respond: p })} className="mt-2.5 rounded-md border border-rule px-3 py-1.5 text-[12.5px] font-semibold">{t.respond}</button>
                     )}
+                    <Link href={`/app/room/${d.id}`} className="mt-2.5 ml-2 inline-block rounded-md border border-rule px-3 py-1.5 text-[12.5px] font-semibold">{t.room}</Link>
+                  </div>
+                )
+              } else if (p.state === 'overdue' && d.chainTime <= p.deadline + BigInt(p.gracePeriod)) {
+                actions[p.index] = (
+                  <div data-action className="text-[13px]">
+                    <p className="font-semibold">{t.overdueNote}</p>
+                    <button onClick={() => setDialog({ dispute: p })} className="mt-2.5 rounded-md border border-hold/50 px-3 py-1.5 text-[12.5px] font-semibold text-hold">{t.dispute}</button>
                   </div>
                 )
               }
@@ -147,8 +156,8 @@ export function SupplierLink({ idText }: { idText: string }) {
                 ) : null}
               </Modal>
               {dialog && typeof dialog === 'object' && address ? (
-                <Modal open onClose={() => setDialog(null)} label={t.respond}>
-                  <DisputeDialog deal={d} part={dialog.respond} owner={address} mode="respond" onCancel={() => setDialog(null)} onDone={() => { setDialog(null); setRefresh((n) => n + 1) }} />
+                <Modal open onClose={() => setDialog(null)} label={'respond' in dialog ? t.respond : t.dispute}>
+                  <DisputeDialog deal={d} part={'respond' in dialog ? dialog.respond : dialog.dispute} owner={address} mode={'respond' in dialog ? 'respond' : 'dispute'} onCancel={() => setDialog(null)} onDone={() => { setDialog(null); setRefresh((n) => n + 1) }} />
                 </Modal>
               ) : null}
             </>
