@@ -11,7 +11,7 @@ outcomes.
 ### Network and custody
 
 - The browser resolves exactly one network from the shared manifest:
-  `VITE_WAYBILL_NETWORK=testnet` or a complete, independently supplied
+  `NEXT_PUBLIC_WAYBILL_NETWORK=testnet` or a complete, independently supplied
   `mainnet` manifest.
 - The selected chain must be Arc. The selected chain ID, USDC address, escrow
   address, vault addresses, registry address, and arbiter-list address must

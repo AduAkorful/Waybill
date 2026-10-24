@@ -22,6 +22,12 @@ export interface WaybillNetworkManifest {
   }
   nativeGasDecimals: 18
   contracts: WaybillContracts
+  /** Multicall3, when the chain has it, so a screen's reads travel as one request. Verified per network, never assumed. */
+  multicall3?: Address
+  /** First block at which the escrow has code; event reads start here */
+  escrowDeployBlock?: bigint
+  /** First block at which the attestor registry has code; its event reads start here */
+  attestorRegistryDeployBlock?: bigint
 }
 
 export const ARC_TESTNET: WaybillNetworkManifest = {
@@ -41,6 +47,12 @@ export const ARC_TESTNET: WaybillNetworkManifest = {
     bondVault: '0x977cCa77f36D84949cc959635Da41c85ce470b43',
     financingVault: '0x375Eed4d2E0030E33c491F8570693ebC03ff84f5',
   },
+  // Checked on Arc testnet: `cast code` returns the contract and getChainId() returns 5042002.
+  multicall3: '0xcA11bde05977b3631167028862bE2a173976CA11',
+  // Checked on Arc testnet: `cast code` is empty at block 67900502 and present at 67900503.
+  escrowDeployBlock: 67_900_503n,
+  // Checked on Arc testnet: `cast code` is empty at block 67899718 and present at 67899719.
+  attestorRegistryDeployBlock: 67_899_719n,
 }
 
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/
@@ -77,6 +89,13 @@ function assertManifest(manifest: WaybillNetworkManifest): WaybillNetworkManifes
   }
 
   assertAddress(manifest.usdc.address, `${manifest.network}.usdc.address`)
+  if (manifest.escrowDeployBlock !== undefined && manifest.escrowDeployBlock < 0n) {
+    throw new Error(`Invalid ${manifest.network}.escrowDeployBlock`)
+  }
+  if (manifest.attestorRegistryDeployBlock !== undefined && manifest.attestorRegistryDeployBlock < 0n) {
+    throw new Error(`Invalid ${manifest.network}.attestorRegistryDeployBlock`)
+  }
+  if (manifest.multicall3 !== undefined) assertAddress(manifest.multicall3, `${manifest.network}.multicall3`)
   for (const [name, address] of Object.entries(manifest.contracts)) {
     assertAddress(address, `${manifest.network}.contracts.${name}`)
   }

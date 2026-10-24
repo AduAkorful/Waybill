@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "waybill-prototype",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "apps/prototype", "run", "dev"],
+      "port": 3100
+    },
+    {
+      "name": "waybill-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "-w", "@waybill/web"],
+      "port": 3000
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@waybill/contracts",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Foundry project. Solidity changes are made in Arc Studio and pulled here; see AGENTS.md.",
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test --no-match-path 'test-integration/*'"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.1.0"
+  }
+}

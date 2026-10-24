@@ -8,7 +8,11 @@ plans/
 console.jsonl
 node_modules/
 lib/
+!apps/web/src/lib/
+!apps/web/src/lib/**
 contracts/out/
 contracts/cache/
 dist/
-
+.next/
+*.tsbuildinfo
+next-env.d.ts

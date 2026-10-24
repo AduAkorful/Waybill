@@ -1,0 +1,15 @@
+{
+  "name": "@waybill/network",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Network manifests (testnet/mainnet addresses, chain ids, decimals). Shared by the web app and the relayer; contains no secrets.",
+  "exports": {
+    "./networks": "./src/networks.ts",
+    "./runtime": "./src/runtime-network.ts"
+  },
+  "scripts": {
+    "test": "bun test src",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}
