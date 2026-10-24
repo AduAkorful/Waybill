@@ -3,7 +3,7 @@
 import { Why } from '@/ui/Why'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { usePrivy } from '@privy-io/react-auth'
+import { useSignOut } from '@/components/use-sign-out'
 import { useAccount } from 'wagmi'
 import { useReloadOnAccountChange } from '@/components/use-account-sync'
 import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api'
@@ -59,7 +59,7 @@ export function Operator() {
 
   return (
     <div className="min-h-dvh">
-      <SiteHeader signIn={false} extra={<WalletChip pauser={read.kind === 'ready' ? read.summary.chain.pauser : null} />} />
+      <SiteHeader signIn="signed-in" extraOnOwnRow extra={<WalletChip pauser={read.kind === 'ready' ? read.summary.chain.pauser : null} />} />
       <main className="mx-auto max-w-6xl px-4 pt-6 pb-20 md:px-8 md:pt-10">
         <h1 className="text-[28px] leading-tight font-semibold tracking-tight">Operator console</h1>
         <p className="mt-1 max-w-2xl text-[13.5px] text-graphite">A monitor, plus three controls for the pauser wallet: pause new deals, label deals, and manage the approved-arbiter list. Nobody at Waybill can move, freeze or redirect money in escrow, and none of these can.</p>
@@ -194,7 +194,7 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
 function WalletChip({ pauser }: { pauser: string | null }) {
   const { address } = useAccount()
   useReloadOnAccountChange(address)
-  const { logout } = usePrivy()
+  const signOut = useSignOut()
   if (!address) return <Link href="/signin" className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] font-semibold whitespace-nowrap hover:bg-sheet">Connect wallet</Link>
   const isPauser = pauser !== null && address.toLowerCase() === pauser.toLowerCase()
   return (
@@ -202,7 +202,7 @@ function WalletChip({ pauser }: { pauser: string | null }) {
       <span className="rounded-full border border-rule px-2.5 py-1 text-[12px] whitespace-nowrap">
         <span className="mono">{shortAddress(address)}</span> · {pauser === null ? 'checking' : isPauser ? 'pauser' : 'read only'}
       </span>
-      <button type="button" onClick={() => void logout()} className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] whitespace-nowrap text-graphite uppercase hover:text-ink md:min-h-0 md:py-1">Sign out</button>
+      <button type="button" onClick={() => void signOut()} className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] whitespace-nowrap text-graphite uppercase hover:text-ink md:min-h-0 md:py-1">Sign out</button>
     </>
   )
 }

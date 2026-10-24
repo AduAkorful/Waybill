@@ -44,6 +44,8 @@ export function useDealViews(ids: readonly bigint[]): { done: boolean; reads: Ma
             } catch (e) {
               reads.set(String(id), { status: 'error', message: e instanceof Error ? e.message : String(e) })
             }
+            // each deal shows as soon as it is read, so the count moves one at a time
+            if (!cancelled) setState({ done: false, reads: new Map([...remembered, ...reads]) })
           }),
         )
         if (cancelled) return

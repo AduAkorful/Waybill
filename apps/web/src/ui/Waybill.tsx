@@ -21,7 +21,7 @@ function Box({ n, label, children, className = "" }: { n: string; label: string;
   return (
     <div data-box className={`border-r border-b border-rule bg-sheet px-3.5 py-2.5 ${className}`}>
       <div className="label flex items-baseline gap-1.5">
-        <span className="mono text-[11.5px] font-normal tracking-normal text-graphite">{n}</span>
+        <span className="mono text-[12px] font-normal tracking-normal text-graphite">{n}</span>
         <span>{label}</span>
       </div>
       <div className="mt-1 text-[13.5px] leading-snug">{children}</div>
@@ -37,7 +37,7 @@ function Route({ ts }: { ts: Tranche[] }) {
       : t.state === "in_review" || t.state === "claimable"
         ? "bg-sheet border-held ring-4 ring-held/15"
         : t.state === "disputed"
-          ? "bg-hold border-hold"
+          ? "bg-sheet border-hold ring-2 ring-hold/30"
           : t.state === "refunded"
             ? "bg-refunded border-refunded"
             : "bg-sheet border-rule";
@@ -132,7 +132,7 @@ export function Waybill({
               </div>
               <div className="mb-5 min-w-0 flex-1">
                 {compact ? (
-                  <div className="mx-2 flex items-center gap-2 text-[11.5px] text-graphite">
+                  <div className="mx-2 flex items-center gap-2 text-[12px] text-graphite">
                     <span className="h-px flex-1 border-t border-dashed border-rule" />
                   </div>
                 ) : (
@@ -152,33 +152,59 @@ export function Waybill({
 
           {detail === "summary" ? (
             <>
-              <div className="-mr-px -mb-px grid grid-cols-2 @3xl:grid-cols-3">
-                <Box n="01" label={lang === "zh" ? "供应商" : "Supplier"}>
-                  {terms?.supplierName ? <span className="block font-semibold">{terms.supplierName}</span> : null}
-                  <span className="mono text-[12.5px]">{shortAddress(deal.supplier)}</span>
-                </Box>
-                {terms?.goods ? (
-                  <Box n="02" label={lang === "zh" ? "货物" : "Goods"}>
-                    {terms.goods}
-                    {terms.units !== undefined ? (
-                      <span className="block text-graphite">
-                        {lang === "zh"
-                          ? `${terms.units.toLocaleString("en-US")} 件${terms.cartons !== undefined ? `，共 ${terms.cartons} 箱` : ""}`
-                          : `${terms.units.toLocaleString("en-US")} units${terms.cartons !== undefined ? ` in ${terms.cartons} cartons` : ""}`}
-                      </span>
-                    ) : null}
-                  </Box>
-                ) : null}
-                <Box n="03" label={lang === "zh" ? "交易总额" : "Deal total"}>
-                  <span className="mono text-[17px] font-medium">{formatAmount(deal.totalAmount)}</span>{" "}
-                  <span className="condensed text-[12px] font-semibold text-graphite">USDC</span>
-                </Box>
-              </div>
+              {(() => {
+                // numbered in the order shown; a lone last box fills its row, and wide screens use one column per box
+                const boxes: { label: string; body: React.ReactNode }[] = [
+                  {
+                    label: lang === "zh" ? "供应商" : "Supplier",
+                    body: (<>
+                      {terms?.supplierName ? <span className="block font-semibold">{terms.supplierName}</span> : null}
+                      <span className="mono text-[12.5px]">{shortAddress(deal.supplier)}</span>
+                    </>),
+                  },
+                ];
+                if (terms?.goods) {
+                  boxes.push({
+                    label: lang === "zh" ? "货物" : "Goods",
+                    body: (<>
+                      {terms.goods}
+                      {terms.units !== undefined ? (
+                        <span className="block text-graphite">
+                          {lang === "zh"
+                            ? `${terms.units.toLocaleString("en-US")} 件${terms.cartons !== undefined ? `，共 ${terms.cartons} 箱` : ""}`
+                            : `${terms.units.toLocaleString("en-US")} units${terms.cartons !== undefined ? ` in ${terms.cartons} cartons` : ""}`}
+                        </span>
+                      ) : null}
+                    </>),
+                  });
+                }
+                boxes.push({
+                  label: lang === "zh" ? "交易总额" : "Deal total",
+                  body: (<>
+                    <span className="mono text-[17px] font-medium">{formatAmount(deal.totalAmount)}</span>{" "}
+                    <span className="condensed text-[12px] font-semibold text-graphite">USDC</span>
+                  </>),
+                });
+                return (
+                  <div className={`-mr-px -mb-px grid grid-cols-2 ${boxes.length === 2 ? "@3xl:grid-cols-2" : "@3xl:grid-cols-3"}`}>
+                    {boxes.map((x, i) => (
+                      <Box
+                        key={x.label}
+                        n={String(i + 1).padStart(2, "0")}
+                        label={x.label}
+                        className={i === boxes.length - 1 && boxes.length % 2 === 1 ? "col-span-2 @3xl:col-span-1" : ""}
+                      >
+                        {x.body}
+                      </Box>
+                    ))}
+                  </div>
+                );
+              })()}
               <p className="border-t border-rule px-3.5 py-2.5 text-[12.5px] text-graphite">
                 <span className="label mr-2">{lang === "zh" ? "条款" : "Terms"}</span>
                 {terms?.template ? `${terms.template} · ` : ""}
                 {lang === "zh" ? "费用" : "fee"} {deal.feeBps / 100}% ({formatAmount(feeTotal)}) · {lang === "zh" ? feeWordingZh[deal.feePayer] : feeWording[deal.feePayer].toLowerCase()} · {lang === "zh" ? (deal.panel ? "三人仲裁组" : "仲裁人") : deal.panel ? "panel of three" : "arbiter"}{" "}
-                <span className="mono text-[11.5px]">{deal.panel ? deal.panel.members.map(shortAddress).join(", ") : shortAddress(deal.arbiter)}</span>, {formatAmount(deal.arbiterFee)}
+                <span className="mono text-[12px]">{deal.panel ? deal.panel.members.map(shortAddress).join(", ") : shortAddress(deal.arbiter)}</span>, {formatAmount(deal.arbiterFee)}
               </p>
             </>
           ) : (
@@ -247,7 +273,7 @@ export function Waybill({
 
           {showLockStamp && deal.state === "funded" ? (
             <div data-lock-stamp className="pointer-events-none absolute top-[12px] right-[150px] hidden @2xl:block">
-              <Stamp tone="held" rotate={-9} sub={`${formatAmount(fundingTotal(deal))} USDC`}>
+              <Stamp tone="held" rotate={-9}>
                 {lang === "zh" ? "资金已锁定" : "Funds locked"}
               </Stamp>
             </div>
@@ -260,7 +286,7 @@ export function Waybill({
         </div>
 
         {ts.length > 1 && ts.some((t) => t.state === "disputed") ? (
-          <p className="border-x border-rule bg-sheet px-4 pb-2 text-[12.5px] text-hold">{footerText.otherParts[lang]}</p>
+          <p className="border-x border-rule bg-sheet px-4 pb-2 text-[12.5px] text-graphite">{footerText.otherParts[lang]}</p>
         ) : null}
 
         {ts.length > 4 ? (

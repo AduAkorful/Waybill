@@ -66,16 +66,26 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
     if (hasWalletSession()) setWalletOn(true)
   }, [])
 
+  // the page's language is the document's language, for screen readers and translation tools
+  useEffect(() => {
+    const el = document.documentElement
+    const before = el.lang
+    el.lang = lang === 'zh' ? 'zh-CN' : 'en'
+    return () => {
+      el.lang = before
+    }
+  }, [lang])
+
   return (
     <div translate="no" lang={lang === 'zh' ? 'zh-Hans' : 'en'} className="min-h-dvh">
       <SiteHeader
         max="max-w-5xl"
-        signIn={false}
+        signIn="signed-in"
         extra={
           <div role="group" aria-label={t.language} className="inline-flex items-center rounded-full border border-rule p-0.5 text-[13px]">
             <span aria-hidden className="hidden px-2 text-graphite sm:inline">文 / A</span>
             {(['en', 'zh'] as const).map((l) => (
-              <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} className={`rounded-full px-3 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-graphite'}`}>{l === 'en' ? 'English' : '中文'}</button>
+              <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} className={`min-h-10 rounded-full px-3 ${lang === l ? 'bg-ink text-paper' : 'text-graphite'}`}>{l === 'en' ? 'EN' : '中文'}</button>
             ))}
           </div>
         }
@@ -102,10 +112,10 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
               <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">{d.state === 'proposed' ? t.title : t.titleOngoing}</h1>
               <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-graphite">{d.state === 'proposed' ? t.intro : t.introOngoing}</p>
 
-              <div className="mt-6 flex flex-wrap items-baseline gap-x-8 gap-y-2 rounded-md border border-rule bg-sheet px-4 py-3.5">
+              <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-3 rounded-md border border-rule bg-sheet px-4 py-3.5 sm:grid-cols-3">
                 <div><p className="label">{t.total}</p><p className="mono text-[26px]">{formatAmount(d.totalAmount)} <span className="text-[14px] text-graphite">USDC</span></p></div>
-                <div><p className="label">{t.releasedTile}</p><p className="mono text-[26px] text-released">{formatAmount(releasedFor(d))}</p></div>
-                <div><p className="label">{t.heldTile}</p><p className="mono text-[26px] text-held">{formatAmount(heldFor(d))}</p></div>
+                <div><p className="label">{t.releasedTile}</p><p className="mono text-[26px] text-released">{formatAmount(releasedFor(d))} <span className="text-[14px] text-graphite">USDC</span></p></div>
+                <div><p className="label">{t.heldTile}</p><p className="mono text-[26px] text-held">{formatAmount(heldFor(d))} <span className="text-[14px] text-graphite">USDC</span></p><p className="text-[12px] text-graphite">{t.inclFees}</p></div>
               </div>
 
               <div className="mt-6">

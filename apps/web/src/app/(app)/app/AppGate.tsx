@@ -46,11 +46,14 @@ export function AppGate({ children }: { children: React.ReactNode }) {
   }, [ready, authenticated, address, reconnect])
 
   useEffect(() => {
-    if (ready && !authenticated) router.replace('/signin')
+    if (!ready || authenticated) return
+    // a session can read as signed out for a moment while the wallet library refreshes it, so wait before leaving
+    const t = setTimeout(() => router.replace('/signin'), 2500)
+    return () => clearTimeout(t)
   }, [ready, authenticated, router])
 
   if (!ready) return <Notice>Loading…</Notice>
-  if (!authenticated) return <Notice>Taking you to sign in…</Notice>
+  if (!authenticated) return <Notice>Checking your sign-in…</Notice>
   if (!address) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-3 px-4">

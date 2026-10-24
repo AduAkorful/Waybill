@@ -78,7 +78,7 @@ export function Combobox({ label, value, onChange, options, placeholder, classNa
             className={`cursor-pointer px-3 py-2 ${i === active ? 'bg-sheet' : ''}`}
           >
             <span className="block font-semibold">{o.label}</span>
-            <span className="mono block truncate text-[11.5px] text-graphite">{o.value}</span>
+            <span className="mono block truncate text-[12px] text-graphite">{o.value}</span>
           </li>
         ))}
       </ul>

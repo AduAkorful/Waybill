@@ -66,7 +66,7 @@ export function Ledger({ deal, voice = "buyer" }: { deal: DealView; voice?: "buy
         </p>
       </div>
       {[released, held, refunded].some((v) => v % 10_000n !== 0n) ? (
-        <p data-exact className="mono mt-2 text-[11.5px] text-graphite">
+        <p data-exact className="mono mt-2 text-[12px] text-graphite">
           Exact: released {formatAmount(released)} · held {formatAmount(held)} · refunded {formatAmount(refunded)} USDC. The large figures above are rounded to the cent.
         </p>
       ) : null}

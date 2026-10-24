@@ -2,12 +2,14 @@
 
 import { useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
+import { useSignOut } from '@/components/use-sign-out'
 import { useAccount } from 'wagmi'
 import { PublicShell } from '@/ui/PublicShell'
 
 /** For a supplier with no wallet: sign in, get one, copy its address to send to the buyer. */
 export function Join() {
-  const { ready, authenticated, login, logout } = usePrivy()
+  const { ready, authenticated, login } = usePrivy()
+  const signOut = useSignOut('/join')
   const { address } = useAccount()
   const [copied, setCopied] = useState(false)
   const copy = async () => {
@@ -38,7 +40,7 @@ export function Join() {
           <p className="mono mt-1 break-all text-[14px]">{address}</p>
           <div className="mt-3 flex gap-2 text-[13px]">
             <button type="button" onClick={() => void copy()} className="rounded-md bg-ink px-3.5 py-2 font-semibold text-paper">{copied ? 'Copied ✓' : 'Copy address'}</button>
-            <button type="button" onClick={() => void logout()} className="px-2 py-2 text-graphite underline">Sign out</button>
+            <button type="button" onClick={() => void signOut()} className="px-2 py-2 text-graphite underline">Sign out</button>
           </div>
         </div>
       ) : (
@@ -57,6 +59,10 @@ export function Join() {
           </li>
         ))}
       </ol>
+      <dl className="space-y-3 border-t border-rule pt-6 text-[13.5px] leading-relaxed md:col-span-2">
+        <div><dt className="font-semibold">Is it safe to share my wallet address?</dt><dd className="text-graphite">Yes. An address only receives money; it cannot be used to take anything from the wallet.</dd></div>
+        <div><dt className="font-semibold">What does it cost me?</dt><dd className="text-graphite">Getting a wallet is free. Accepting a deal is a transaction on Arc, which takes a small network fee paid from the wallet. The deal's own fee is set by the buyer and shown to you in the terms before you accept.</dd></div>
+      </dl>
     </main>
     </PublicShell>
   )

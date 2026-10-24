@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { usePrivy } from '@privy-io/react-auth'
+import { useSignOut } from '@/components/use-sign-out'
 import { useWalletDeals } from '@/data/wallet-deals'
 import { ThemeToggle, Wordmark } from '@/ui/Chrome'
 import { shortAddress } from '@/view/format'
@@ -11,7 +11,7 @@ import { heldShells, shellLabel } from '@/view/wallet'
 /** One frame for every role: header nav on desktop, a bottom tab bar on phones. Only roles the wallet really holds are offered. */
 export function RoleShell({ address, children }: { address: string; children: React.ReactNode }) {
   const path = usePathname()
-  const { logout } = usePrivy()
+  const signOut = useSignOut()
   const read = useWalletDeals()
   const shells = read.status === 'ready' ? heldShells(read.deals) : []
   const nav = [
@@ -58,7 +58,7 @@ export function RoleShell({ address, children }: { address: string; children: Re
             </span>
             <button
               type="button"
-              onClick={() => void logout()}
+              onClick={() => void signOut()}
               className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] text-graphite uppercase hover:text-ink md:min-h-0 md:py-1"
             >
               Sign out

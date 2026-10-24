@@ -69,7 +69,7 @@ export function AddressChanges({ deal, viewer, onChanged }: { deal: DealView; vi
           </div>
         )
       })}
-      <p className="mt-3 text-[11.5px] text-graphite">Changes wait 48 hours and are visible to both sides. The other side can reject until then.</p>
+      <p className="mt-3 text-[12px] text-graphite">Changes wait 48 hours and are visible to both sides. The other side can reject until then.</p>
 
       {dialog && 'propose' in dialog ? (
         <Modal open onClose={close} label="Change address">

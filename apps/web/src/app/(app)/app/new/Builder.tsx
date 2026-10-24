@@ -163,7 +163,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                   <div className="w-24">
                     <label className="label block" htmlFor={`pct-${i}`}>Share, %</label>
                     <input id={`pct-${i}`} name={`pct-${i}`} className={`${input} mono`} inputMode="decimal" value={p.percent} onChange={(e) => setPart(i, { percent: e.target.value })} />
-                    <p className="mono mt-1 text-[11.5px] text-graphite" aria-live="off">{partAmount(form.total, p.percent) === null ? '' : `${formatAmount(partAmount(form.total, p.percent)!)} USDC`}</p>
+                    <p className="mono mt-1 text-[12px] text-graphite" aria-live="off">{partAmount(form.total, p.percent) === null ? '' : `${formatAmount(partAmount(form.total, p.percent)!)} USDC`}</p>
                   </div>
                   <div className="min-w-0 basis-full sm:flex-1 sm:basis-0">
                     <label className="label block" htmlFor={`cond-${i}`}>Paid when</label>
@@ -299,7 +299,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
             Create deal
           </button>
           <p className="mt-3 text-[12px] text-graphite">Terms freeze when you fund. Nobody, including Waybill, can move the money except by these rules.</p>
-          <p className="mt-2 text-[11.5px] text-graphite">Read from the escrow at {new Date(now * 1000).toISOString().slice(11, 16)} UTC. Held in escrow now: {formatAmount(limits.currentLocked)} of {formatAmount(limits.maxLocked)} USDC early-access cap.</p>
+          <p className="mt-2 text-[12px] text-graphite">Read from the escrow at {new Date(now * 1000).toISOString().slice(11, 16)} UTC. Held in escrow now: {formatAmount(limits.currentLocked)} of {formatAmount(limits.maxLocked)} USDC early-access cap.</p>
         </div>
       </aside>
 

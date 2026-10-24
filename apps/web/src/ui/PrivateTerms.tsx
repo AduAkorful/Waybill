@@ -55,7 +55,7 @@ export function PrivateTerms({ deal, wallet }: { deal: DealView; wallet: `0x${st
           {state.kind === 'error' ? <p role="alert" className="mt-2 text-[12.5px] text-hold">{state.message}</p> : null}
         </>
       )}
-      {terms ? <p className="mt-2 text-[11.5px] text-graphite">Written by the buyer and not enforced by the contract; the amounts, deadlines and people on the waybill are what the contract holds.</p> : null}
+      {terms ? <p className="mt-2 text-[12px] text-graphite">Written by the buyer and not enforced by the contract; the amounts, deadlines and people on the waybill are what the contract holds.</p> : null}
     </section>
   )
 }

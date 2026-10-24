@@ -32,7 +32,7 @@ export function Directory({ attestors }: { attestors: DirectoryRow[] }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Name, city or address"
-          className="w-full max-w-xs rounded border border-rule bg-paper px-2.5 py-1.5"
+          className="min-h-11 w-full max-w-xs rounded border border-rule bg-paper px-2.5 text-base"
         />
       </label>
       <div className="mt-4 overflow-hidden rounded-md border border-rule bg-sheet">

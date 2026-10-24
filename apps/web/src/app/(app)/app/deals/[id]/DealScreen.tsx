@@ -215,7 +215,7 @@ export function DealScreen({ idText }: { idText: string }) {
             {(d.events ?? []).map((e) => (
               <li key={`${e.blockNumber}-${e.logIndex}`}>
                 <p>{describeEvent(e)}</p>
-                <p className="mono text-[11.5px] text-graphite">
+                <p className="mono text-[12px] text-graphite">
                   {e.time === null ? 'time unknown' : formatDateTime(e.time)} ·{' '}
                   <a className="underline" href={`${explorer}/tx/${e.txHash}`} target="_blank" rel="noreferrer">
                     {shortHash(e.txHash)} ↗

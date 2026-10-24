@@ -148,7 +148,7 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
               {events.map((e) => (
                 <li key={`${e.blockNumber}-${e.logIndex}`}>
                   {describeEvent(e)}
-                  <span className="mono ml-2 text-[11.5px] text-graphite">
+                  <span className="mono ml-2 text-[12px] text-graphite">
                     {e.time === null ? 'time unknown' : `${formatDateTime(e.time)}`} ·{' '}
                     <a className="underline" href={`${explorer}/tx/${e.txHash}`} target="_blank" rel="noreferrer">{shortHash(e.txHash)} ↗</a>
                   </span>

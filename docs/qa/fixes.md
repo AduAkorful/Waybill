@@ -5,6 +5,43 @@ After each batch the web app on port 3000 is rebuilt and restarted; retest again
 "Fixed" means changed in code, covered by a unit test where the logic is pure, and the page answers as described below.
 It does not mean a signed transaction was re-run in a browser — that is what QA is for.
 
+## Batch 11 — 2026-10-21 (findings from the batches 8–10 retest, report §15)
+
+Web app rebuilt and restarted; no relayer or contract changes.
+
+### Fixed
+- **Sign out on `/operator` did nothing (SF-01):** every Sign out button (app, operator, supplier page, `/join`) now ends signed out even when the wallet library's logout call fails: it clears the sign-in the browser holds and reloads. After Sign out you land on the front page (supplier page: the same page; `/join`: `/join`).
+- **`/d/*` and `/operator` headers broke into three rows at 320 px (NF-01, NF-16):** the language switch is a compact "EN | 中文" and Attestors steps aside on phones, so `/d/*` is one row. The operator's wallet chip and Sign out take one row of their own under the logo.
+- **One header (NF-03, SF-02, SF-03, MW-20):** same slots and order everywhere: logo, Attestors, the page's own control, Sign in, theme. The supplier page and operator show "Your deals" in the Sign in slot when signed in (nothing when signed out, because those pages have their own sign-in). The home hero button also becomes "Your deals" when signed in.
+- **Tap targets (NF-07, NF-17):** the theme button is at least 44 px wide, header buttons are 44 px tall at every width, the language pills are 40 px, and the directory search is 44 px tall and 16 px.
+- **Opening `/app/*` directly (SF-06):** a session that reads as signed out for a moment no longer bounces to sign-in; the page waits 2.5 seconds ("Checking your sign-in…") before it leaves.
+- **Arbiter and role lists (RT-24):** each deal appears as soon as it is read and the "n of m" count moves one at a time. The wallet's list of deals is remembered for the visit, so a second visit paints at once while it refreshes.
+- **Language (NF-10):** switching the supplier page to 中文 sets the page language to Chinese (`zh-CN`) for screen readers and translation tools, and back to English.
+- **Rolling counters (NF-11):** the reel digits can no longer be selected or copied. Assistive technology already reads the real figure.
+- **Home "A real deal" card and `/d/*` summary (NF-05, NF-12):** boxes are numbered 01, 02, 03 in order with no empty cell.
+- **Status card (NF-02, NF-08, MW-19):** Total, Paid to you and Held in escrow each carry "USDC", span the card, and "Held" says "includes fees" so 30.15 against a 30.00 total is explained.
+- **Frozen note (NF-09):** "Other parts are not affected." is neutral grey, not red.
+- **Route dots (NF-13):** a disputed part is a hollow ring with a soft red edge, not a solid red dot.
+- **Repeated amount (NF-14):** the "Funds locked" stamp no longer repeats the escrow amount from box 04.
+- **404 wording (NF-15):** the deal wording is conditional ("If it was a deal link…") and the page is centred.
+- **Text size (MW-03, NF-06):** all remaining 11.5 px text is 12 px. The home hero is 26 px under 400 px wide (MW-23).
+- **Empty space on `/join` (NF-04):** two short answers (is the address safe to share, what it costs) fill the page. The cost answer says accepting a deal takes a small network fee paid from the wallet.
+
+### Not changed, on purpose
+- **"Accept as attestor" and "Connect wallet" as links (SF-04, SF-05):** both go to another page, so they stay links (anchor elements) and are announced as links. Only their look is button-like.
+- **NF-18 (labelling buyer-typed names in 中文):** optional; not done.
+- **MW-05:** unchanged, waits for reviewed Chinese copy.
+- **Empty space on `/signin`:** content is vertically centred and the left panel has steps; more filler was not added.
+
+### Retest checklist for batch 11
+1. `/operator` signed in: Sign out returns you to the front page, signed out.
+2. 320 px: `/d/284` header is one row; `/operator` is two (logo row, wallet row).
+3. Header on `/`, `/attestors`, `/d/284`, `/operator` signed in: "Your deals" in the same slot.
+4. `/app/arbiter`: the count moves one by one; leave and return, rows paint at once.
+5. Open `/app/attestor` directly in a new tab: no bounce to `/signin` while the session is valid.
+6. `/d/284` in 中文: the page language is Chinese (inspect `<html lang>`); status card has USDC on all three figures.
+7. `/` live-deal card and `/d/*`: boxes numbered without gaps.
+
 ## Batch 10 — 2026-10-21 (the remaining open findings)
 
 Web app rebuilt and restarted; no relayer or contract changes.
