@@ -36,6 +36,11 @@ Use a real Postgres migration runner in deployment. Do not edit a production
 database manually to make a failed cursor, projection, or attempt appear
 healthy.
 
+`src/postgres.ts` creates the pool from `WAYBILL_DATABASE_URL` and applies the
+numbered migrations under a Postgres advisory lock. SSL is required by default;
+set `WAYBILL_DATABASE_SSL=false` only for an explicitly isolated local
+development database.
+
 ## Testnet operation
 
 1. Copy `.env.example` into a secret-managed runtime environment.
