@@ -15,8 +15,8 @@ import {FinancingVault} from "../src/vaults/FinancingVault.sol";
 ///
 /// Env:
 ///   WAYBILL_DEPLOY_USDC          USDC token (Arc: 0x3600000000000000000000000000000000000000)
-///   WAYBILL_DEPLOY_TREASURY      protocol fee recipient
-///   WAYBILL_DEPLOY_PAUSER        pauser (must equal the broadcaster)
+///   WAYBILL_DEPLOY_PAUSER        pauser (must equal the broadcaster); also the protocol fee treasury, by operator
+///                                decision 2026-10-24. The treasury can move later via scheduleSetTreasury.
 ///   WAYBILL_DEPLOY_MAX_DEAL      per-deal cap, raw 6-decimal units
 ///   WAYBILL_DEPLOY_MAX_LOCKED    total-held cap, raw 6-decimal units
 ///   WAYBILL_DEPLOY_ARBITERS      comma-separated initial arbiter list
@@ -25,8 +25,8 @@ contract DeployWaybill is Script {
 
     function run() external {
         address usdc = vm.envAddress("WAYBILL_DEPLOY_USDC");
-        address treasury = vm.envAddress("WAYBILL_DEPLOY_TREASURY");
         address pauser = vm.envAddress("WAYBILL_DEPLOY_PAUSER");
+        address treasury = pauser;
         uint256 maxDeal = vm.envUint("WAYBILL_DEPLOY_MAX_DEAL");
         uint256 maxLocked = vm.envUint("WAYBILL_DEPLOY_MAX_LOCKED");
         address[] memory arbiters = vm.envAddress("WAYBILL_DEPLOY_ARBITERS", ",");
