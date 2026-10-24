@@ -5,6 +5,7 @@ plans/
 !.env.example
 .agents/
 .arc-studio/
+console.jsonl
 node_modules/
 lib/
 contracts/out/
