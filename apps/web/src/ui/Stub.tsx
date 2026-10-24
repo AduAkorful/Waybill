@@ -10,7 +10,7 @@ export type Lang = "en" | "zh";
 const stateWord: Record<MilestoneState, { en: string; zh: string }> = {
   waiting: { en: "Waiting", zh: "等待中" },
   in_review: { en: "Buyer review", zh: "买方审核中" },
-  claimable: { en: "Paying supplier", zh: "正在付款" },
+  claimable: { en: "Ready to pay", zh: "待付款" },
   released: { en: "Released", zh: "已付款" },
   overdue: { en: "Overdue · grace running", zh: "已逾期" },
   refundable: { en: "Refundable", zh: "可退款" },

@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { useAccount } from 'wagmi'
 import { WalletDealsProvider } from '@/data/wallet-deals'
+import { ChainGate } from '@/ui/NetworkGuard'
 import { RoleShell } from './RoleShell'
 
 function Notice({ children }: { children: React.ReactNode }) {
@@ -47,7 +48,9 @@ export function AppGate({ children }: { children: React.ReactNode }) {
   }
   return (
     <WalletDealsProvider address={address}>
-      <RoleShell address={address}>{children}</RoleShell>
+      <RoleShell address={address}>
+        <ChainGate>{children}</ChainGate>
+      </RoleShell>
     </WalletDealsProvider>
   )
 }

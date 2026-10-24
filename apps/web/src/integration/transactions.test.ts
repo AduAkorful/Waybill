@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { Hex, TransactionReceipt } from 'viem'
+import { keccak256, toBytes, type Hex, type TransactionReceipt } from 'viem'
 import { ARC_TESTNET } from '@waybill/network/networks'
 import { encodeEscrowAction } from './escrow'
 import {
@@ -71,5 +71,25 @@ describe('frontend transaction lifecycle boundary', () => {
     expect(() => assertActionNetwork(action, 5042, ARC_TESTNET.chainId)).toThrow(
       'expected 5042002',
     )
+  })
+
+  test('a network failure is never reported as a wallet decline', () => {
+    const http = Object.assign(new Error('HTTP request failed. Status: 429'), { name: 'HttpRequestError', status: 429 })
+    const wrapped = Object.assign(new Error('Request failed. user denied'), { cause: http })
+    expect(classifyWalletError(wrapped).code).toBe('rpc_error')
+    expect(classifyWalletError(new Error('network rejected: user rejected')).code).not.toBe('user_rejected')
+  })
+
+  test('a decline is found anywhere in the cause chain', () => {
+    const inner = Object.assign(new Error('x'), { code: 4001 })
+    expect(classifyWalletError(Object.assign(new Error('outer'), { cause: inner })).code).toBe('user_rejected')
+  })
+
+  test('a contract revert is named in plain words', () => {
+    const selector = keccak256(toBytes('AcceptanceNotExpired()')).slice(0, 10)
+    const error = Object.assign(new Error('execution reverted'), { cause: { data: selector } })
+    const classified = classifyWalletError(error)
+    expect(classified.code).toBe('reverted')
+    expect(classified.message).toContain('after its acceptance deadline')
   })
 })

@@ -34,3 +34,8 @@ export function NetworkGuard({ children, signedOut }: { children: ReactNode; sig
   }
   return <>{children}</>
 }
+
+/** For signed-in routes: with a wallet on the wrong chain, nothing below is shown, only the way back. */
+export function ChainGate({ children }: { children: ReactNode }) {
+  return <NetworkGuard signedOut={<>{children}</>}>{children}</NetworkGuard>
+}

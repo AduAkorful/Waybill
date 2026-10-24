@@ -17,7 +17,7 @@ import type { DealView, Tranche } from '@/view/types'
 import { Providers } from '@/app/(app)/providers'
 import { COPY, type Lang } from './copy'
 
-const input = 'mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] outline-none focus:border-held'
+const input = 'mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] focus:border-held'
 
 /**
  * Everything on the supplier page that needs a wallet: sign-in, accepting, the per-part actions and the address
@@ -85,6 +85,13 @@ function Inner({ deal: d, lang, autoLogin, onMounted, onChanged }: { deal: DealV
 
   return (
     <>
+      {authenticated && address && !isSupplier ? (
+        <div role="alert" className="mt-6 rounded-md border border-hold/50 bg-hold-wash px-4 py-3">
+          <p className="font-semibold">{t.wrongWallet}</p>
+          <p className="mt-1 text-[13px]">{t.wrongWalletBody(shortAddress(d.supplier), shortAddress(address))}</p>
+          <button type="button" onClick={() => void logout()} className="mt-2 text-[13px] underline">{t.signOut}</button>
+        </div>
+      ) : null}
       <div className="mt-6">
     {mustAccept ? (
       !ready ? null : !authenticated ? (
@@ -94,13 +101,7 @@ function Inner({ deal: d, lang, autoLogin, onMounted, onChanged }: { deal: DealV
         </div>
       ) : !address ? (
         <p role="status" className="text-[13px] text-graphite">…</p>
-      ) : !isSupplier ? (
-        <div role="alert" className="rounded-md border border-hold/50 bg-hold-wash px-4 py-3">
-          <p className="font-semibold">{t.wrongWallet}</p>
-          <p className="mt-1 text-[13px]">{t.wrongWalletBody(shortAddress(d.supplier), shortAddress(address))}</p>
-          <button type="button" onClick={() => void logout()} className="mt-2 text-[13px] underline">{t.signOut}</button>
-        </div>
-      ) : (
+      ) : !isSupplier ? null : (
         <div>
           <label className="label block" htmlFor="payout">{t.payout}</label>
           <input id="payout" className={`${input} mono`} value={payout} onChange={(e) => setPayout(e.target.value)} placeholder={address} spellCheck={false} />

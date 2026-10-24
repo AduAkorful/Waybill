@@ -7,7 +7,7 @@ import { useDeal } from '@/data/use-deal'
 import { encodeEscrowAction } from '@/integration/escrow'
 import { encodeCurrentEscrowAction } from '@/integration/current-actions'
 import { getBrowserNetwork } from '@/integration/network'
-import { Acceptances } from '@/ui/Acceptances'
+import { Acceptances, missingAcceptances } from '@/ui/Acceptances'
 import { LiveLedger, LiveWaybill } from '@/ui/Live'
 import { AddressChanges } from '@/ui/AddressChanges'
 import { PrivateTerms } from '@/ui/PrivateTerms'
@@ -16,6 +16,8 @@ import { EvidenceList } from '@/ui/EvidenceList'
 import { Modal } from '@/ui/Modal'
 import { TxFlow, type TxStep } from '@/ui/TxFlow'
 import { fundingTotal, reviewEnds } from '@/view/derive'
+import { dealHeadline } from '@/view/status'
+import { cancelReadiness, fundReadiness } from '@/view/readiness'
 import { formatAmount, formatDateTime, shortAddress, shortHash } from '@/view/format'
 import { describeEvent } from '@/view/timeline'
 import type { DealView, Tranche } from '@/view/types'
@@ -118,7 +120,7 @@ export function DealScreen({ idText }: { idText: string }) {
               <Link href="/app" className="hover:text-ink">
                 ← Deals ·{' '}
               </Link>
-              Deal {String(d.id)} · {stateLabel[d.state]}
+              Deal {String(d.id)} · {d.state === 'funded' ? dealHeadline(d) : stateLabel[d.state]}
             </p>
             <h1 className="mt-1 text-[22px] leading-tight font-semibold tracking-tight md:text-[28px]">
               {d.terms?.goods ?? `${d.tranches.length} ${d.tranches.length === 1 ? 'part' : 'parts'}`} · {shortAddress(isBuyer ? d.supplier : d.buyer)}
@@ -140,19 +142,40 @@ export function DealScreen({ idText }: { idText: string }) {
             <div className="space-y-3">
               <Acceptances deal={d} />
               {isBuyer ? (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    disabled={d.state !== 'accepted'}
-                    onClick={() => setDialog({ kind: 'fund' })}
-                    className="rounded-md bg-held px-5 py-2.5 text-[14px] font-semibold text-sheet disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Fund {formatAmount(fundingTotal(d))} USDC
-                  </button>
-                  {d.state === 'proposed' ? (
-                    <button onClick={() => setDialog({ kind: 'cancel' })} className="rounded-md px-3 py-2.5 text-[13.5px] text-graphite hover:text-hold">
-                      Cancel deal
-                    </button>
-                  ) : null}
+                <div>
+                  {(() => {
+                    const fund = fundReadiness(d, missingAcceptances(d))
+                    const cancel = cancelReadiness(d)
+                    return (
+                      <>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            disabled={!fund.ok}
+                            aria-describedby="fund-note"
+                            onClick={() => setDialog({ kind: 'fund' })}
+                            className="rounded-md bg-held px-5 py-2.5 text-[14px] font-semibold text-sheet disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            Fund {formatAmount(fundingTotal(d))} USDC
+                          </button>
+                          {d.state === 'proposed' ? (
+                            <button
+                              disabled={!cancel.ok}
+                              aria-describedby="fund-note"
+                              onClick={() => setDialog({ kind: 'cancel' })}
+                              className="rounded-md px-3 py-2.5 text-[13.5px] text-graphite hover:text-hold disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-graphite"
+                            >
+                              Cancel deal
+                            </button>
+                          ) : null}
+                        </div>
+                        <p id="fund-note" className="mt-2 text-[12.5px] text-graphite">
+                          {!fund.ok ? fund.reason : null}
+                          {!fund.ok && !cancel.ok && d.state === 'proposed' ? ' ' : null}
+                          {d.state === 'proposed' && !cancel.ok ? cancel.reason : null}
+                        </p>
+                      </>
+                    )
+                  })()}
                 </div>
               ) : null}
             </div>

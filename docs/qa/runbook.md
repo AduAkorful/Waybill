@@ -101,3 +101,5 @@ These are real contract timers. They cannot be skipped, and nothing in the app f
 ## 6. Reporting
 
 Give each finding: the URL, the wallet role, the deal number, the exact steps, what you expected, what happened, and (for a transaction) the explorer link of the hash. Never paste a private key, seed phrase, evidence file, or an email verification link into a report.
+
+See `docs/qa/fixes.md` for what has been fixed since the last QA pass and what to expect when retesting.

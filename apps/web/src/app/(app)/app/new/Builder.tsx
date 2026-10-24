@@ -21,7 +21,7 @@ const FEE_PAYERS: { value: FeePayer; label: string }[] = [
   { value: 2, label: 'Split between us' },
 ]
 
-const input = 'mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] outline-none focus:border-held'
+const input = 'mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] focus:border-held'
 
 export function Builder() {
   const { address } = useAccount()
@@ -45,7 +45,9 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   const arbiter = useArbiterCheck(form.arbiter)
   const panelRead = [useArbiterCheck(form.panel[0] ?? ''), useArbiterCheck(form.panel[1] ?? ''), useArbiterCheck(form.panel[2] ?? '')]
   const panelChecks = panelRead.map((r) => (r?.status === 'ready' ? r.value : null))
-  const [signing, setSigning] = useState(false)
+  // The deal as it was when Create was pressed. The form behind the dialog keeps re-reading the chain, and a failed
+  // re-read must not close or change a dialog the wallet is waiting on.
+  const [frozen, setFrozen] = useState<Extract<typeof built, { ok: true }> | null>(null)
   const [created, setCreated] = useState<bigint | null>(null)
   const [lookup, setLookup] = useState('')
   const [details, setDetails] = useState<DetailsForm>(emptyDetails)
@@ -112,7 +114,8 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
               <legend className="label">Who decides disputes</legend>
               <div className="mt-1.5 flex flex-wrap gap-4 text-[13.5px]">
                 <label className="flex items-center gap-2"><input type="radio" name="arbiter-mode" checked={!isPanel} onChange={() => set({ panel: [] })} /> One arbiter</label>
-                <label className="flex items-center gap-2"><input type="radio" name="arbiter-mode" checked={isPanel} onChange={() => set({ panel: ['', '', ''] })} /> A panel of three (any two who agree decide)</label>
+                <label className={`flex items-center gap-2 ${arbiters.arbiters.length < 3 ? 'opacity-60' : ''}`}><input type="radio" name="arbiter-mode" disabled={arbiters.arbiters.length < 3 && !isPanel} checked={isPanel} onChange={() => set({ panel: ['', '', ''] })} /> A panel of three (any two who agree decide)</label>
+                {arbiters.arbiters.length < 3 ? <p className="text-[12px] text-graphite">A panel needs three arbiters on the approved list; {arbiters.arbiters.length} {arbiters.arbiters.length === 1 ? 'is' : 'are'} on it now.</p> : null}
               </div>
             </fieldset>
             {!isPanel ? (
@@ -276,7 +279,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
               {built.errors.map((e) => <li key={e}>{e}</li>)}
             </ul>
           ) : null}
-          <button type="button" disabled={!built.ok} onClick={() => setSigning(true)} className="mt-4 w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet disabled:cursor-not-allowed disabled:opacity-40">
+          <button type="button" disabled={!built.ok} onClick={() => built.ok && setFrozen(built)} className="mt-4 w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet disabled:cursor-not-allowed disabled:opacity-40">
             Create deal
           </button>
           <p className="mt-3 text-[12px] text-graphite">Terms freeze when you fund. Nobody, including Waybill, can move the money except by these rules.</p>
@@ -284,25 +287,25 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
         </div>
       </aside>
 
-      <Modal open={signing && built.ok} onClose={() => setSigning(false)} label="Create this deal">
-        {signing && built.ok ? (
+      <Modal open={frozen !== null} onClose={() => setFrozen(null)} label="Create this deal">
+        {frozen ? (
           <>
             <h2 className="text-[19px] font-semibold">Create this deal</h2>
             <p className="mt-2 mb-4 text-[13.5px] leading-relaxed">This records the terms on Arc. No money moves yet. You fund it once everyone has accepted.</p>
             <TxFlow
               confirmLabel="Create deal"
-              steps={[{ label: 'Create the deal', action: encodeCurrentEscrowAction(built.deal.panel ? { kind: 'createDealWithPanel', ...built.deal, panel: built.deal.panel } : { kind: 'createDeal', ...built.deal }, getBrowserNetwork()) }]}
-              onCancel={() => setSigning(false)}
+              steps={[{ label: 'Create the deal', action: encodeCurrentEscrowAction(frozen.deal.panel ? { kind: 'createDealWithPanel', ...frozen.deal, panel: frozen.deal.panel } : { kind: 'createDeal', ...frozen.deal }, getBrowserNetwork()) }]}
+              onCancel={() => setFrozen(null)}
               onDone={async (hashes: Hex[]) => {
                 const hash = hashes[hashes.length - 1]!
                 try {
                   const receipt = await client!.getTransactionReceipt({ hash })
                   const log = parseEventLogs({ abi: CREATED, logs: receipt.logs, eventName: 'DealCreated' }).find((l) => l.address.toLowerCase() === getBrowserNetwork().contracts.escrow.toLowerCase())
                   if (!log) throw new Error('The transaction confirmed but its deal number could not be read.')
-                  setSigning(false)
+                  setFrozen(null)
                   setCreated(log.args.dealId)
                 } catch (e) {
-                  setSigning(false)
+                  setFrozen(null)
                   setLookup(e instanceof Error ? e.message : String(e))
                 }
               }}

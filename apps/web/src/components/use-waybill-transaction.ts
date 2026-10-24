@@ -44,6 +44,14 @@ export function useWaybillTransaction() {
 
     try {
       assertActionNetwork(action, chainId)
+      // Ask the chain first: if the contract would refuse right now, say why and never open the wallet.
+      if (walletClient.account) {
+        await publicClient.call({
+          account: walletClient.account,
+          to: action.to,
+          data: action.data,
+        })
+      }
       setState({ status: 'signing' })
       const hash = await sendWalletAction(walletClient, action)
       setState({ status: 'confirming', hash })

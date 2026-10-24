@@ -14,8 +14,13 @@ interface Row {
 export function acceptanceRows(deal: DealView): Row[] {
   const rows: Row[] = [{ key: "supplier", role: "Supplier", who: shortAddress(deal.supplier), done: deal.supplierPayout !== null }];
   for (const t of deal.tranches) {
-    if (t.condition === "attestation" && t.attestor) {
-      rows.push({ key: `attestor-${t.index}`, role: `Attestor · stub ${t.index}`, who: shortAddress(t.attestor), done: t.attestorAccepted });
+    if (t.condition === "attestation" && t.attestors.length) {
+      rows.push({
+        key: `attestor-${t.index}`,
+        role: `${t.attestors.length > 1 ? "Attestors" : "Attestor"} · stub ${t.index}`,
+        who: t.attestors.map(shortAddress).join(", "),
+        done: t.attestorAccepted,
+      });
     }
   }
   if (deal.panel) {
@@ -25,6 +30,11 @@ export function acceptanceRows(deal: DealView): Row[] {
     rows.push({ key: "arbiter", role: "Arbiter", who: shortAddress(deal.arbiter), done: deal.arbiterAccepted });
   }
   return rows;
+}
+
+/** Roles still to accept, for the buyer's reason text. */
+export function missingAcceptances(deal: DealView): string[] {
+  return acceptanceRows(deal).filter((r) => !r.done).map((r) => `${r.role.toLowerCase()} (${r.who})`);
 }
 
 /** Who has accepted the terms. Funding is blocked until every row is ticked. */

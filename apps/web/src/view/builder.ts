@@ -1,4 +1,4 @@
-import { isAddress, type Address } from 'viem'
+import { isAddress, zeroAddress, type Address } from 'viem'
 import type { FeePayer, MilestoneInput, ReleaseCondition } from '@/integration/current-actions'
 import type { DealTerms } from './types'
 
@@ -167,11 +167,22 @@ export function buildDeal(
   const isPanel = form.panel.length > 0
   const errors: string[] = []
   const addr = (value: string, what: string): Address | null => {
-    if (!isAddress(value.trim(), { strict: false })) {
+    const text = value.trim()
+    if (!isAddress(text, { strict: false })) {
       errors.push(`${what} must be a wallet address (0x and 40 characters).`)
       return null
     }
-    return value.trim() as Address
+    // Mixed upper and lower case carries a checksum; if it does not match, a character was mistyped.
+    const hex = text.slice(2)
+    if (hex !== hex.toLowerCase() && hex !== hex.toUpperCase() && !isAddress(text, { strict: true })) {
+      errors.push(`${what} does not pass the address checksum. Check it for a typo.`)
+      return null
+    }
+    if (text.toLowerCase() === zeroAddress) {
+      errors.push(`${what} cannot be the empty address (all zeros).`)
+      return null
+    }
+    return text as Address
   }
 
   if (limits.newDealsPaused) errors.push('Creating new deals is paused right now.')
@@ -181,6 +192,7 @@ export function buildDeal(
   let arb: Address | null = null
   let panel: Address[] | null = null
   if (supplier && same(supplier, buyer)) errors.push('The supplier cannot be your own wallet.')
+  if (refund && supplier && same(refund, supplier)) errors.push('The refund address cannot be the supplier: refunds would go to the person being paid.')
   if (isPanel) {
     if (form.panel.length !== 3) errors.push('A panel has exactly three arbiters.')
     const members = form.panel.map((m, i) => addr(m, `Panel arbiter ${i + 1}`))

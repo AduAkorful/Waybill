@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getBrowserNetwork } from '@/integration/network'
+import { dealHeadline } from '@/view/status'
 import { getPublicDeal } from '@/server/deal'
 import { Acceptances } from '@/ui/Acceptances'
 import { Ledger } from '@/ui/Ledger'
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const read = await getPublicDeal(id)
   if (read.status === 'missing' || !isPublic(read.deal)) return { title: `Deal ${id}`, description: 'This deal record is not public yet.' }
   const d = read.deal
-  const description = `${d.tranches.length} ${d.tranches.length === 1 ? 'part' : 'parts'} · ${formatAmount(d.totalAmount)} USDC · ${statusText[d.state]}`
+  const description = `${d.tranches.length} ${d.tranches.length === 1 ? 'part' : 'parts'} · ${formatAmount(d.totalAmount)} USDC · ${dealHeadline(d)}`
   return {
     title: `Deal ${d.id}`,
     description,
@@ -68,7 +69,7 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
             <p className="label">Public record · deal {deal.id.toString()}</p>
-            <h1 className="mt-1 text-[26px] font-semibold tracking-tight">{statusText[deal.state]}</h1>
+            <h1 className="mt-1 text-[26px] font-semibold tracking-tight">{dealHeadline(deal)}</h1>
           </div>
           <Link href={`/record/${deal.id}/print`} className="rounded-md border border-rule px-3 py-1.5 text-[13px] font-semibold hover:bg-sheet">
             Print or save as PDF

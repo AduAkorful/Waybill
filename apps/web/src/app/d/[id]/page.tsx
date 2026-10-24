@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { getPublicDeal } from '@/server/deal'
 import type { DealView } from '@/view/types'
 import { SupplierLink } from './SupplierLink'
@@ -14,13 +15,15 @@ export const metadata: Metadata = {
 export default async function SupplierPage({ params }: { params: Promise<{ id: string }> }) {
   const idText = (await params).id
   let initial: DealView | null = null
-  if (/^\d+$/.test(idText)) {
-    try {
-      const read = await getPublicDeal(BigInt(idText))
-      if (read.status === 'ready') initial = read.deal
-    } catch {
-      // the browser reads the escrow itself and reports a failure on the page
-    }
+  if (!/^\d+$/.test(idText)) notFound()
+  try {
+    const read = await getPublicDeal(BigInt(idText))
+    if (read.status === 'missing') notFound()
+    if (read.status === 'ready') initial = read.deal
+  } catch (error) {
+    // notFound() throws to stop rendering; let it through
+    if (error && typeof error === 'object' && 'digest' in error) throw error
+    // otherwise the browser reads the escrow itself and reports a failure on the page
   }
   return <SupplierLink idText={idText} initial={initial} />
 }

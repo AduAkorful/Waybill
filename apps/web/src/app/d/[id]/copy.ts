@@ -5,8 +5,8 @@ export const COPY = {
   en: {
     eyebrow: 'Deal',
     title: 'Review and accept this deal',
-    titleOngoing: 'Your deal',
-    introOngoing: 'Where each payment stands. Money is paid to you as each part is confirmed.',
+    titleOngoing: 'Deal status',
+    introOngoing: 'Where each payment stands. The supplier is paid as each part is confirmed.',
     intro: 'A buyer has invited you to be paid in stages. Nothing is locked until you and everyone named have accepted and the buyer funds it.',
     total: 'Total',
     parts: 'Payments',
@@ -41,8 +41,8 @@ export const COPY = {
   zh: {
     eyebrow: '交易',
     title: '请查看并接受此交易',
-    titleOngoing: '您的交易',
-    introOngoing: '每笔款项的当前进度。每一期确认后，款项会付给您。',
+    titleOngoing: '交易状态',
+    introOngoing: '每笔款项的当前进度。每一期确认后，款项会付给供应商。',
     intro: '买家邀请您分阶段收款。在您和所有被指定的人都接受、并且买家注资之前，不会锁定任何资金。',
     total: '总额',
     parts: '付款',

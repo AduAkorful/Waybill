@@ -142,3 +142,19 @@ describe('off-chain details', () => {
     if (!r.ok) expect(r.errors.length).toBe(3)
   })
 })
+
+describe('address checks', () => {
+  const zero = '0x0000000000000000000000000000000000000000'
+  const built = (over: Partial<BuilderForm>) => buildDeal(form(over), buyer, limits, { allowed: true, fee: 0n } as never, NOW)
+  test('the empty address is refused', () => {
+    expect(built({ refund: zero }).ok).toBe(false)
+    expect((built({ refund: zero }) as { errors: string[] }).errors.join(' ')).toContain('empty address')
+  })
+  test('a mixed-case address with a wrong checksum is refused', () => {
+    const bad = '0x5EAf26805258F49620fDb1e6FD8Afd91D7a6460E'.replace('5EAf', '5eAf')
+    expect((built({ supplier: bad }) as { errors: string[] }).errors.join(' ')).toContain('checksum')
+  })
+  test('the refund address cannot be the supplier', () => {
+    expect((built({ refund: supplier }) as { errors: string[] }).errors.join(' ')).toContain('cannot be the supplier')
+  })
+})

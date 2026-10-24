@@ -1,6 +1,7 @@
 import type { Hex, PublicClient, TransactionReceipt } from 'viem'
 import type { EncodedWalletAction } from './escrow'
 import { getBrowserNetwork } from './network'
+import { contractErrorName, contractErrorText, isTransportFailure, isUserRejection, revertDataOf } from './tx-errors'
 
 export type WalletErrorCode =
   | 'user_rejected'
@@ -32,30 +33,35 @@ function errorText(error: unknown): string {
   return String(error).toLowerCase()
 }
 
+/**
+ * Sorts a failure into what actually happened. A decline is reported only for a real wallet
+ * rejection (error code or name), never from wording, so a busy or unreachable network is never
+ * called a decline. A revert carries the contract's own error name when the node returned it.
+ */
 export function classifyWalletError(error: unknown): WaybillWalletError {
-  const text = errorText(error)
-  const code =
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    typeof error.code === 'number'
-      ? error.code
-      : undefined
-
-  if (code === 4001 || text.includes('user rejected') || text.includes('user denied')) {
+  if (isUserRejection(error)) {
     return new WaybillWalletError('user_rejected', 'Wallet signature was rejected', error)
   }
-  if (text.includes('wrong network') || text.includes('chain mismatch')) {
+  const revertName = contractErrorName(revertDataOf(error))
+  if (revertName) {
+    return new WaybillWalletError('reverted', contractErrorText(revertName), error)
+  }
+  if (isTransportFailure(error)) {
+    return new WaybillWalletError(
+      'rpc_error',
+      'The network is busy or could not be reached, so we could not check this',
+      error,
+    )
+  }
+  const text = errorText(error)
+  if (text.includes('wrong network') || text.includes('chain mismatch') || text.includes('expected 5042')) {
     return new WaybillWalletError('wrong_network', 'Wallet is connected to the wrong network', error)
   }
-  if (text.includes('no active wallet') || text.includes('account')) {
+  if (text.includes('no active wallet') || text.includes('not ready')) {
     return new WaybillWalletError('no_account', 'No active wallet account is available', error)
   }
-  if (text.includes('revert') || text.includes('execution reverted')) {
-    return new WaybillWalletError('reverted', 'The transaction would revert', error)
-  }
-  if (text.includes('rpc') || text.includes('network') || text.includes('timeout')) {
-    return new WaybillWalletError('rpc_error', 'The chain request failed', error)
+  if (text.includes('execution reverted') || text.includes('revert')) {
+    return new WaybillWalletError('reverted', 'The contract would refuse this right now', error)
   }
   return new WaybillWalletError('unknown', 'The wallet request failed', error)
 }

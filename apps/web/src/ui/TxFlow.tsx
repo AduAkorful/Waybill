@@ -120,7 +120,7 @@ export function TxFlow({
             <p role="alert" className="mb-2 text-[13px] text-hold">
               {state.error.code === 'user_rejected'
                 ? 'You declined it in your wallet. Nothing was sent. You can try again.'
-                : `${state.error.message}. Nothing was sent.`}
+                : `${state.error.message}. Nothing was sent${state.error.code === 'rpc_error' ? '; try again in a moment.' : '.'}`}
             </p>
           ) : null}
           <button
@@ -137,9 +137,15 @@ export function TxFlow({
       ) : null}
 
       {state.status === 'signing' ? (
-        <p role="status" className="rounded-md border border-rule bg-paper px-3.5 py-3 text-[14px]">
-          Check your wallet and approve to continue.
-        </p>
+        <div role="status" className="rounded-md border border-rule bg-paper px-3.5 py-3 text-[14px]">
+          <p>Check your wallet and approve to continue.</p>
+          <p className="mt-1 text-[12.5px] text-graphite">
+            Nothing happens until you approve. If the wallet window closed or never appeared, you can stop waiting and try again.
+          </p>
+          <button onClick={tx.reset} className="mt-2 rounded-md border border-rule px-3 py-1.5 text-[13px] font-semibold hover:bg-sheet">
+            Stop waiting
+          </button>
+        </div>
       ) : null}
 
       {state.status === 'confirming' || state.status === 'success' ? (

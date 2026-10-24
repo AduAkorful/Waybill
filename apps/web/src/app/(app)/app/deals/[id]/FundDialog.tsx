@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { usePublicClient } from 'wagmi'
-import { encodeEscrowAction, encodeUsdcApproval, readUsdcAllowance } from '@/integration/escrow'
+import { encodeEscrowAction, encodeUsdcApproval, readUsdcAllowance, readUsdcBalance } from '@/integration/escrow'
+import { balanceReadiness } from '@/view/readiness'
 import { LineItems } from '@/ui/Sheet'
 import { TxFlow, type TxStep } from '@/ui/TxFlow'
 import { fundingTotal } from '@/view/derive'
 import { formatAmount } from '@/view/format'
 import type { DealView } from '@/view/types'
 
-type Allowance = { status: 'checking' } | { status: 'error'; message: string } | { status: 'ready'; enough: boolean }
+type Allowance = { status: 'checking' } | { status: 'error'; message: string } | { status: 'ready'; enough: boolean; balance: bigint }
 
 /** Funding is up to two real signatures: allow the escrow to take the deposit (only if it cannot already), then fund. */
 export function FundDialog({ deal, owner, onCancel, onDone }: { deal: DealView; owner: `0x${string}`; onCancel: () => void; onDone: () => void }) {
@@ -20,8 +21,8 @@ export function FundDialog({ deal, owner, onCancel, onDone }: { deal: DealView; 
   useEffect(() => {
     if (!client) return setAllowance({ status: 'error', message: 'No network connection to Arc' })
     let cancelled = false
-    readUsdcAllowance(client, owner)
-      .then((a) => !cancelled && setAllowance({ status: 'ready', enough: a >= total }))
+    Promise.all([readUsdcAllowance(client, owner), readUsdcBalance(client, owner)])
+      .then(([a, balance]) => !cancelled && setAllowance({ status: 'ready', enough: a >= total, balance }))
       .catch((e) => !cancelled && setAllowance({ status: 'error', message: e instanceof Error ? e.message : String(e) }))
     return () => {
       cancelled = true
@@ -54,9 +55,17 @@ export function FundDialog({ deal, owner, onCancel, onDone }: { deal: DealView; 
         />
       </div>
       <p className="mt-3 mb-4 text-[12.5px] text-graphite">On Arc. Once sent, Waybill can&apos;t reverse it; only the deal&apos;s rules can move this money.</p>
-      {allowance.status === 'checking' ? <p role="status" className="text-[13px] text-graphite">Checking your USDC allowance…</p> : null}
-      {allowance.status === 'error' ? <p role="alert" className="text-[13px] text-hold">Could not check your USDC allowance, so nothing was offered to sign: {allowance.message}</p> : null}
-      {allowance.status === 'ready' ? <TxFlow confirmLabel="Fund" steps={steps} onCancel={onCancel} onDone={() => onDone()} /> : null}
+      {allowance.status === 'checking' ? <p role="status" className="text-[13px] text-graphite">Checking your USDC balance…</p> : null}
+      {allowance.status === 'error' ? <p role="alert" className="text-[13px] text-hold">Could not check your USDC balance and allowance, so nothing was offered to sign: {allowance.message}</p> : null}
+      {allowance.status === 'ready' && !balanceReadiness(allowance.balance, total, formatAmount).ok ? (
+        <>
+          <p role="alert" className="text-[13px] text-hold">
+            {(balanceReadiness(allowance.balance, total, formatAmount) as { reason: string }).reason} Add USDC to this wallet, then open this again. Nothing was sent.
+          </p>
+          <button onClick={onCancel} className="mt-1 w-full py-2 text-[13px] text-graphite hover:text-ink">Close</button>
+        </>
+      ) : null}
+      {allowance.status === 'ready' && balanceReadiness(allowance.balance, total, formatAmount).ok ? <TxFlow confirmLabel="Fund" steps={steps} onCancel={onCancel} onDone={() => onDone()} /> : null}
     </>
   )
 }
