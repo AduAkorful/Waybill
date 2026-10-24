@@ -38,6 +38,30 @@ These come up in retests. Each has a reason. If one of them is wrong *for a diff
 | Console lines `Privy logout 400` and `sessions 401` after Sign out (SF-15) | The browser reports a failed network call to the wallet library's own server (the session had already ended there). A page cannot hide a failed request from the console, and the person is signed out either way. | – |
 | NF-19 message seen with Rabby (SF-17) | See batch 13: the app now checks the balance first, so the wallet is not opened. | – |
 
+## Batch 14 — 2026-10-21 (findings from the batch 13 retest, report §21)
+
+Web app rebuilt and restarted; no relayer or contract changes. Measured in a browser at 1280 and 1440 px: the logo and the page content now start at the same x on `/`, `/record`, `/d`, `/attestors`, `/join`, `/operator` and the 404; axe 0 violations on `/signin`, `/legal`, `/operator`, `/d/abc` at 320 and 1440.
+
+### Fixed
+- **Content not under the logo (NF-32):** every page's content now uses the same width and side padding as the header (logo and content both at x=96 at 1280, x=176 at 1440).
+- **`/app/attest/<id>` too narrow (SF-21):** same wider container; the statement and the accept panel sit side by side from 1024 px.
+- **`/signin` desktop layout (SF-22):** both halves sit inside the header's container; the value panel is a card under the logo, the headline and steps are grouped, and the form column is 416 px.
+- **`/legal` (NF-31):** wider layout with a sticky contents list in the left column from 1024 px (the link row stays on top on phones).
+- **`/join` and the 404:** same container, so they line up with the logo.
+- **Contrast on `/operator` (NF-33):** the green figures are darker (`#08683e`), above 4.5:1. This applies to every green figure on the site.
+- **Create deal on desktop (SF-20):** pressing it with problems moves focus to the problem list and flashes it, as on phones.
+- **`/app/new` loading (SF-24):** the escrow's limits are remembered for the visit, so a second visit shows the form at once. The first visit still waits for one read (the form needs the live fee range and caps to check what you enter).
+
+### Not changed, and why
+- **`/d/<id>` staying on "Reading the deal…" (SF-23):** the first open of a deal is a cold read through the free tunnel and free RPC (see the "not code" table). The page updates itself after your own transaction (a refresh waits 2.6 s so the shared read cache cannot return the old state). A second open is instant.
+
+### Retest checklist for batch 14
+1. 1280 and 1440: logo and the left edge of the content line up on every page.
+2. `/signin` at 1440: card and form inside the header's width.
+3. `/legal` at 1280: contents list on the left, stays in view while scrolling.
+4. `/operator`: green figures pass contrast.
+5. `/app/new` desktop: press Create with an empty form; the list is focused and flashes.
+
 ## Batch 13 — 2026-10-21 (findings from the batch 12 retest, report §19)
 
 Web app rebuilt and restarted; no relayer or contract changes. Checked with a browser at 320, 375 and 1440 px: axe 0 violations on 12 pages at 320 and 1440, no horizontal scroll.

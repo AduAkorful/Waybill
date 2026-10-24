@@ -11,7 +11,7 @@
   --graphite: #5a5e66;
   --rule: #d5cab3;
   --held: #1c43b8;
-  --released: #0b7a49;
+  --released: #08683e;
   --refunded: #b0336b;
   --hold: #b3270f;
   /* Highlighter: marks the one thing that needs you. Never a state on its own. */
@@ -199,7 +199,7 @@ body {
   --graphite: #555a62;
   --rule: #cfd3d9;
   --held: #1c43b8;
-  --released: #0b7a49;
+  --released: #08683e;
   --refunded: #b0336b;
   --hold: #c92f17;
   background: #fff;

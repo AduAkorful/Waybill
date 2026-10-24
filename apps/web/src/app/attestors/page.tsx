@@ -14,7 +14,7 @@ export default async function Attestors() {
   const read = await getAttestors()
   return (
     <PublicShell>
-      <main className="mx-auto max-w-5xl px-4 pt-6 pb-20 md:px-8">
+      <main className="mx-auto max-w-6xl px-4 pt-6 pb-20 md:px-8">
         <p className="label">Directory</p>
         <h1 className="mt-1 text-[30px] font-semibold tracking-tight">Attestors</h1>
         <p className="mt-2 max-w-2xl text-[15px] text-graphite">

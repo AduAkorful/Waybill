@@ -47,17 +47,20 @@ const sections = [
 export default function Legal() {
   return (
     <PublicShell>
-      <main className="mx-auto max-w-3xl px-4 pt-8 pb-20 md:px-8 md:pt-14">
+      <main className="mx-auto max-w-6xl px-4 pt-8 pb-20 md:px-8 md:pt-14 lg:grid lg:grid-cols-[13rem_minmax(0,48rem)] lg:gap-x-16">
+        <div className="lg:col-start-2 lg:row-start-1">
         <p role="note" className="inline-block rounded-md border border-hold/50 bg-hold-wash px-3 py-1.5 text-[13px] font-semibold">Draft, pending review by counsel</p>
         <h1 className="mt-2 text-[34px] leading-tight font-semibold tracking-tight">Terms, privacy and security</h1>
         <p className="mt-3 text-[15px] leading-relaxed text-graphite">
           Plain-language statements of how Waybill works today. The full documents are written and reviewed before launch, and nothing here is legal advice.
         </p>
-        <nav aria-label="On this page" className="mt-5 flex flex-wrap gap-x-5 text-[13.5px]">
+        </div>
+        <nav aria-label="On this page" className="mt-5 flex flex-wrap gap-x-5 text-[13.5px] lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:mt-2 lg:flex-col lg:self-start lg:sticky lg:top-24">
           {sections.map((s) => (
-            <a key={s.id} href={`#${s.id}`} className="inline-flex min-h-11 min-w-11 items-center justify-center underline">{s.title}</a>
+            <a key={s.id} href={`#${s.id}`} className="inline-flex min-h-11 min-w-11 items-center justify-center underline lg:justify-start">{s.title}</a>
           ))}
         </nav>
+        <div className="lg:col-start-2 lg:row-start-2">
         {sections.map((s) => (
           <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`} className="mt-10 scroll-mt-20 border-t border-ink/80 pt-4">
             <h2 id={`${s.id}-h`} className="text-[20px] font-semibold">{s.title}</h2>
@@ -71,6 +74,7 @@ export default function Legal() {
             </ul>
           </section>
         ))}
+        </div>
       </main>
     </PublicShell>
   )

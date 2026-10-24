@@ -67,7 +67,7 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
 
   return (
     <PublicShell>
-      <main className="mx-auto max-w-5xl px-4 pt-4 pb-20 md:px-8">
+      <main className="mx-auto max-w-6xl px-4 pt-4 pb-20 md:px-8">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
             <p className="label">Public record · deal {deal.id.toString()}</p>

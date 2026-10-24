@@ -44,7 +44,7 @@ export default async function Home() {
 
   return (
     <PublicShell>
-      <main className="mx-auto max-w-5xl px-4 pb-24 md:px-8">
+      <main className="mx-auto max-w-6xl px-4 pb-24 md:px-8">
         <section className="pt-10 pb-12 md:pt-16">
           <p className="label">Early access · {net.network === 'testnet' ? 'Arc test network' : 'Arc'}</p>
           <h1 className="mt-2 max-w-3xl text-[26px] leading-[1.1] font-semibold tracking-tight min-[400px]:text-[36px] md:text-[52px]">

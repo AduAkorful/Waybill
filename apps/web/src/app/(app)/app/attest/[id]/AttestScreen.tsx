@@ -31,7 +31,7 @@ export function AttestScreen({ idText }: { idText: string }) {
   if (mine.length === 0) return <Notice title="This wallet is not named to confirm anything in this deal" detail={`Signed in as ${shortAddress(address)}.`} />
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pt-6 pb-24 md:px-8 md:pt-10">
+    <main className="mx-auto max-w-6xl px-4 pt-6 pb-24 md:px-8 md:pt-10">
       <Link href="/app/attestor" className="text-[12.5px] text-graphite">← Your work</Link>
       <p className="label mt-4">Deal {String(d.id)}</p>
       <h1 className="mt-1 text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">

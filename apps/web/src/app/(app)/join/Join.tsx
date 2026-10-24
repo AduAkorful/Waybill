@@ -24,7 +24,7 @@ export function Join() {
   }
   return (
     <PublicShell>
-    <main className="mx-auto grid max-w-4xl gap-x-12 gap-y-8 px-4 py-10 md:grid-cols-[1fr_1fr] md:px-8 md:py-16">
+    <main className="mx-auto grid max-w-6xl gap-x-12 gap-y-8 px-4 py-10 md:grid-cols-[1fr_1fr] md:px-8 md:py-16">
       <div>
       <h1 className="text-[26px] leading-tight font-semibold tracking-tight">Get a wallet to be paid</h1>
       <p className="mt-2 text-[14px] leading-relaxed text-graphite">

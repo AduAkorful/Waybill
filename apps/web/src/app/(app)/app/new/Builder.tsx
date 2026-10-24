@@ -60,10 +60,17 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   const [created, setCreated] = useState<bigint | null>(null)
   // a click on Create while something is still wrong must answer, not do nothing
   const [attempted, setAttempted] = useState(false)
+  const [flash, setFlash] = useState(false)
   const tryCreate = () => {
     if (built.ok) return setFrozen(built)
     setAttempted(true)
-    requestAnimationFrame(() => document.getElementById('build-problems')?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
+    requestAnimationFrame(() => {
+      const list = document.getElementById('build-problems')
+      list?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      list?.focus({ preventScroll: true })
+    })
+    setFlash(true)
+    setTimeout(() => setFlash(false), 1400)
   }
   const [lookup, setLookup] = useState('')
   const [details, setDetails] = useState<DetailsForm>(emptyDetails)
@@ -298,7 +305,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
             <p className="mt-2 text-[13px] text-graphite">Fill in the total, supplier and arbiter to see what you would lock.</p>
           )}
           {!built.ok && showErrors ? (
-            <ul id="build-problems" aria-label="Problems to fix before creating" className="mt-4 list-disc space-y-1 pl-4 text-[12.5px] text-hold">
+            <ul id="build-problems" tabIndex={-1} aria-label="Problems to fix before creating" className={`mt-4 list-disc space-y-1 rounded-md pl-4 text-[12.5px] text-hold outline-none transition-colors ${flash ? 'bg-hold-wash ring-2 ring-hold/60' : ''}`}>
               {built.errors.map((e) => <li key={e}>{e}</li>)}
             </ul>
           ) : null}

@@ -25,31 +25,33 @@ function useClient(): PublicClient {
   return useMemo(() => getReadClient(), [network])
 }
 
+/** The limits read earlier in this visit, shown at once while a fresh read runs. Memory only. */
+let lastLimits: BuilderLimits | undefined
+
 export type Read<T> = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; value: T }
 
 /** The escrow's own limits, read live. Nothing about fees or caps is written into the page. */
 export function useBuilderLimits(): Read<BuilderLimits> {
   const client = useClient()
   const network = getBrowserNetwork()
-  const [read, setRead] = useState<Read<BuilderLimits>>({ status: 'loading' })
+  const [read, setRead] = useState<Read<BuilderLimits>>(() => (lastLimits ? { status: 'ready', value: lastLimits } : { status: 'loading' }))
   useEffect(() => {
     let cancelled = false
     const address = network.contracts.escrow
     const call = (functionName: (typeof ESCROW_LIMITS)[number]['name']) => client.readContract({ address, abi: ESCROW_LIMITS, functionName } as never)
     Promise.all(['minFeeBps', 'maxFeeBps', 'maxDealAmount', 'maxLocked', 'currentLocked', 'newDealsPaused'].map((n) => call(n as never)))
       .then(([minFeeBps, maxFeeBps, maxDealAmount, maxLocked, currentLocked, newDealsPaused]) => {
-        if (!cancelled)
-          setRead({
-            status: 'ready',
-            value: {
+        if (!cancelled) {
+          lastLimits = {
               minFeeBps: Number(minFeeBps),
               maxFeeBps: Number(maxFeeBps),
               maxDealAmount: maxDealAmount as bigint,
               maxLocked: maxLocked as bigint,
               currentLocked: currentLocked as bigint,
               newDealsPaused: newDealsPaused as boolean,
-            },
-          })
+          }
+          setRead({ status: 'ready', value: lastLimits })
+        }
       })
       .catch((e) => !cancelled && setRead({ status: 'error', message: e instanceof Error ? e.message : String(e) }))
     return () => {
