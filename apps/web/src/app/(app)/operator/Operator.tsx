@@ -8,6 +8,7 @@ import { encodeOperatorAction } from '@/integration/operator-actions'
 import { getBrowserNetwork } from '@/integration/network'
 import { ThemeToggle, Wordmark } from '@/ui/Chrome'
 import { Modal } from '@/ui/Modal'
+import { ArbiterListCard } from './ArbiterListCard'
 import { LabelCard } from './LabelCard'
 import { TxFlow } from '@/ui/TxFlow'
 import { formatAmount, formatDateTime, shortAddress, shortHash } from '@/view/format'
@@ -82,6 +83,7 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
     <>
       <PauseCard summary={s} onChanged={onChanged} />
       <LabelCard summary={s} onChanged={onChanged} />
+      <ArbiterListCard summary={s} onChanged={onChanged} />
 
       <section className="mt-8" aria-label="Money in escrow">
         <h2 className="label mb-2">Money in escrow now · {s.network} · chain {s.chainId}</h2>
