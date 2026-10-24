@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { useSignOut } from '@/components/use-sign-out'
 import { useAccount } from 'wagmi'
+import { NetworkSnapshot } from '@/ui/NetworkSnapshot'
 import { PublicShell } from '@/ui/PublicShell'
 
 /** For a supplier with no wallet: sign in, get one, copy its address to send to the buyer. */
@@ -63,6 +64,7 @@ export function Join() {
         <div><dt className="font-semibold">Is it safe to share my wallet address?</dt><dd className="text-graphite">Yes. An address only receives money; it cannot be used to take anything from the wallet.</dd></div>
         <div><dt className="font-semibold">What does it cost me?</dt><dd className="text-graphite">Getting a wallet is free, but a new wallet starts empty. Accepting a deal is a transaction on Arc, and its network fee is paid in USDC from that wallet, so ask your buyer to send a small amount of USDC to your address along with the deal link. The deal's own fee is set by the buyer and shown to you in the terms before you accept.</dd></div>
       </dl>
+      <div className="md:col-span-2"><NetworkSnapshot /></div>
     </main>
     </PublicShell>
   )

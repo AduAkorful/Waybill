@@ -1,5 +1,6 @@
 'use client'
 
+import { NetworkSnapshot } from '@/ui/NetworkSnapshot'
 import Link from 'next/link'
 import { notFound, useParams } from 'next/navigation'
 import { useAccount } from 'wagmi'
@@ -209,6 +210,8 @@ export function RoleHome() {
           </ol>
         </section>
       )}
+
+      {listed.length === 0 ? <NetworkSnapshot /> : null}
 
       {failed.length > 0 ? (
         <ul role="alert" className="mt-6 space-y-1 text-[12.5px] text-hold">

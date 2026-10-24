@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLogin, useLoginWithEmail, usePrivy } from '@privy-io/react-auth'
 import { useAccount, useSwitchChain } from 'wagmi'
 import { getBrowserNetwork } from '@/integration/network'
+import { NetworkSnapshot } from '@/ui/NetworkSnapshot'
 import { SiteHeader } from '@/ui/SiteHeader'
 
 const CODE_LENGTH = 6
@@ -247,6 +248,7 @@ export function SignIn() {
         </div>
       </main>
       </div>
+      <div className="mx-auto w-full max-w-6xl px-4 pb-12 md:px-8"><NetworkSnapshot heading="What is happening on Waybill" /></div>
     </div>
   )
 }

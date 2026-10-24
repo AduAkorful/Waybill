@@ -38,6 +38,29 @@ These come up in retests. Each has a reason. If one of them is wrong *for a diff
 | Console lines `Privy logout 400` and `sessions 401` after Sign out (SF-15) | The browser reports a failed network call to the wallet library's own server (the session had already ended there). A page cannot hide a failed request from the console, and the person is signed out either way. | – |
 | NF-19 message seen with Rabby (SF-17) | See batch 13: the app now checks the balance first, so the wallet is not opened. | – |
 
+## Batch 18 — 2026-10-22 (short pages get real information, not only more width)
+
+Short pages used to be a few lines on a full desktop screen. They now carry a live block, **"On this network right now"**, read from the escrow and the registry when the page opens (nothing typed in, nothing invented):
+- **Deals created**, **Held in escrow now** (of the early-access cap) and **Largest deal allowed** (the escrow's own limits).
+- **Newest funded or settled deals** (each row opens its public record): deal number, parts, total, state.
+- **Attestors with the most signed statements** (from the registry, each opens its profile).
+If a figure cannot be read, the block says so in that spot.
+
+### Where
+- The 404 (`/d/abc`, any unknown address), `/signin` (below the form, on phones and desktop), `/join`, and the role pages of a wallet with no deals yet (under the "what happens next" steps).
+
+### Notes for QA
+- The attestor names shown ("Waybill test", city "Arc") are the test profiles; see the by-design list.
+- The block needs the relayer for the attestor list. If the relayer is unreachable the attestor half says "not available right now"; the other figures come straight from the chain.
+- A first view can take a few seconds on the free tunnel: it reads about eight deals. It shows "Reading the escrow…" meanwhile.
+- Checked in a browser at 1440 px with the real chain: 292 deals, 106.535 USDC held, deals 289, 287, 285, 284 listed. axe 0 violations, 133 tests pass.
+
+### Retest checklist for batch 18
+1. `/d/abc`, `/signin`, `/join` at 1440: the block fills the page below the content; figures match `/operator` and the deal pages.
+2. A deal row opens its record; an attestor row opens its profile.
+3. A wallet with no deals (`/app/arbiter`): steps, then the block.
+4. Phone: the block stacks in one column.
+
 ## Batch 17 — 2026-10-22 (open items revisited)
 
 Items earlier batches had left as "by design" or "not code" were looked at again; these were code after all. axe 0 on 8 pages at 320 and 1440; 133 tests pass.
