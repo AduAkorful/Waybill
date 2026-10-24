@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+.next
+**/.next
+.git
+.env
+.env.*
+!.env.example
+plans
+AGENTS.md
+contracts/out
+contracts/cache
+apps/prototype
+docs

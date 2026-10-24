@@ -1,0 +1,64 @@
+# Render Blueprint for the relayer (indexer, read API, evidence upload, email, gas-only worker).
+# The web app is deployed separately on Vercel and the database is Supabase: see docs/deploy.md.
+# Values marked `sync: false` are secrets or per-environment URLs: Render asks for them when the Blueprint is created
+# and they never live in this file.
+services:
+  - type: web
+    name: waybill-relayer
+    runtime: docker
+    dockerfilePath: ./services/relayer/Dockerfile
+    dockerContext: .
+    # Always on. The indexer must keep running, so a free instance that sleeps will not do.
+    plan: starter
+    # Exactly one writer. Two relayer instances would race on the same gas account (see services/relayer/README.md).
+    numInstances: 1
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: WAYBILL_NETWORK
+        value: testnet
+      # Render sends traffic to the port in PORT (10000 by default); the relayer reads WAYBILL_API_PORT.
+      - key: WAYBILL_API_PORT
+        value: "10000"
+      # A recent block (just before the first QA deals) keeps the first sync short. Use 67900503 for the full history.
+      - key: WAYBILL_RELAYER_START_BLOCK
+        value: "68143000"
+      - key: WAYBILL_RELAYER_POLL_INTERVAL_MS
+        value: "5000"
+      - key: WAYBILL_RELAYER_MAX_BLOCK_RANGE
+        value: "2000"
+      - key: WAYBILL_DATABASE_POOL_SIZE
+        value: "5"
+      # Supabase session-pooler connection string (port 5432), and its CA certificate as PEM text.
+      - key: WAYBILL_DATABASE_URL
+        sync: false
+      - key: WAYBILL_DATABASE_CA
+        sync: false
+      # The Vercel production origin, exact, no trailing slash.
+      - key: WAYBILL_API_ALLOWED_ORIGINS
+        sync: false
+      - key: WAYBILL_PUBLIC_WEB_URL
+        sync: false
+      # A new throwaway key used only to pay gas for claim/refund/default. It holds no deal money.
+      - key: WAYBILL_RELAYER_PRIVATE_KEY
+        sync: false
+      # Optional, all or none: evidence storage.
+      - key: WAYBILL_EVIDENCE_KEY
+        sync: false
+      - key: WAYBILL_EVIDENCE_S3_ENDPOINT
+        sync: false
+      - key: WAYBILL_EVIDENCE_S3_BUCKET
+        sync: false
+      - key: WAYBILL_EVIDENCE_S3_REGION
+        sync: false
+      - key: WAYBILL_EVIDENCE_S3_ACCESS_KEY_ID
+        sync: false
+      - key: WAYBILL_EVIDENCE_S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: WAYBILL_EVIDENCE_PINATA_JWT
+        sync: false
+      # Optional, all or none (with WAYBILL_PUBLIC_WEB_URL above): email.
+      - key: WAYBILL_EMAIL_RESEND_API_KEY
+        sync: false
+      - key: WAYBILL_EMAIL_FROM
+        sync: false

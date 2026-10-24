@@ -21,6 +21,10 @@ notifications, evidence pointers, and labelled test flags only.
   provider interfaces. Provider SDKs and credentials are intentionally not in
   this repository.
 
+## Hosted Postgres (Supabase)
+
+Use the **session pooler** connection string (port 5432), which is IPv4-reachable from hosts such as Render; migrations take their lock inside a transaction, so either pooler mode works. TLS is always verified: Supabase's certificate chains to its own authority, so paste that authority's certificate (Dashboard, Database, Settings, SSL configuration) into `WAYBILL_DATABASE_CA` as PEM text (line breaks may be written `\n`). Never set `WAYBILL_DATABASE_SSL=false` against a hosted database. On every start the relayer turns on row-level security for every `waybill_*` table and revokes the `anon` and `authenticated` roles, because Supabase exposes the public schema to anonymous API keys; the relayer's own login owns the tables and is unaffected. Tables added by later migrations are covered the same way.
+
 ## Migration order
 
 Apply these migrations in numeric order:
@@ -76,7 +80,7 @@ The indexer fetches logs by address and decodes them itself: the public Arc RPC 
 
 ## Email notifications
 
-Opt-in: set all of `WAYBILL_EMAIL_RESEND_API_KEY`, `WAYBILL_EMAIL_FROM` and `WAYBILL_PUBLIC_WEB_URL` (where the links in mail point), or none; a partial set stops the process at start. A wallet owner sets an address with `POST /v1/contacts` (`{"email","notify"}`, signed by that wallet with `emailMessage` in `src/wallet-emails.ts`), reads it with a signed `GET /v1/contacts`, and a one-time link mailed to the address (`/verify-email?token=` in the web app, which calls `POST /v1/contacts/verify`) proves they can read the inbox. Only a verified, switched-on address is mailed; changing the address starts again unverified. When the escrow indexer stores a new event (`src/notification-planner.ts` decides who is told what: invitations, acceptances, funding, confirmation, payment, disputes and their decisions, address changes, settlement, cancellation), the people it concerns who have a verified address get a short email through the outbox (`src/event-notifier.ts`). The person who acted is not told. Events whose block is more than 48 hours old are treated as history and never mailed, so a backfill sends nothing. Mail is plain text and HTML, names the deal and part and nothing commercial, and links to the recipient's own page. The dispatcher runs in the same process every 10 seconds; failed sends are retried.
+Opt-in: leave `WAYBILL_EMAIL_RESEND_API_KEY` and `WAYBILL_EMAIL_FROM` empty for no email; set either and all three of those and `WAYBILL_PUBLIC_WEB_URL` (where the links in mail point) are required, or the process stops at start. A wallet owner sets an address with `POST /v1/contacts` (`{"email","notify"}`, signed by that wallet with `emailMessage` in `src/wallet-emails.ts`), reads it with a signed `GET /v1/contacts`, and a one-time link mailed to the address (`/verify-email?token=` in the web app, which calls `POST /v1/contacts/verify`) proves they can read the inbox. Only a verified, switched-on address is mailed; changing the address starts again unverified. When the escrow indexer stores a new event (`src/notification-planner.ts` decides who is told what: invitations, acceptances, funding, confirmation, payment, disputes and their decisions, address changes, settlement, cancellation), the people it concerns who have a verified address get a short email through the outbox (`src/event-notifier.ts`). The person who acted is not told. Events whose block is more than 48 hours old are treated as history and never mailed, so a backfill sends nothing. Mail is plain text and HTML, names the deal and part and nothing commercial, and links to the recipient's own page. The dispatcher runs in the same process every 10 seconds; failed sends are retried.
 
 ## Deal labels
 

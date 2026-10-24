@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   applyMigrations,
+  databaseSsl,
+  secureTables,
   createPostgresPool,
   type Migration,
   type MigrationClient,
@@ -42,6 +44,28 @@ const migrations: Migration[] = [
   { name: '002_second.sql', sql: 'CREATE TABLE second (id INT)' },
   { name: '001_first.sql', sql: 'CREATE TABLE first (id INT)' },
 ]
+
+describe('database TLS and table locking', () => {
+  const CERT = '-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----'
+  test('TLS is verified by default and can be switched off only explicitly, for a local database', () => {
+    expect(databaseSsl({})).toEqual({ rejectUnauthorized: true })
+    expect(databaseSsl({ WAYBILL_DATABASE_SSL: 'false' })).toBe(false)
+  })
+  test('a private certificate authority is trusted without turning verification off', () => {
+    expect(databaseSsl({ WAYBILL_DATABASE_CA: CERT })).toEqual({ rejectUnauthorized: true, ca: CERT })
+    // hosts often hand over PEM with literal \\n sequences
+    expect(databaseSsl({ WAYBILL_DATABASE_CA: CERT.replace(/\n/g, '\\n') })).toEqual({ rejectUnauthorized: true, ca: CERT })
+    expect(() => databaseSsl({ WAYBILL_DATABASE_CA: 'not a certificate' })).toThrow('PEM')
+  })
+  test('every waybill table is locked to its owner, and the statement names no table itself', async () => {
+    const seen: string[] = []
+    await secureTables({ query: async (text: string) => (seen.push(text), { rows: [] as never[] }) })
+    expect(seen).toHaveLength(1)
+    expect(seen[0]).toContain('ENABLE ROW LEVEL SECURITY')
+    expect(seen[0]).toContain("tablename LIKE 'waybill\\_%'")
+    expect(seen[0]).toContain('REVOKE ALL')
+  })
+})
 
 describe('Postgres configuration and migrations', () => {
   test('requires an explicit database URL and bounds pool size', async () => {

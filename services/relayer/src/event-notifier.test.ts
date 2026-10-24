@@ -60,6 +60,8 @@ describe('email setup', () => {
   test('all or nothing', () => {
     expect(loadEmailSetup({})).toBeNull()
     expect(() => loadEmailSetup({ WAYBILL_EMAIL_FROM: 'x' })).toThrow('partly configured')
+    expect(loadEmailSetup({ WAYBILL_PUBLIC_WEB_URL: 'https://app.example' })).toBeNull()
+    expect(loadEmailSetup({ WAYBILL_EMAIL_RESEND_API_KEY: '', WAYBILL_EMAIL_FROM: '  ', WAYBILL_PUBLIC_WEB_URL: 'https://app.example' })).toBeNull()
     expect(() => loadEmailSetup({ WAYBILL_EMAIL_RESEND_API_KEY: 'k', WAYBILL_EMAIL_FROM: 'f', WAYBILL_PUBLIC_WEB_URL: 'ftp://x' })).toThrow('http(s)')
     expect(loadEmailSetup({ WAYBILL_EMAIL_RESEND_API_KEY: 'k', WAYBILL_EMAIL_FROM: 'f', WAYBILL_PUBLIC_WEB_URL: 'https://app.example/' })!.webUrl).toBe('https://app.example')
   })

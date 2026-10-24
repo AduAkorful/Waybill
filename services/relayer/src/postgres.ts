@@ -49,13 +49,52 @@ function parsePoolSize(value: string | undefined): number {
   return size
 }
 
+/**
+ * TLS is always verified. A host whose certificate chains to a private authority (Supabase's poolers do) is trusted by
+ * giving that authority's certificate in WAYBILL_DATABASE_CA, as PEM text; line breaks may be written as \n.
+ */
+export function databaseSsl(environment: NodeJS.ProcessEnv): PoolConfig['ssl'] {
+  if (environment.WAYBILL_DATABASE_SSL === 'false') return false
+  const ca = environment.WAYBILL_DATABASE_CA?.trim()
+  if (!ca) return { rejectUnauthorized: true }
+  const pem = ca.replace(/\\n/g, '\n')
+  if (!pem.includes('-----BEGIN CERTIFICATE-----')) throw new Error('WAYBILL_DATABASE_CA must be a PEM certificate')
+  return { rejectUnauthorized: true, ca: pem }
+}
+
 export function createPostgresPool(environment: NodeJS.ProcessEnv = process.env): Pool {
   const config: PoolConfig = {
     connectionString: required(environment, 'WAYBILL_DATABASE_URL'),
     max: parsePoolSize(environment.WAYBILL_DATABASE_POOL_SIZE),
-    ssl: environment.WAYBILL_DATABASE_SSL === 'false' ? false : { rejectUnauthorized: true },
+    ssl: databaseSsl(environment),
   }
   return new Pool(config)
+}
+
+/**
+ * Locks every Waybill table to the connecting role. Hosted Postgres such as Supabase exposes the public schema to
+ * anonymous API keys, which would put wallet emails and deal terms within reach of anyone; with row-level security on
+ * and no policy, only the table owner (the relayer's own login) can read or write. Safe to run on every start, and it
+ * covers tables that later migrations add.
+ */
+export const SECURE_TABLES_SQL = `
+  DO $$
+  DECLARE t text;
+  BEGIN
+    FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = current_schema() AND tablename LIKE 'waybill\\_%' LOOP
+      EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
+      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+        EXECUTE format('REVOKE ALL ON TABLE %I FROM anon', t);
+      END IF;
+      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+        EXECUTE format('REVOKE ALL ON TABLE %I FROM authenticated', t);
+      END IF;
+    END LOOP;
+  END $$
+`
+
+export async function secureTables(database: SqlExecutor): Promise<void> {
+  await database.query(SECURE_TABLES_SQL)
 }
 
 export async function loadMigrations(directory: string): Promise<Migration[]> {

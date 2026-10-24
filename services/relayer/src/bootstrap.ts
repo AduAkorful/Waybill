@@ -33,6 +33,7 @@ import {
   applyMigrations,
   createPostgresPool,
   loadMigrations,
+  secureTables,
   type Migration,
   type MigrationPool,
 } from './postgres'
@@ -270,6 +271,7 @@ export function createBackendApplication(
     async start() {
       if (loopPromise) return loopPromise
       await applyMigrations(pool, await dependencies.loadMigrations())
+      await secureTables(pool)
       stopped = false
       if (api && apiConfig) {
         await new Promise<void>((resolve, reject) => {
