@@ -15,20 +15,27 @@ services:
     healthCheckPath: /health
     autoDeploy: false
     envVars:
+      # Arc mainnet. Addresses come only from ARC_MAINNET in packages/network/src/networks.ts, never from here.
       - key: WAYBILL_NETWORK
-        value: testnet
+        value: mainnet
+      # A dedicated (keyed) Arc mainnet RPC; the public one rate-limits the indexer. The relayer checks its chain id at start.
+      - key: WAYBILL_MAINNET_RPC_URL
+        sync: false
       # Render sends traffic to the port in PORT (10000 by default); the relayer reads WAYBILL_API_PORT.
       - key: WAYBILL_API_PORT
         value: "10000"
-      # A recent block (just before the first QA deals) keeps the first sync short. Use 68854415 (the plan-50 escrow deployment) for the full history.
+      # The mainnet escrow's deploy block (2026-10-24), so the index holds its whole history.
       - key: WAYBILL_RELAYER_START_BLOCK
-        value: "68854415"
+        value: "27636004"
       - key: WAYBILL_RELAYER_POLL_INTERVAL_MS
         value: "5000"
       - key: WAYBILL_RELAYER_MAX_BLOCK_RANGE
         value: "2000"
       - key: WAYBILL_DATABASE_POOL_SIZE
         value: "5"
+      # Mainnet's own schema in the shared Supabase database, apart from any testnet index.
+      - key: WAYBILL_DATABASE_SCHEMA
+        value: waybill_mainnet
       # Supabase session-pooler connection string (port 5432), and its CA certificate as PEM text.
       - key: WAYBILL_DATABASE_URL
         sync: false
@@ -62,8 +69,20 @@ services:
         sync: false
       - key: WAYBILL_EMAIL_FROM
         sync: false
-      # Operator alerts. Required on mainnet (one or both); testnet only logs without them.
+      # Operator alerts. Mainnet refuses to start without at least one: an https webhook (Slack/Discord style) and/or an
+      # email address (sent through Resend, so WAYBILL_EMAIL_RESEND_API_KEY and WAYBILL_EMAIL_FROM must be set too).
       - key: WAYBILL_ALERT_WEBHOOK_URL
         sync: false
       - key: WAYBILL_ALERT_EMAIL
         sync: false
+      # Alert when the relayer's gas falls below this many USDC.
+      - key: WAYBILL_ALERT_MIN_GAS_USDC
+        value: "5"
+      # Alert when a loop is this many blocks behind the chain head.
+      - key: WAYBILL_ALERT_MAX_LAG_BLOCKS
+        value: "1200"
+      # Alert when money held reaches this percentage of the 10,000 USDC total cap.
+      - key: WAYBILL_ALERT_LOCKED_PERCENT
+        value: "80"
+      - key: WAYBILL_ALERT_POLL_SECONDS
+        value: "60"
