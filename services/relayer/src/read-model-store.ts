@@ -32,6 +32,19 @@ interface SqlExecutor {
   query<Row>(text: string, values?: readonly unknown[]): Promise<SqlResult<Row>>
 }
 
+interface DealProjectionRow {
+  network: WaybillNetwork
+  deal_id: string | number | bigint
+  state: string
+  buyer: `0x${string}` | null
+  supplier: `0x${string}` | null
+  supplier_payout: `0x${string}` | null
+  total_amount: string | number | bigint | null
+  prepaid_fee: string | number | bigint | null
+  last_block_number: string | number | bigint
+  last_log_index: string | number | bigint
+}
+
 const EVENT_INSERT_SQL = `
   INSERT INTO waybill_chain_events
     (network, block_number, log_index, transaction_hash, event_name,
@@ -61,6 +74,13 @@ const DEAL_UPSERT_SQL = `
          waybill_deal_projections.last_block_number = EXCLUDED.last_block_number
          AND waybill_deal_projections.last_log_index < EXCLUDED.last_log_index
        )
+`
+
+const DEAL_GET_SQL = `
+  SELECT network, deal_id, state, buyer, supplier, supplier_payout,
+         total_amount, prepaid_fee, last_block_number, last_log_index
+  FROM waybill_deal_projections
+  WHERE network = $1 AND deal_id = $2
 `
 
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/
@@ -104,6 +124,27 @@ function validateProjection(projection: DealProjection): void {
   validatePosition(projection.lastBlockNumber, projection.lastLogIndex)
 }
 
+function toProjection(row: DealProjectionRow): DealProjection {
+  const dealId = BigInt(row.deal_id)
+  const lastBlockNumber = BigInt(row.last_block_number)
+  const lastLogIndex = BigInt(row.last_log_index)
+  if (dealId < 0n || lastBlockNumber < 0n || lastLogIndex < 0n) {
+    throw new Error('Invalid deal projection position returned by store')
+  }
+  return {
+    network: row.network,
+    dealId,
+    state: row.state,
+    buyer: row.buyer ?? undefined,
+    supplier: row.supplier ?? undefined,
+    supplierPayout: row.supplier_payout ?? undefined,
+    totalAmount: row.total_amount === null ? undefined : BigInt(row.total_amount),
+    prepaidFee: row.prepaid_fee === null ? undefined : BigInt(row.prepaid_fee),
+    lastBlockNumber,
+    lastLogIndex,
+  }
+}
+
 export class PostgresReadModelStore {
   constructor(private readonly database: SqlExecutor) {}
 
@@ -136,5 +177,14 @@ export class PostgresReadModelStore {
       projection.lastBlockNumber.toString(),
       projection.lastLogIndex.toString(),
     ])
+  }
+
+  async getDeal(network: WaybillNetwork, dealId: bigint): Promise<DealProjection | null> {
+    if (dealId < 0n) throw new Error('dealId must be non-negative')
+    const result = await this.database.query<DealProjectionRow>(DEAL_GET_SQL, [
+      network,
+      dealId.toString(),
+    ])
+    return result.rows[0] ? toProjection(result.rows[0]) : null
   }
 }
