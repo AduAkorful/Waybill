@@ -736,4 +736,58 @@ contract Dispute04d is Test {
         if (!ok) vm.expectRevert(respond ? IWaybillEscrow.RebuttalWindowOpen.selector : IWaybillEscrow.ResponseWindowOpen.selector);
         escrow.resolve(dealId, 0, true);
     }
+
+    // ── §35 QA edge cases for the rebuttal rule ──────────────────────────────
+    function testQA35_doubleWaiveReverts() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
+        vm.prank(buyer); escrow.waiveRebuttal(dealId, 0);
+        vm.prank(buyer);
+        vm.expectRevert(IWaybillEscrow.RebuttalAlreadyOver.selector);
+        escrow.waiveRebuttal(dealId, 0);
+    }
+
+    function testQA35_waiveAfterResolutionReverts() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
+        vm.prank(buyer); escrow.waiveRebuttal(dealId, 0);
+        vm.prank(arbiter); escrow.resolve(dealId, 0, false);
+        vm.prank(buyer);
+        vm.expectRevert();
+        escrow.waiveRebuttal(dealId, 0);
+    }
+
+    function testQA35_raiserMayAddEvidenceDuringRebuttal() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
+        vm.warp(block.timestamp + 23 hours);
+        vm.prank(buyer); escrow.appendDisputeEvidence(dealId, 0, keccak256("rebut"));
+    }
+
+    function testQA35_applyDefaultBlockedThroughRebuttalAndArbiterWindow() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
+        uint64 dl = escrow.getMilestone(dealId, 0).arbiterDeadline;
+        assertEq(dl, escrow.getDecisionOpensAt(dealId, 0) + uint64(ARB_HOURS) * 1 hours);
+        vm.warp(dl);
+        vm.expectRevert();
+        escrow.applyDefault(dealId, 0);
+        vm.warp(uint256(dl) + 1);
+        vm.prank(arbiter);
+        vm.expectRevert(IWaybillEscrow.ArbiterDeadlinePassed.selector);
+        escrow.resolve(dealId, 0, true);
+        escrow.applyDefault(dealId, 0);
+    }
+
+    function testQA35_withdrawDuringRebuttalClearsIt() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
+        vm.prank(buyer); escrow.withdrawDispute(dealId, 0);
+        assertEq(escrow.getDecisionOpensAt(dealId, 0), 0, "cleared");
+        assertFalse(escrow.getMilestone(dealId, 0).responseSubmitted, "response reset");
+        // the milestone is CLAIMABLE again (a buyer re-dispute needs IN_REVIEW, by design); waive is impossible
+        vm.prank(buyer);
+        vm.expectRevert(IWaybillEscrow.NotDisputed.selector);
+        escrow.waiveRebuttal(dealId, 0);
+    }
 }

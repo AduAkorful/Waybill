@@ -142,8 +142,9 @@ library AttestLogic {
         if (ms.state != IWaybillEscrow.MilestoneState.IN_REVIEW && ms.state != IWaybillEscrow.MilestoneState.REFUNDABLE)
             revert IWaybillEscrow.InvalidMilestoneState();
 
+        bool approvedEarly = ms.state == IWaybillEscrow.MilestoneState.IN_REVIEW;
         ms.state = IWaybillEscrow.MilestoneState.CLAIMABLE;
-        if (ms.state == IWaybillEscrow.MilestoneState.IN_REVIEW) {
+        if (approvedEarly) {
             emit IWaybillEscrow.MilestoneApprovedEarly(dealId, milestoneIndex);
         }
         emit IWaybillEscrow.MilestoneClaimable(dealId, milestoneIndex);

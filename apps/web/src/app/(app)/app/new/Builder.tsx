@@ -14,6 +14,7 @@ import { Combobox } from '@/ui/Combobox'
 import { TxFlow } from '@/ui/TxFlow'
 import { feeShares, partAmount, buildDeal, buildTerms, arbiterFieldClash, CONDITION_LABEL, emptyDetails, emptyForm, feeFor, TEMPLATES, type BuilderForm, type DetailsForm, type PartForm, type Template } from '@/view/builder'
 import { formatAmount, shortAddress } from '@/view/format'
+import { draftKey, isBlankDraft, parseDraft, serializeDraft } from '@/view/builder-draft'
 import { ShareDeal } from './ShareDeal'
 
 const CREATED = parseAbi(['event DealCreated(uint256 indexed dealId, address indexed buyer, address indexed supplier, address arbiter, uint256 totalAmount, uint16 feeBps)'])
@@ -71,6 +72,42 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   const [flash, setFlash] = useState(false)
   // the terms page says creating a deal confirms business use; this is where that is confirmed
   const [agreed, setAgreed] = useState(false)
+  const [details, setDetails] = useState<DetailsForm>(emptyDetails)
+  // the half-built deal survives a reload: one draft per network and wallet, restored once, cleared on create or Start over
+  const storageKey = useMemo(() => draftKey(getBrowserNetwork().chainId, buyer), [buyer])
+  const [draftReady, setDraftReady] = useState(false)
+  const [restored, setRestored] = useState(false)
+  useEffect(() => {
+    setDraftReady(false)
+    let draft = null
+    try { draft = parseDraft(window.localStorage.getItem(storageKey)) } catch { /* storage blocked: start blank */ }
+    if (draft) {
+      setTemplate(draft.template)
+      setForm(draft.form)
+      setDetails(draft.details)
+      setRestored(true)
+    }
+    setDraftReady(true)
+  }, [storageKey])
+  useEffect(() => {
+    if (!draftReady || created !== null) return
+    const timer = setTimeout(() => {
+      try {
+        if (isBlankDraft(form, details, emptyForm(buyer, limits.minFeeBps, TEMPLATES[1]!), template)) window.localStorage.removeItem(storageKey)
+        else window.localStorage.setItem(storageKey, serializeDraft(template, form, details))
+      } catch { /* storage full or blocked: the form still works, it just won't survive a reload */ }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [draftReady, created, form, details, template, storageKey, buyer, limits.minFeeBps])
+  const clearDraft = () => { try { window.localStorage.removeItem(storageKey) } catch { /* nothing kept */ } }
+  const startOver = () => {
+    clearDraft()
+    setTemplate(TEMPLATES[1]!)
+    setForm(emptyForm(buyer, limits.minFeeBps, TEMPLATES[1]!))
+    setDetails(emptyDetails())
+    setAttempted(false)
+    setRestored(false)
+  }
   const tryCreate = () => {
     if (built.ok) {
       setAgreed(false)
@@ -86,7 +123,6 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
     setTimeout(() => setFlash(false), 1400)
   }
   const [lookup, setLookup] = useState('')
-  const [details, setDetails] = useState<DetailsForm>(emptyDetails)
   const [now] = useState(() => Math.floor(Date.now() / 1000))
   // Deadlines are checked against the chain's clock, not this device's: if the chain runs ahead (a skewed device
   // clock, or a test fork that was moved forward), build from the chain's time so the deadline is still in the future.
@@ -125,7 +161,11 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
     <main className="mx-auto grid max-w-6xl gap-8 px-4 pt-6 pb-40 md:px-8 md:pt-10 lg:pb-20 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0">
         <p className="label">New deal</p>
-        <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">Set the terms</h1>
+        <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
+          <h1 className="text-[28px] leading-tight font-semibold tracking-tight">Set the terms</h1>
+          <button type="button" onClick={startOver} className="text-[13px] text-graphite underline hover:text-ink">Start over</button>
+        </div>
+        {restored ? <p role="status" className="mt-2 text-[13px] text-graphite">Your unfinished deal was restored from this browser.</p> : null}
         <p className="mt-1 max-w-xl text-[13.5px] text-graphite">Nothing is sent until you create the deal and sign it in your wallet. After that, the supplier and everyone you name must accept before you can fund it.</p>
 
         <section className="mt-8" aria-label="Template">
@@ -355,7 +395,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
             <h2 className="text-[19px] font-semibold">Create this deal</h2>
             <p className="mt-2 mb-4 text-[13.5px] leading-relaxed">This records the terms on Arc. No money moves yet. You fund it once everyone has accepted.</p>
             <label className="mb-4 flex items-start gap-2.5 text-[13.5px]">
-              <input type="checkbox" className="mt-1 h-4 w-4 shrink-0" checked={agreed} disabled={agreed} onChange={(e) => setAgreed(e.target.checked)} aria-describedby={agreed ? undefined : "agree-help"} />
+              <input type="checkbox" className="mt-1 h-4 w-4 shrink-0" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} aria-describedby={agreed ? undefined : "agree-help"} />
               <span>
                 I am using Waybill for business, and I have read the{' '}
                 <Link href="/legal" target="_blank" className="underline">terms, privacy and security</Link> page, including how disputes are decided.
@@ -379,6 +419,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                   if (!log) throw new Error('The transaction confirmed but its deal number could not be read.')
                   setFrozen(null)
                   setCreatedTx(hash)
+                  clearDraft()
                   setCreated(log.args.dealId)
                 } catch (e) {
                   setFrozen(null)

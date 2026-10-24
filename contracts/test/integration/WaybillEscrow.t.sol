@@ -796,6 +796,9 @@ contract TestScenarioA is WaybillEscrowTest {
         escrow.attest(id, 2, ev, now2, now2 + 1 days, attestor, sig2);
         assertEq(uint8(escrow.getMilestone(id, 2).state), uint8(IWaybillEscrow.MilestoneState.IN_REVIEW));
         vm.prank(buyer);
+        // QA §35: early approval from IN_REVIEW must emit MilestoneApprovedEarly (was dead code)
+        vm.expectEmit(true, true, false, false, address(escrow));
+        emit IWaybillEscrow.MilestoneApprovedEarly(id, 2);
         escrow.approveMilestone(id, 2);
         assertEq(uint8(escrow.getMilestone(id, 2).state), uint8(IWaybillEscrow.MilestoneState.CLAIMABLE));
         escrow.claim(id, 2);

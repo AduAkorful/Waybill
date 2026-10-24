@@ -118,7 +118,7 @@ export async function readMilestone(
     reviewWindow: Number(value(5, 'reviewWindow')),
     disputed: Boolean(value(10, 'disputed')),
     responseDeadline: asBigInt(value(19, 'responseDeadline'), 'responseDeadline'),
-    arbiterDeadline: asBigInt(value(20, 'arbiterDeadline'), 'arbiterDeadline'),
+    arbiterDeadline: asBigInt(value(13, 'arbiterDeadline'), 'arbiterDeadline'),
   }
 }
 
