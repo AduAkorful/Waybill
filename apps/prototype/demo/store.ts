@@ -172,7 +172,7 @@ const setT = (d: DealRecord, idx: number, over: Partial<Tranche>): DealRecord =>
 
 const dropUpcoming = (d: DealRecord, match: string): DealRecord => ({ ...d, timeline: d.timeline.filter((e) => !(e.upcoming && e.actor.includes(match))) });
 
-// ——— Actions. Each mirrors one fixed contract operation from docs/frontend-behavior.md ———
+// ——— Actions. Each mirrors one fixed contract operation ———
 
 export const act = {
   reset() {

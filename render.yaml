@@ -1,5 +1,5 @@
 # Render Blueprint for the relayer (indexer, read API, evidence upload, email, gas-only worker).
-# The web app is deployed separately on Vercel and the database is Supabase: see docs/deploy.md.
+# The web app is deployed separately on Vercel and the database is Supabase.
 # Values marked `sync: false` are secrets or per-environment URLs: Render asks for them when the Blueprint is created
 # and they never live in this file.
 services:
@@ -10,7 +10,7 @@ services:
     dockerContext: .
     # Always on. The indexer must keep running, so a free instance that sleeps will not do.
     plan: starter
-    # Exactly one writer. Two relayer instances would race on the same gas account (see services/relayer/README.md).
+    # Exactly one writer. Two relayer instances would race on the same gas account.
     numInstances: 1
     healthCheckPath: /health
     autoDeploy: false
