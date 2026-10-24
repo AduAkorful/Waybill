@@ -362,11 +362,13 @@ export function readUsdcAllowance(
   publicClient: PublicClient,
   owner: `0x${string}`,
   network: WaybillNetworkManifest = getBrowserNetwork(),
+  spender?: `0x${string}`,
 ) {
+  const allowanceSpender = spender ?? network.contracts.escrow
   return publicClient.readContract({
     address: network.usdc.address,
     abi: USDC_ABI,
     functionName: 'allowance',
-    args: [owner, network.contracts.escrow],
+    args: [owner, allowanceSpender],
   })
 }
