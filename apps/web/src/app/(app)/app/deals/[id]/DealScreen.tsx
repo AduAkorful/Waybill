@@ -13,6 +13,7 @@ import { AddressChanges } from '@/ui/AddressChanges'
 import { PrivateTerms } from '@/ui/PrivateTerms'
 import { DisputeDialog } from '@/ui/DisputeDialog'
 import { EvidenceList } from '@/ui/EvidenceList'
+import { Skeleton } from '@/ui/Skeleton'
 import { Modal } from '@/ui/Modal'
 import { TxFlow, type TxStep } from '@/ui/TxFlow'
 import { fundingTotal, reviewEnds } from '@/view/derive'
@@ -50,7 +51,7 @@ export function DealScreen({ idText }: { idText: string }) {
   }
 
   if (id === null) return <Message title={`“${idText}” is not a deal number`} />
-  if (read.status === 'loading') return <Message title="Reading the deal from the chain…" quiet />
+  if (read.status === 'loading') return <Skeleton label="Reading the deal from the chain…" />
   if (read.status === 'error') return <Message title="This deal could not be read" detail={read.message} />
 
   const d = read.deal

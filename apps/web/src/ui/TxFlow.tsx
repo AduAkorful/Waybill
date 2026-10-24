@@ -8,6 +8,7 @@ import type { EncodedWalletAction } from '@/integration/escrow'
 import { getBrowserNetwork } from '@/integration/network'
 import { waitForActionReceipt } from '@/integration/transactions'
 import { shortHash } from '@/view/format'
+import { rememberReceipt } from './receipts'
 
 export interface TxStep {
   /** Plain words for what this signature does */
@@ -75,6 +76,7 @@ export function TxFlow({
   useEffect(() => {
     if (state.status !== 'success') return
     const hash = state.hash
+    rememberReceipt(step.label, hash)
     const timer = setTimeout(() => advance(hash), 900)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,6 +87,7 @@ export function TxFlow({
     setRecheck('checking')
     const result = await waitForActionReceipt(publicClient, hash)
     if (result.status === 'success') {
+      rememberReceipt(step.label, hash)
       setConfirmedUnknown(true)
       setRecheck('idle')
       advance(hash)

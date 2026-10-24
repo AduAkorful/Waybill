@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useAccount } from 'wagmi'
 import { useDeal } from '@/data/use-deal'
+import { hasSigned } from '@/view/events'
 import { reviewEnds } from '@/view/derive'
 import { PrivateTerms } from '@/ui/PrivateTerms'
 import { formatAmount, formatDateTime, shortAddress } from '@/view/format'
@@ -11,6 +12,7 @@ import type { DealView, Tranche } from '@/view/types'
 import { AcceptPanel } from './AcceptPanel'
 import { Statement } from './Statement'
 import { WorkPanel } from './WorkPanel'
+import { Skeleton } from '@/ui/Skeleton'
 
 /** What an attestor sees for one deal: each part naming this wallet, its statement, and the one thing to do next. */
 export function AttestScreen({ idText }: { idText: string }) {
@@ -21,7 +23,7 @@ export function AttestScreen({ idText }: { idText: string }) {
   const done = () => setRefresh((n) => n + 1)
 
   if (id === null) return <Notice title={`“${idText}” is not a deal number`} />
-  if (read.status === 'loading' || !address) return <Notice title="Reading the deal from the chain…" quiet />
+  if (read.status === 'loading' || !address) return <Skeleton label="Reading the deal from the chain…" />
   if (read.status === 'error') return <Notice title="This deal could not be read" detail={read.message} />
 
   const d = read.deal
@@ -55,9 +57,9 @@ function PartSection({ deal, part, owner, onDone }: { deal: DealView; part: Tran
   else if (deal.state === 'proposed' || deal.state === 'accepted') action = <Info tone="released" title="You accepted this role." body="We will see the deal funded on the chain. Don't inspect before then." />
   else if (deal.state === 'cancelled') action = <Info title="This deal was cancelled before it was funded." />
   else if (part.state === 'waiting' || part.state === 'overdue') {
-    action = part.attested ? <Info tone="released" title="Your confirmation is recorded." body={`${part.attestCount} of ${part.threshold} attestors have signed.`} /> : <WorkPanel deal={deal} part={part} owner={owner} onDone={onDone} />
+    action = part.attested || hasSigned(deal.events, part.position, owner) ? <Info tone="released" title="Your confirmation is recorded." body={`${part.attestCount} of ${part.threshold} attestors have signed.`} /> : <WorkPanel deal={deal} part={part} owner={owner} onDone={onDone} />
   } else if (part.state === 'in_review') {
-    action = <Info tone="released" title="Signed." body={ends ? `The buyer's review closes ${formatDateTime(ends)} UTC. The part is paid then unless they dispute it.` : undefined} />
+    action = <Info tone="released" title="Signed." body={ends ? `The buyer's review closes ${formatDateTime(ends)}. The part is paid then unless they dispute it.` : undefined} />
   } else if (part.state === 'released' || part.state === 'claimable') action = <Info tone="released" title="This part has been paid to the supplier." />
   else if (part.state === 'disputed') action = <Info tone="hold" title="The buyer disputed this part." body="The arbiter decides. Your signed statement and files are part of the record." />
   else action = <Info title={`This part is ${part.state.replace('_', ' ')}.`} />
@@ -69,7 +71,7 @@ function PartSection({ deal, part, owner, onDone }: { deal: DealView; part: Tran
         <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule text-[13px] sm:grid-cols-3">
           {[
             ['This part', `${formatAmount(part.amount)} USDC`],
-            ['Due', `${formatDateTime(part.deadline)} UTC`],
+            ['Due', `${formatDateTime(part.deadline)}`],
             ['Buyer’s review', `${Math.round(part.reviewWindow / 3600)} h after signing`],
           ].map(([k, v]) => (
             <div key={k} className="bg-sheet px-3 py-2.5">

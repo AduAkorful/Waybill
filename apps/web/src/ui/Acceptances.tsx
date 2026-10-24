@@ -17,7 +17,7 @@ export function acceptanceRows(deal: DealView): Row[] {
     if (t.condition === "attestation" && t.attestors.length) {
       rows.push({
         key: `attestor-${t.index}`,
-        role: `${t.attestors.length > 1 ? "Attestors" : "Attestor"} · stub ${t.index}`,
+        role: `${t.attestors.length > 1 ? "Attestors" : "Attestor"} · part ${t.index}`,
         who: t.attestors.map(shortAddress).join(", "),
         done: t.attestorAccepted,
       });

@@ -150,7 +150,8 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
     return { status: 200, body: await options.health() }
   }
   if (url.pathname === '/v1/network') {
-    return { status: 200, body: { network: options.network } }
+    // which optional services this relayer runs, so a page can say so before asking anyone to sign
+    return { status: 200, body: { network: options.network, features: { email: Boolean(options.emails), evidence: Boolean(options.evidence) } } }
   }
   if (url.pathname.startsWith('/v1/wallets/')) {
     const match = /^\/v1\/wallets\/(0x[0-9a-fA-F]{40})\/deals$/.exec(url.pathname)

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { buildDeal, buildTerms, emptyDetails, emptyForm, feeFor, parseAmount, percentToBps, TEMPLATES, type BuilderForm, type BuilderLimits } from './builder'
+import { partAmount, buildDeal, buildTerms, emptyDetails, emptyForm, feeFor, parseAmount, percentToBps, TEMPLATES, type BuilderForm, type BuilderLimits } from './builder'
 
 const buyer = '0x00000000000000000000000000000000000000b1'
 const supplier = '0x00000000000000000000000000000000000000c2'
@@ -156,5 +156,19 @@ describe('address checks', () => {
   })
   test('the refund address cannot be the supplier', () => {
     expect((built({ refund: supplier }) as { errors: string[] }).errors.join(' ')).toContain('cannot be the supplier')
+  })
+})
+
+describe('part amounts and the comma hint', () => {
+  test('a part is its exact share of the total, rounded down', () => {
+    expect(partAmount('1000', '30')).toBe(300_000_000n)
+    expect(partAmount('100', '33.33')).toBe(33_330_000n)
+    expect(partAmount('', '30')).toBeNull()
+    expect(partAmount('100', 'x')).toBeNull()
+  })
+  test('a comma decimal gets a specific message', () => {
+    const r = buildDeal(form({ total: '1,5' }), buyer, limits, { allowed: true, fee: 0n } as never, NOW)
+    expect(r.ok).toBe(false)
+    expect((r as { errors: string[] }).errors.join(' ')).toContain('dot for decimals')
   })
 })

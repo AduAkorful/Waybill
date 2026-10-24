@@ -10,7 +10,7 @@ import { getBrowserNetwork } from '@/integration/network'
 import { Modal } from '@/ui/Modal'
 import { LineItems } from '@/ui/Sheet'
 import { TxFlow } from '@/ui/TxFlow'
-import { buildDeal, buildTerms, CONDITION_LABEL, emptyDetails, emptyForm, feeFor, TEMPLATES, type BuilderForm, type DetailsForm, type PartForm, type Template } from '@/view/builder'
+import { partAmount, buildDeal, buildTerms, CONDITION_LABEL, emptyDetails, emptyForm, feeFor, TEMPLATES, type BuilderForm, type DetailsForm, type PartForm, type Template } from '@/view/builder'
 import { formatAmount, shortAddress } from '@/view/format'
 import { ShareDeal } from './ShareDeal'
 
@@ -157,6 +157,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                   <div className="w-24">
                     <label className="label block" htmlFor={`pct-${i}`}>Share, %</label>
                     <input id={`pct-${i}`} name={`pct-${i}`} className={`${input} mono`} inputMode="decimal" value={p.percent} onChange={(e) => setPart(i, { percent: e.target.value })} />
+                    <p className="mono mt-1 text-[11.5px] text-graphite" aria-live="off">{partAmount(form.total, p.percent) === null ? '—' : `${formatAmount(partAmount(form.total, p.percent)!)} USDC`}</p>
                   </div>
                   <div className="min-w-0 flex-1">
                     <label className="label block" htmlFor={`cond-${i}`}>Paid when</label>

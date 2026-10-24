@@ -35,7 +35,7 @@ export class WaybillApiError extends Error {
 }
 
 export interface WaybillApiClient {
-  getNetwork(): Promise<{ network: WaybillNetwork }>
+  getNetwork(): Promise<{ network: WaybillNetwork; features?: { email?: boolean; evidence?: boolean } }>
   getDeal(dealId: bigint): Promise<unknown>
   /** Indexed events for one deal, oldest first, exactly as the relayer serves them */
   getDealEvents(dealId: bigint): Promise<unknown>
@@ -82,7 +82,7 @@ export function createWaybillApiClient(
 
   return {
     async getNetwork() {
-      const result = await getJson<{ network: WaybillNetwork }>('/v1/network')
+      const result = await getJson<{ network: WaybillNetwork; features?: { email?: boolean; evidence?: boolean } }>('/v1/network')
       if (result.network !== network.network) {
         throw new WaybillApiError(409, 'network_mismatch')
       }

@@ -107,6 +107,11 @@ export function DisputeDialog({ deal, part, owner, mode = 'dispute', onCancel, o
               rows={4}
               className="mt-1.5 w-full rounded-md border border-rule bg-sheet px-3 py-2.5 text-[14px] focus:border-held"
             />
+            {!append && !respond ? (
+              <p className="mt-1.5 text-[12px] text-graphite">
+                Disputing freezes only this part. The other side then has {deal.responsePeriodHours} hours to respond; after that the arbiter can decide.
+              </p>
+            ) : null}
           </div>
           <div>
             <label className="label block" htmlFor="files">Evidence files (optional)</label>

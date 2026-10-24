@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title: `Deal ${d.id}`,
     description,
-    openGraph: { title: `Waybill deal ${d.id}`, description, type: 'article' },
+    openGraph: { title: `Waybill deal ${d.id}`, description, type: 'article', url: `/record/${d.id}` },
   }
 }
 

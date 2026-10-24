@@ -84,7 +84,7 @@ export function Stub({
       {torn ? <div aria-hidden className="absolute inset-0 rounded-b-md border border-dashed border-rule" /> : null}
       <article
         data-stub-card={t.index}
-        aria-label={`Stub ${t.index}, ${word.en}`}
+        aria-label={`Part ${t.index}, ${word.en}`}
         className={`relative flex h-full flex-col rounded-b-md px-4 pb-4 ${wash} ${torn ? "pt-6 shadow-[var(--shadow)]" : "pt-4"} ${
           active ? "z-[1] shadow-[0_0_0_1.5px_var(--held),var(--shadow)]" : ""
         } ${t.state === "disputed" ? "shadow-[0_0_0_1.5px_var(--hold),var(--shadow)]" : ""} ${
@@ -94,7 +94,7 @@ export function Stub({
       >
         <header className="flex items-baseline justify-between gap-2">
           <span className="label">
-            {zh ? `第 ${t.index} 期` : `Stub ${t.index}`} · {t.bps / 100}%
+            {zh ? `第 ${t.index} 期` : `Part ${t.index}`} · {t.bps / 100}%
           </span>
           <span className={`label ${stateTone[t.state]}`}>{zh ? word.zh : word.en}</span>
         </header>

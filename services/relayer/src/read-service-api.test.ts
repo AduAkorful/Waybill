@@ -77,7 +77,7 @@ describe('read-only API boundary', () => {
     })
     await expect(handleApiRequest({ method: 'GET', url: '/v1/network' }, options)).resolves.toEqual({
       status: 200,
-      body: { network: 'testnet' },
+      body: { network: 'testnet', features: { email: false, evidence: false } },
     })
     await expect(handleApiRequest({ method: 'GET', url: '/v1/deals/4' }, options)).resolves.toEqual({
       status: 200,

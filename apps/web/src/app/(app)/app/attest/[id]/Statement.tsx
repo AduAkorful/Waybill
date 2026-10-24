@@ -8,7 +8,7 @@ export function Statement({ deal, part, signer }: { deal: DealView; part: Tranch
       <p className="label">The statement you sign</p>
       <p className="mt-2 text-[14.5px] leading-relaxed">
         I, <span className="mono">{shortAddress(signer)}</span>, confirm that what part {part.index} of {deal.tranches.length} of deal {String(deal.id)} covers
-        ({formatAmount(part.amount)} USDC, due {formatDateTime(part.deadline)} UTC) has been done as agreed, and that the files I attach show what I saw.
+        ({formatAmount(part.amount)} USDC, due {formatDateTime(part.deadline)}) has been done as agreed, and that the files I attach show what I saw.
       </p>
       <p className="label mt-4">What signing does not cover</p>
       <ul className="mt-1.5 list-disc space-y-1 pl-5 text-[13px] leading-snug text-graphite">

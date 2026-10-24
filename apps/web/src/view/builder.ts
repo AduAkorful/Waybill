@@ -93,7 +93,7 @@ export const TEMPLATES: readonly Template[] = [
     blurb: '30% on acceptance, 70% when an inspector confirms the goods.',
     parts: () => [part('30', 0, 7), part('70', 1, 45)],
   },
-  { id: 'custom', name: 'Custom', blurb: 'Choose the parts yourself, from two to eight.', parts: () => [part('50', 0, 7), part('50', 1, 45)] },
+  { id: 'custom', name: 'Custom', blurb: 'Choose the parts yourself, from one to eight.', parts: () => [part('50', 0, 7), part('50', 1, 45)] },
 ]
 
 export function emptyForm(buyer: string, feeBps: number, template: Template = TEMPLATES[1]!): BuilderForm {
@@ -116,6 +116,14 @@ export function parseAmount(text: string): bigint | null {
   const m = /^(\d+)(?:\.(\d{1,6}))?$/.exec(text.trim())
   if (!m) return null
   return BigInt(m[1]!) * 1_000_000n + BigInt((m[2] ?? '').padEnd(6, '0'))
+}
+
+/** What a share of the total is, in raw USDC units, rounded down; null when either figure is not valid. */
+export function partAmount(totalText: string, percentText: string): bigint | null {
+  const total = parseAmount(totalText)
+  const bps = percentToBps(percentText)
+  if (total === null || bps === null) return null
+  return (total * BigInt(bps)) / 10_000n
 }
 
 /** "33.33" to 3333 bps; null when it is not a percentage with at most two decimals. */
@@ -219,7 +227,7 @@ export function buildDeal(
   const leader = isPanel ? (panelChecks[0] ?? null) : arbiter
 
   const total = parseAmount(form.total)
-  if (total === null || total === 0n) errors.push('Enter the total in USDC, with up to six decimals.')
+  if (total === null || total === 0n) errors.push(form.total.includes(',') ? 'Enter the total with a dot for decimals, like 1500.50 (no commas).' : 'Enter the total in USDC, with up to six decimals.')
   else if (total > limits.maxDealAmount) errors.push(`The total is above the early-access limit per deal.`)
 
   const feeBps = wholeNumber(form.feeBps, limits.minFeeBps, limits.maxFeeBps)

@@ -7,6 +7,7 @@ import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api
 import { encodeOperatorAction } from '@/integration/operator-actions'
 import { getBrowserNetwork } from '@/integration/network'
 import { ThemeToggle, Wordmark } from '@/ui/Chrome'
+import { Skeleton } from '@/ui/Skeleton'
 import { Modal } from '@/ui/Modal'
 import { ArbiterListCard } from './ArbiterListCard'
 import { LabelCard } from './LabelCard'
@@ -65,7 +66,7 @@ export function Operator() {
       <main className="mx-auto max-w-6xl px-4 pt-6 pb-20 md:px-8 md:pt-10">
         <h1 className="text-[28px] leading-tight font-semibold tracking-tight">Operator console</h1>
         <p className="mt-1 max-w-2xl text-[13.5px] text-graphite">A monitor, plus three controls for the pauser wallet: pause new deals, label deals, and manage the approved-arbiter list. Nobody at Waybill can move, freeze or redirect money in escrow, and none of these can.</p>
-        {read.kind === 'loading' ? <p role="status" className="mt-8 text-[14px] text-graphite">Reading the deployment…</p> : null}
+        {read.kind === 'loading' ? <Skeleton label="Reading the deployment…" rows={5} /> : null}
         {read.kind === 'error' ? <p role="alert" className="mt-8 text-[14px] text-hold">The monitor could not be loaded, so no figures are shown: {read.message}</p> : null}
         {read.kind === 'ready' ? <Monitor summary={read.summary} health={read.health} onChanged={() => setRefresh((n) => n + 1)} /> : null}
       </main>

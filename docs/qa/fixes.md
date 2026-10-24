@@ -5,6 +5,50 @@ After each batch the web app on port 3000 is rebuilt and restarted; retest again
 "Fixed" means changed in code, covered by a unit test where the logic is pure, and the page answers as described below.
 It does not mean a signed transaction was re-run in a browser — that is what QA is for.
 
+## Batch 3 — 2026-10-20 (builder amounts, receipts, loading, copy)
+
+Web app and relayer restarted on the new code (the relayer now reports which optional services are on). axe: 0 violations on the public pages and `/operator` at 375 and 1440 px, light and dark.
+
+### Builder (WB-QA-031 part, 047, 064)
+- Each part shows what its share is worth in USDC under the percentage box (rounded down to the micro-USDC; the escrow settles any remainder), or "—" until the total and share are valid.
+- A comma decimal ("1,5") now says *"Enter the total with a dot for decimals, like 1500.50"*.
+- The custom template says "from one to eight" parts, matching what is allowed.
+- Not changed: tiny "dust" totals are still allowed (the fee rounds up on them); the fee-payer summary still describes a split fee in words, not amounts.
+
+### Attestor (WB-QA-029, 104)
+- After you have signed a part, it shows **"Your confirmation is recorded"** instead of the upload form again. This is read from the indexed signing events, so it needs the relayer to be up; if it is not, the form can appear but the pre-flight check refuses with "This attestor has already signed for this part" before the wallet opens.
+
+### Receipts (WB-QA-027, 045)
+- Every confirmed step leaves a small card at the bottom right ("<step> · confirmed", short hash, explorer link, × to dismiss) that stays after the dialog closes. It lives only in the page (cleared on reload) and covers all signed flows including accept-arbiter and accept-attestor.
+
+### Copy (WB-QA-028 part, 040)
+- "Stub n" is now **"Part n"** everywhere visible (cards, screen-reader labels, the acceptance list).
+- The dispute form says *"Disputing freezes only this part. The other side then has N hours to respond; after that the arbiter can decide."* (N from the deal).
+- The 404 page tells people to check the deal number in the link and offers Sign in.
+- Remaining "UTC UTC" doubling on the attestor screens removed.
+
+### Loading and notices (WB-QA-012, 022 part, 037)
+- Deal, attest, room and operator pages show placeholder bars with the loading text instead of a bare line.
+- **Settings:** the page asks the relayer first. With email off it says *"Email updates are not switched on for this site yet… You will not be asked to sign anything here."* and shows no sign button. (Right now email is off, so expect that message.)
+
+### Link previews (WB-QA-013)
+- `/record/<id>` now has an `og:image` (a generated card: "Deal N · Funded · 3 parts in dispute", amount, part count; unfunded deals show only "Deal N"). The URL is absolute from the server's own address; set `WAYBILL_SITE_URL` (server env) to the public address (for example the tunnel URL) so previews use it. Without it the image URL points at localhost.
+
+### Contrast
+- The light theme's alert red is slightly darker (`#b3270f`) so error text passes AA on the card background.
+
+### Retest checklist for batch 3
+1. `/app/new`: change the total and shares, each part shows its USDC; type `1,5` as the total.
+2. As ATTESTOR on 284 after signing: no upload form.
+3. Do any signed step; the receipt card stays after the dialog closes and links to the explorer.
+4. `/app/settings`: message that email is off, no signature requested.
+5. `curl -s <web>/record/284 | grep og:image`; open the image URL.
+6. Open a dispute dialog: 72h-style text present. `/d/abc`: new 404 text.
+7. Throttle the network and open `/operator`, `/app/deals/<id>`: placeholder bars appear.
+
+### Next batch (not started)
+Builder: dust minimum and fee-payer amounts in the summary, ENS/checksum policy note, attestor/arbiter pickers with registry names; operator wallet-role chip; per-part evidence signing reuse; 60-second wallet timeout; remaining table items in the report.
+
 ## Batch 2 — 2026-10-20 (accessibility, layout, copy)
 
 Web app rebuilt and restarted on port 3000. Automated check: axe-core found **0 violations** on `/`, `/attestors`, `/record/*`, `/d/<id>`, `/signin`, `/join`, `/legal`, `/operator` at 375 px and 1440 px, light and dark. Signed-in pages (`/app/*`) cannot be audited without a session — QA should run axe there.
@@ -97,5 +141,3 @@ Web app rebuilt and restarted on port 3000. Automated check: axe-core found **0 
 9. Wallet on another chain → `/app/*` shows the Switch to Arc card.
 10. Press Create, then let the wallet sit → dialog stays open with Stop waiting; no silent close.
 
-### Next batch (not started)
-Builder amounts and validation polish (per-part USDC, dust, 1-part custom, fee strings), receipt strip and explorer links after each step, skeleton loaders, OG image, email-off notice before signing, remaining copy items.

@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { getWagmiConfig } from '@/config'
 import { getBrowserChain } from '@/integration/network'
 import { getPrivyProviderProps } from '@/privy'
+import { ReceiptStrip } from '@/ui/receipts'
 import { useSiteTheme } from './theme'
 
 /** Wallet, chain and query providers. Only signed-in app routes load them, so public pages stay light. */
@@ -18,7 +19,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <PrivyProvider {...privy} config={{ ...privy.config, defaultChain: chain, supportedChains: [chain], appearance: { theme } }}>
       <QueryClientProvider client={queryClient}>
-        <WagmiProvider config={getWagmiConfig()}>{children}</WagmiProvider>
+        <WagmiProvider config={getWagmiConfig()}>
+          {children}
+          <ReceiptStrip />
+        </WagmiProvider>
       </QueryClientProvider>
     </PrivyProvider>
   )

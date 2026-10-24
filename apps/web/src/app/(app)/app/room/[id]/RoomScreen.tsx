@@ -9,6 +9,7 @@ import { encodeEscrowAction } from '@/integration/escrow'
 import { getBrowserNetwork } from '@/integration/network'
 import { DisputeDialog } from '@/ui/DisputeDialog'
 import { EvidenceList } from '@/ui/EvidenceList'
+import { Skeleton } from '@/ui/Skeleton'
 import { Modal } from '@/ui/Modal'
 import { PrivateTerms } from '@/ui/PrivateTerms'
 import { TxFlow } from '@/ui/TxFlow'
@@ -36,7 +37,7 @@ export function RoomScreen({ idText }: { idText: string }) {
   }
 
   if (id === null) return <Notice title={`“${idText}” is not a deal number`} />
-  if (read.status === 'loading' || !address) return <Notice title="Reading the deal from the chain…" quiet />
+  if (read.status === 'loading' || !address) return <Skeleton label="Reading the deal from the chain…" />
   if (read.status === 'error') return <Notice title="This deal could not be read" detail={read.message} />
 
   const d = read.deal

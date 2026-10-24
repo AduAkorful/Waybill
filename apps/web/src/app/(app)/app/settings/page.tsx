@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import { readEmailSettings, saveEmailSettings, type EmailSettings } from '@/integration/contacts'
+import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api'
 import { getBrowserNetwork } from '@/integration/network'
 import { shortAddress } from '@/view/format'
 
@@ -22,6 +23,20 @@ export default function SettingsPage() {
   const [notify, setNotify] = useState(true)
   const [saved, setSaved] = useState<EmailSettings | null>(null)
   const sign = (message: string) => signMessageAsync({ message })
+  const [emailOn, setEmailOn] = useState<'checking' | 'on' | 'off' | 'unknown'>('checking')
+
+  // ask the relayer whether email is switched on before anyone is asked to sign
+  useEffect(() => {
+    let cancelled = false
+    try {
+      createWaybillApiClient(loadBrowserApiBaseUrl()).getNetwork()
+        .then((n) => !cancelled && setEmailOn(n.features?.email ? 'on' : 'off'))
+        .catch(() => !cancelled && setEmailOn('unknown'))
+    } catch {
+      setEmailOn('unknown')
+    }
+    return () => { cancelled = true }
+  }, [])
 
   // nothing is read until the person asks: reading is a wallet signature
   useEffect(() => setRead({ kind: 'idle' }), [address])
@@ -60,7 +75,9 @@ export default function SettingsPage() {
         Get a short email when something needs you on a deal: an invitation, a confirmation to review, a dispute or its decision. Emails name the deal and the part, link back here, and never include commercial detail. Waybill sends nothing until you confirm the address from the link in the first email.
       </p>
 
-      {read.kind === 'idle' ? (
+      {emailOn === 'off' ? <p role="status" className="mt-6 rounded-md border border-rule bg-sheet px-3.5 py-3 text-[14px]">Email updates are not switched on for this site yet, so there is nothing to set up. You will not be asked to sign anything here.</p> : null}
+      {emailOn === 'checking' ? <p role="status" className="mt-6 text-[14px] text-graphite">Checking…</p> : null}
+      {read.kind === 'idle' && (emailOn === 'on' || emailOn === 'unknown') ? (
         <button type="button" onClick={() => void load()} className="mt-6 rounded-md border border-rule px-4 py-2.5 text-[14px] font-semibold">Show my email settings</button>
       ) : null}
       {read.kind === 'working' ? <p role="status" className="mt-6 text-[14px] text-graphite">Approve the message in your wallet. This costs nothing.</p> : null}

@@ -55,3 +55,10 @@ export function splitDecisions(events: readonly DealEvent[]): SplitDecision[] {
 export function withEvents(view: DealView, events: readonly DealEvent[]): DealView {
   return { ...view, events: [...events], splits: splitDecisions(events) }
 }
+
+/** Whether this wallet has already signed for a part, read from the indexed `AttestationSubmitted` events. */
+export function hasSigned(events: readonly DealEvent[] | undefined, position: number, wallet: string): boolean {
+  return (events ?? []).some(
+    (e) => e.name === 'AttestationSubmitted' && e.position === position && String(e.args.attestor ?? '').toLowerCase() === wallet.toLowerCase(),
+  )
+}
