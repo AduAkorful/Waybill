@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPublicClient, http, type PublicClient } from 'viem'
 import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api'
 import { getBrowserChain, getBrowserNetwork } from '@/integration/network'
@@ -26,7 +26,7 @@ export type DealRead =
  * One deal, read from the escrow, with its indexed history from the relayer when the API is configured.
  * The escrow read is the truth; a failed or missing history never hides the deal, and is reported next to it.
  */
-export function useDeal(id: bigint | null): DealRead {
+export function useDeal(id: bigint | null, refreshKey = 0): DealRead {
   const network = useMemo(() => getBrowserNetwork(), [])
   const client = useMemo(
     () =>
@@ -38,11 +38,14 @@ export function useDeal(id: bigint | null): DealRead {
     [network],
   )
   const [read, setRead] = useState<DealRead>({ status: 'loading' })
+  const shownId = useRef<bigint | null>(null)
 
   useEffect(() => {
     if (id === null) return
     let cancelled = false
-    setRead({ status: 'loading' })
+    // a refresh keeps the deal on screen; only a different deal resets to loading
+    if (shownId.current !== id) setRead({ status: 'loading' })
+    shownId.current = id
 
     const api = (() => {
       try {
@@ -82,7 +85,7 @@ export function useDeal(id: bigint | null): DealRead {
       cancelled = true
       clearInterval(timer)
     }
-  }, [client, network, id])
+  }, [client, network, id, refreshKey])
 
   return read
 }
