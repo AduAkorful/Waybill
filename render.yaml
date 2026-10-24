@@ -75,9 +75,10 @@ services:
         sync: false
       - key: WAYBILL_ALERT_EMAIL
         sync: false
-      # Alert when the relayer's gas falls below this many USDC.
+      # Alert when the relayer's gas falls below this many USDC. A claim or refund costs about 0.002-0.005 USDC on Arc,
+      # so 0.5 still leaves 100+ transactions of warning.
       - key: WAYBILL_ALERT_MIN_GAS_USDC
-        value: "5"
+        value: "0.5"
       # Alert when a loop is this many blocks behind the chain head.
       - key: WAYBILL_ALERT_MAX_LAG_BLOCKS
         value: "1200"
