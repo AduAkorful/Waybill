@@ -144,3 +144,23 @@ events, permissions, fee math, and test semantics are identical to the pre-04k s
 
 Compile result for 04k: `forge build` exits 0 with warnings only (unused local
 variables and unused function parameters pre-existing before this restructuring).
+
+## Backend provenance and boundary
+
+The backend/relayer is repository-owned infrastructure around the Studio-built
+contracts. It does not replace the Arc Studio contract source, and it cannot
+move escrow principal. The current backend slices are:
+
+- shared fail-closed testnet/mainnet manifest and runtime switch;
+- read-only Arc client, confirmed event cursor, event worker, and fresh
+  eligibility checks;
+- fixed gas-only submission (`claim`, `refund`, `applyDefault`) with serialized
+  nonce handling, attempt persistence, and receipt reconciliation;
+- chain projections, contacts, labelled test flags, notification outbox,
+  evidence pointers, health/reconciliation checks, and provider-independent
+  email/evidence adapters.
+
+The backend uses the current escrow deployment only:
+`0xcf08585EdCEb9b8612046b2205cf1aa2C42E5EfA` on Arc testnet. Legacy escrow
+addresses are not backend targets. Mainnet configuration remains empty until a
+separate deployment, address review, and exact-artifact validation are complete.
