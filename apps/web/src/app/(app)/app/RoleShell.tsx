@@ -30,7 +30,7 @@ export function RoleShell({ address, children }: { address: string; children: Re
   const current = shells.find((s) => path.startsWith(`/app/${s}`))
 
   return (
-    <div className="flex min-h-dvh flex-col pb-16 md:pb-0">
+    <div className="flex min-h-dvh flex-col pb-[calc(2.85rem+env(safe-area-inset-bottom))] md:pb-0">
       <header className="sticky top-0 z-30 border-b border-rule bg-paper/95 backdrop-blur">
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 md:px-6">
           <div className="flex items-center gap-7">
@@ -59,7 +59,7 @@ export function RoleShell({ address, children }: { address: string; children: Re
             <button
               type="button"
               onClick={() => void logout()}
-              className="rounded-full border border-rule px-2.5 py-1 text-[10.5px] text-graphite uppercase hover:text-ink"
+              className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] text-graphite uppercase hover:text-ink md:min-h-0 md:py-1"
             >
               Sign out
             </button>
@@ -67,13 +67,13 @@ export function RoleShell({ address, children }: { address: string; children: Re
         </div>
       </header>
       <div className="flex-1">{children}</div>
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-rule bg-paper/95 backdrop-blur md:hidden" aria-label="Main">
-        {nav.map((n) => (
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-rule bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Main">
+        {nav.filter((n) => n.href !== '/attestors').map((n) => (
           <Link
             key={n.href}
             href={n.href}
             aria-current={n.active ? 'page' : undefined}
-            className={`flex-1 py-3 text-center text-[12.5px] ${n.active ? 'font-semibold text-ink' : 'text-graphite'}`}
+            className={`flex min-h-11 flex-1 items-center justify-center px-1 text-center text-[12px] leading-tight ${n.active ? 'font-semibold text-ink' : 'text-graphite'}`}
           >
             {n.label}
           </Link>

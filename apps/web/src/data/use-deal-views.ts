@@ -7,7 +7,10 @@ import { loadDealView } from '@/view/from-chain'
 import type { DealView } from '@/view/types'
 
 /** Deals read at once. The public RPC rate-limits bursts, so a long list is read in small groups. */
-const GROUP = 3
+const GROUP = 6
+
+/** Deals read earlier in this visit, shown at once while the lists are read again. Memory only. */
+const lastViews = new Map<string, DealViewRead>()
 
 export type DealViewRead = { status: 'ready'; deal: DealView } | { status: 'error'; message: string }
 
@@ -23,21 +26,28 @@ export function useDealViews(ids: readonly bigint[]): { done: boolean; reads: Ma
 
   useEffect(() => {
     let cancelled = false
-    setState({ done: false, reads: new Map() })
+    const remembered = new Map<string, DealViewRead>()
+    for (const id of ids) {
+      const r = lastViews.get(String(id))
+      if (r) remembered.set(String(id), r)
+    }
+    setState({ done: false, reads: remembered })
     const run = async () => {
       const reads = new Map<string, DealViewRead>()
       for (let i = 0; i < ids.length; i += GROUP) {
         await Promise.all(
           ids.slice(i, i + GROUP).map(async (id) => {
             try {
-              reads.set(String(id), { status: 'ready', deal: await loadDealView(client, network, id) })
+              const r: DealViewRead = { status: 'ready', deal: await loadDealView(client, network, id) }
+              reads.set(String(id), r)
+              lastViews.set(String(id), r)
             } catch (e) {
               reads.set(String(id), { status: 'error', message: e instanceof Error ? e.message : String(e) })
             }
           }),
         )
         if (cancelled) return
-        setState({ done: false, reads: new Map(reads) })
+        setState({ done: false, reads: new Map([...remembered, ...reads]) })
       }
       if (!cancelled) setState({ done: true, reads })
     }

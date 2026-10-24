@@ -58,6 +58,13 @@ function Inner({ deal: d, lang, autoLogin, onMounted, onChanged }: { deal: DealV
 
   const isSupplier = !!address && address.toLowerCase() === d.supplier.toLowerCase()
   const expired = d.state === 'proposed' && d.chainTime > d.acceptanceDeadline
+  const lower = address?.toLowerCase()
+  // a named attestor or arbiter is not in the wrong place; their banner above says what to do
+  const isNamedHere =
+    lower !== undefined &&
+    (d.arbiter.toLowerCase() === lower ||
+      (d.panel?.members ?? []).some((m) => m.toLowerCase() === lower) ||
+      d.tranches.some((p) => p.attestors.some((a) => a.toLowerCase() === lower)))
   const mustAccept = d.state === 'proposed' && d.supplierPayout === null && !expired
   const actions: Record<number, React.ReactNode> = {}
   if (isSupplier) {
@@ -89,7 +96,7 @@ function Inner({ deal: d, lang, autoLogin, onMounted, onChanged }: { deal: DealV
   return (
     <>
       {authenticated && address && !isSupplier ? <NamedPartyBanner deal={d} wallet={address} /> : null}
-      {authenticated && address && !isSupplier ? (
+      {authenticated && address && !isSupplier && !isNamedHere ? (
         <div role="alert" className="mt-6 rounded-md border border-hold/50 bg-hold-wash px-4 py-3">
           <p className="font-semibold">{t.wrongWallet}</p>
           <p className="mt-1 text-[13px]">{t.wrongWalletBody(shortAddress(d.supplier), shortAddress(address))}</p>

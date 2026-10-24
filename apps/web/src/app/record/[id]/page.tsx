@@ -6,6 +6,8 @@ import { dealHeadline } from '@/view/status'
 import { getPublicDeal } from '@/server/deal'
 import { Acceptances } from '@/ui/Acceptances'
 import { Ledger } from '@/ui/Ledger'
+import { HistoryRows } from '@/ui/HistoryRows'
+import { groupHistory } from '@/view/attestor'
 import { PublicShell } from '@/ui/PublicShell'
 import { Waybill } from '@/ui/Waybill'
 import { formatAmount, formatDateTime, shortAddress, shortHash } from '@/view/format'
@@ -71,7 +73,7 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
             <p className="label">Public record · deal {deal.id.toString()}</p>
             <h1 className="mt-1 text-[26px] font-semibold tracking-tight">{dealHeadline(deal)}</h1>
           </div>
-          <Link href={`/record/${deal.id}/print`} className="rounded-md border border-rule px-3 py-1.5 text-[13px] font-semibold hover:bg-sheet">
+          <Link href={`/record/${deal.id}/print`} className="hidden rounded-md border border-rule px-3 py-1.5 text-[13px] font-semibold hover:bg-sheet md:inline-block">
             Print or save as PDF
           </Link>
         </div>
@@ -100,19 +102,9 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
           {history.status === 'error' ? <p role="alert" className="mt-2 text-hold">History is unavailable right now: {history.message}</p> : null}
           {history.status === 'ready' && (deal.events ?? []).length === 0 ? <p className="mt-2 text-graphite">No events have been indexed for this deal yet.</p> : null}
           {history.status === 'ready' && (deal.events ?? []).length > 0 ? (
-            <ol className="mt-3 divide-y divide-rule rounded-md border border-rule bg-sheet text-[13.5px]">
-              {(deal.events ?? []).map((e) => (
-                <li key={`${e.blockNumber}-${e.logIndex}`} className="flex flex-wrap items-baseline justify-between gap-2 px-3.5 py-2.5">
-                  <span>{describeEvent(e)}</span>
-                  <span className="mono text-[12px] text-graphite">
-                    {e.time === null ? 'time unknown' : formatDateTime(e.time)} ·{' '}
-                    <a className="underline" href={`${explorer}/tx/${e.txHash}`} target="_blank" rel="noreferrer">
-                      {shortHash(e.txHash)} ↗
-                    </a>
-                  </span>
-                </li>
-              ))}
-            </ol>
+            <div className="mt-3">
+              <HistoryRows groups={groupHistory(deal.events ?? [], describeEvent)} explorer={explorer} />
+            </div>
           ) : null}
         </section>
 
@@ -127,7 +119,7 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
             <dd>{deal.panel ? deal.panel.members.map(shortAddress).join(', ') : shortAddress(deal.arbiter)}</dd>
             <dt>Escrow contract</dt>
             <dd>
-              <a className="underline" href={`${explorer}/address/${getBrowserNetwork().contracts.escrow}`} target="_blank" rel="noreferrer">
+              <a className="inline-flex min-h-11 items-center underline sm:min-h-0" href={`${explorer}/address/${getBrowserNetwork().contracts.escrow}`} target="_blank" rel="noreferrer">
                 {shortAddress(getBrowserNetwork().contracts.escrow)} ↗
               </a>
             </dd>

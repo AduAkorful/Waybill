@@ -113,7 +113,7 @@ body {
 .label {
   font-stretch: 75%;
   font-weight: 600;
-  font-size: 10.5px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--graphite);
@@ -237,5 +237,14 @@ body {
   select,
   input:not([type="radio"]):not([type="checkbox"]) {
     min-height: 44px;
+  }
+}
+
+/* Phones: iOS zooms into any field under 16px when it is focused. */
+@media (max-width: 767px) {
+  input:not([type="radio"]):not([type="checkbox"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px;
   }
 }

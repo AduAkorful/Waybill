@@ -85,7 +85,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   const showErrors = form.total !== '' || form.supplier !== '' || form.arbiter !== '' || form.panel.some((m) => m !== '')
 
   return (
-    <main className="mx-auto grid max-w-6xl gap-8 px-4 pt-6 pb-28 md:px-8 md:pt-10 lg:pb-20 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <main className="mx-auto grid max-w-6xl gap-8 px-4 pt-6 pb-40 md:px-8 md:pt-10 lg:pb-20 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0">
         <p className="label">New deal</p>
         <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">Set the terms</h1>
@@ -161,9 +161,9 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                   <div className="w-24">
                     <label className="label block" htmlFor={`pct-${i}`}>Share, %</label>
                     <input id={`pct-${i}`} name={`pct-${i}`} className={`${input} mono`} inputMode="decimal" value={p.percent} onChange={(e) => setPart(i, { percent: e.target.value })} />
-                    <p className="mono mt-1 text-[11.5px] text-graphite" aria-live="off">{partAmount(form.total, p.percent) === null ? '—' : `${formatAmount(partAmount(form.total, p.percent)!)} USDC`}</p>
+                    <p className="mono mt-1 text-[11.5px] text-graphite" aria-live="off">{partAmount(form.total, p.percent) === null ? '' : `${formatAmount(partAmount(form.total, p.percent)!)} USDC`}</p>
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 basis-full sm:flex-1 sm:basis-0">
                     <label className="label block" htmlFor={`cond-${i}`}>Paid when</label>
                     <select
                       id={`cond-${i}`}
@@ -178,7 +178,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                     </select>
                   </div>
                   {form.parts.length > 1 ? (
-                    <button type="button" onClick={() => set({ parts: form.parts.filter((_, j) => j !== i) })} aria-label={`Remove part ${i + 1}`} className="pb-2 text-[12.5px] text-graphite hover:text-hold">Remove</button>
+                    <button type="button" onClick={() => set({ parts: form.parts.filter((_, j) => j !== i) })} aria-label={`Remove part ${i + 1}`} className="ml-auto inline-flex min-h-11 items-center px-2 text-[12.5px] text-graphite hover:text-hold sm:ml-0 sm:pb-0">Remove</button>
                   ) : null}
                 </div>
                 {p.condition === 1 ? (
@@ -301,7 +301,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
         </div>
       </aside>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-paper px-4 py-2.5 lg:hidden">
+      <div className="fixed inset-x-0 bottom-[calc(2.85rem+env(safe-area-inset-bottom))] z-30 border-t border-rule bg-paper px-4 py-2.5 md:bottom-0 lg:hidden">
         <button type="button" disabled={!built.ok} aria-label="Create deal" onClick={() => built.ok && setFrozen(built)} className="w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet disabled:cursor-not-allowed disabled:opacity-40">
           {built.ok ? 'Create deal' : 'Create deal · fix the problems above'}
         </button>

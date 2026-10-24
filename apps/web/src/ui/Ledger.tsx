@@ -33,6 +33,7 @@ export function Ledger({ deal, voice = "buyer" }: { deal: DealView; voice?: "buy
 
   return (
     <section aria-label="Where the money is" className="@container">
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
       <dl className="flex flex-wrap items-end gap-x-8 gap-y-3">
         <div>
           <dt className="label">Released to supplier</dt>
@@ -52,6 +53,7 @@ export function Ledger({ deal, voice = "buyer" }: { deal: DealView; voice?: "buy
             <Odometer to={toCents(refunded)} size={size} label={`${formatAmount(refunded)} USDC`} />
           </dd>
         </div>
+      </dl>
         <p className="ml-auto max-w-[17rem] text-[12px] leading-snug text-graphite">
           {held === 0n ? (
             deal.state === "funded" ? "Nothing is held." : deal.state === "settled" ? "Nothing is held. Every part has a final fate." : "Nothing is locked."
@@ -62,7 +64,7 @@ export function Ledger({ deal, voice = "buyer" }: { deal: DealView; voice?: "buy
           )}
           {decided > 0 ? ` The split on ${decided} arbiter-decided part${decided > 1 ? "s" : ""} is not in these figures.` : ""}
         </p>
-      </dl>
+      </div>
       {[released, held, refunded].some((v) => v % 10_000n !== 0n) ? (
         <p data-exact className="mono mt-2 text-[11.5px] text-graphite">
           Exact: released {formatAmount(released)} · held {formatAmount(held)} · refunded {formatAmount(refunded)} USDC. The large figures above are rounded to the cent.
@@ -73,7 +75,7 @@ export function Ledger({ deal, voice = "buyer" }: { deal: DealView; voice?: "buy
           <span key={t.index} data-ledger-seg={t.index} className={`h-full rounded-[2px] ${seg[t.state]}`} style={{ flexGrow: t.bps, flexBasis: 0 }} />
         ))}
       </div>
-      <div className="mt-1.5 flex gap-[3px] text-[11px] text-graphite">
+      <div className="mt-1.5 flex gap-[3px] text-[12px] text-graphite">
         {deal.tranches.map((t) => (
           <span key={t.index} className="truncate" style={{ flexGrow: t.bps, flexBasis: 0 }}>
             <span className="mono hidden @xl:inline">{formatAmount(t.amount)} · </span>

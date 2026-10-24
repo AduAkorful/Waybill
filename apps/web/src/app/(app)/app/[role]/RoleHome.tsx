@@ -66,7 +66,7 @@ function Row({ d, need, shell }: { d: DealView; need: string | null; shell: Shel
         <span className="col-span-2 hidden md:col-span-1 md:block">
           <MiniLedger d={d} />
           {d.terms?.origin && d.terms.destination ? (
-            <span className="mono mt-1 block text-[10.5px] text-graphite">
+            <span className="mono mt-1 block text-[12px] text-graphite">
               {d.terms.origin.code} → {d.terms.destination.code}
             </span>
           ) : null}
@@ -138,8 +138,8 @@ export function RoleHome() {
           <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">
             {listed.length === 0
               ? `No deals name this wallet as ${shellLabel[role].toLowerCase()}`
-              : !done && loaded.length === 0
-                ? 'Reading your deals…'
+              : !done && needs.length === 0
+                ? `Reading your deals… ${loaded.length + failed.length} of ${listed.length}`
                 : needs.length
                   ? `${needs.length} ${needs.length === 1 ? 'deal needs' : 'deals need'} you today`
                   : 'Nothing needs you today'}

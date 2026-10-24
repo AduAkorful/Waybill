@@ -5,6 +5,55 @@ After each batch the web app on port 3000 is rebuilt and restarted; retest again
 "Fixed" means changed in code, covered by a unit test where the logic is pure, and the page answers as described below.
 It does not mean a signed transaction was re-run in a browser — that is what QA is for.
 
+## Batch 8 — 2026-10-21 (signed-in blockers, phone layout, desktop space)
+
+Fixes for QA's retest of batches 6 and 7 (report §10) and the real-device review (report §11). Web app rebuilt and restarted. Nothing changed in the relayer or contracts.
+
+### Signed-in blockers
+- **Create deal bar behind the tab bar (M-S01):** on phones the Create bar now sits above the bottom tab bar (and the safe area), and the form has room to scroll past both. The tab bar buttons are 44 px tall.
+- **Wrong-wallet box for a named attestor or arbiter (RT-19):** `/d/<id>` no longer shows "This deal is for another wallet" to a wallet that is named on the deal as an attestor or arbiter. They see only the green "You are named… Accept" box.
+- **Stuck on "Preparing your wallet" (RT-20):** arriving at `/app/*` from a page with its own wallet setup now asks the wallet library to reconnect, and if no account appears within 6 seconds the page reloads once by itself. The button stays as a manual fallback.
+- **Old errors after an account switch (RT-21):** the page content is rebuilt for the new account, so the previous account's error or half-filled dialog is gone.
+- **Slow arbiter list (RT-24):** the list reads six deals at a time (was three) and shows deals it has already read in this visit at once. The heading says "Reading your deals… 3 of 40" until every deal is read, and "Nothing needs you today" only appears after the read completes.
+- **Fund dialog numbers (RT-22):** each figure is written exactly, with no padding: "locks 20.10 … holds 1.163558".
+- **Evidence read (RT-23):** the dialog says one signature opens the files of every part of the deal for 8 minutes. (The signed text is unchanged; the relayer must keep matching it.)
+
+### Phones
+- **Header at 320 px (MW-01):** "Sign in" no longer wraps; the theme button shows only its symbol under 400 px.
+- **Tap targets (MW-02):** header links, Sign in, theme, Sign out, footer link, history transaction links and the Remove button are at least 44 px tall on phones.
+- **Small text (MW-03):** the small caps labels, theme button, "USDC" units and similar are 12 px (were 10.5 to 11 px).
+- **Input zoom on iPhone (MW-04):** every text field is 16 px on phones.
+- **Public record history (MW-06):** repeated events collapse into one row with a count; time and transaction sit on separate lines on phones; the first 10 rows show and the rest open under "Show N more". "Print or save as PDF" is hidden on phones.
+- **Attestor profile (MW-09, MW-10):** one column on every width: name and address, a four-across stat strip, activity summary, then the full-width history (same collapsing). Phones show a shortened address; "Not registered" is no longer in the monospace face; a same-day range shows one date.
+- **Create form (M-S03):** on phones "Paid when" takes a full row and Remove is a 44 px button; the stray dash under Share is gone.
+- **Operator header (M-S08):** "Connect wallet" is a real button, a connected wallet gets a Sign out button, and the chip reads "0x… · pauser / read only / checking" on one line.
+- **Phone tab bar (M-S07):** the public "Attestors" link is no longer in the signed-in phone tab bar, so an attestor has five tabs, not six.
+
+### Desktop space
+- **Supplier page (MW-17):** wider (up to 1024 px). Parts sit side by side only when each has room; three or more parts stack when the page is narrower, so "HELD BY DISPUTE" and the frozen note no longer wrap into a squeeze or collide with the stamp.
+- **/join (MW-12, MW-13):** uses the public header and footer, and shows a three-step "what happens next" beside the sign-in card.
+- **/signin (MW-14, MW-15):** the duplicate "Waybill" eyebrow is gone, the left panel lists the three steps, the form is wider on desktop, and phones show a one-line value statement above the form.
+- **404 (MW-16):** larger and lower on the page, with Home, Attestors and Sign in buttons.
+
+### Not changed in this batch (decisions or follow-ups)
+- **Language toggle on public pages (MW-05):** not added. Only the supplier page has reviewed Chinese copy; a toggle elsewhere would switch nothing. Planned with the Chinese copy review.
+- **One header everywhere (MW-20):** the public pages, supplier page, sign-in and operator still have their own headers; they now share tap sizes and the theme button but not one component.
+- **Open, lower priority:** MW-07 (record hero repeats the parties and skips field 03), MW-08, MW-11 (attestor list as a table), MW-18, MW-19, MW-21, MW-22, MW-23, MW-24, MW-25, RT-25 (empty space on `/app/attestor`), RT-26, M-S02, M-S04 to M-S06, M-S09 to M-S13.
+- **Not provable here:** the real-device behaviours (iOS zoom, safe areas, Rabby and Privy start-up) were not run on a phone; the web build was checked with Chrome at 320, 390 and 1440 px and axe.
+
+### Retest checklist for batch 8
+1. Phone (375 px) `/app/new`: the Create deal button is fully visible above the tab bar and can be tapped; scroll to the bottom and nothing is hidden.
+2. Phone 320 px, any public page: header on one line, "Sign in" not wrapped.
+3. `/d/286` as the attestor wallet: only the green "You are named" box.
+4. From `/d/286` tap "Accept as attestor": the attest page opens (or reloads once by itself and then opens).
+5. Switch the account in Rabby on `/app/deals/286`: no red error from the previous account remains.
+6. `/app/arbiter` with many deals: "Reading your deals… n of m", never "Nothing needs you today" until it has finished. Second visit shows rows at once.
+7. `/record/284` on a phone: grouped history, time and transaction on separate lines, "Show N more".
+8. `/attestors/<address>` at 1440 px: one column, stat strip across, history full width.
+9. `/d/284` at 1440 px: the three parts sit side by side with room; at 800 px they stack.
+10. `/join`, `/signin`, a missing page (`/d/abc`): the layouts described above.
+11. `/operator` on a phone: Connect wallet button; after connecting, Sign out.
+
 ## Batch 7 — 2026-10-20 (slow reads, list layout, attestor page, language)
 
 Web app and relayer restarted. axe: 0 violations on the public pages and `/operator` at 375 and 1440 px, light and dark.

@@ -20,7 +20,7 @@ function Box({ n, label, children, className = "" }: { n: string; label: string;
   return (
     <div data-box className={`border-r border-b border-rule bg-sheet px-3.5 py-2.5 ${className}`}>
       <div className="label flex items-baseline gap-1.5">
-        <span className="mono text-[10px] font-normal tracking-normal text-graphite">{n}</span>
+        <span className="mono text-[11.5px] font-normal tracking-normal text-graphite">{n}</span>
         <span>{label}</span>
       </div>
       <div className="mt-1 text-[13.5px] leading-snug">{children}</div>
@@ -91,6 +91,13 @@ export function Waybill({
 }) {
   const ts = deal.tranches;
   const focus = focusPart(deal)?.index;
+  // Parts sit side by side only when every part has its minimum width; below that they stack, instead of being squeezed.
+  const side =
+    ts.length <= 2
+      ? { grid: "@2xl:[grid-template-columns:var(--cols)]", hideH: "@2xl:hidden", showV: "@2xl:block" }
+      : ts.length === 3
+        ? { grid: "@4xl:[grid-template-columns:var(--cols)]", hideH: "@4xl:hidden", showV: "@4xl:block" }
+        : { grid: "@5xl:[grid-template-columns:var(--cols)]", hideH: "@5xl:hidden", showV: "@5xl:block" };
   const cols = ts.map((t) => (t.index === focus ? "minmax(18rem, 1.5fr)" : "minmax(12rem, 1fr)")).join(" 2px ");
   const terms = redacted ? undefined : deal.terms;
   const feeTotal = ts.reduce((s, t) => s + t.fee, 0n);
@@ -163,7 +170,7 @@ export function Waybill({
                 ) : null}
                 <Box n="03" label={lang === "zh" ? "交易总额" : "Deal total"}>
                   <span className="mono text-[17px] font-medium">{formatAmount(deal.totalAmount)}</span>{" "}
-                  <span className="condensed text-[11px] font-semibold text-graphite">USDC</span>
+                  <span className="condensed text-[12px] font-semibold text-graphite">USDC</span>
                 </Box>
               </div>
               <p className="border-t border-rule px-3.5 py-2.5 text-[12.5px] text-graphite">
@@ -196,7 +203,7 @@ export function Waybill({
               ) : null}
               <Box n="04" label="Deal total">
                 <span className="mono text-[17px] font-medium">{formatAmount(deal.totalAmount)}</span>{" "}
-                <span className="condensed text-[11px] font-semibold text-graphite">USDC</span>
+                <span className="condensed text-[12px] font-semibold text-graphite">USDC</span>
               </Box>
               <Box n="05" label="Fee">
                 <span className="mono">
@@ -250,13 +257,13 @@ export function Waybill({
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 rounded-b-md border border-t-0 border-rule bg-sheet @2xl:[grid-template-columns:var(--cols)]" style={{ ["--cols" as string]: cols }}>
+          <div className={`grid grid-cols-1 rounded-b-md border border-t-0 border-rule bg-sheet ${side.grid}`} style={{ ["--cols" as string]: cols }}>
             {ts.map((t, i) => (
               <div key={t.index} className="contents">
                 {i > 0 ? (
                   <>
-                    <div className="perf @2xl:hidden" aria-hidden />
-                    <div className="perf-v hidden @2xl:block" aria-hidden />
+                    <div className={`perf ${side.hideH}`} aria-hidden />
+                    <div className={`perf-v hidden ${side.showV}`} aria-hidden />
                   </>
                 ) : null}
                 <Stub

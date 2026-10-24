@@ -99,11 +99,11 @@ export function Stub({
           <span className={`label ${stateTone[t.state]}`}>{zh ? word.zh : word.en}</span>
         </header>
 
-        <h3 className="mt-2 text-[15px] leading-snug font-semibold">{trancheName(t)}</h3>
+        <h2 className="mt-2 text-[15px] leading-snug font-semibold">{trancheName(t)}</h2>
 
         <p className="mt-2 flex items-baseline gap-1.5">
           <span className={`mono leading-none font-medium tracking-tight ${active ? "text-[26px]" : "text-[21px]"}`}>{formatAmount(t.amount)}</span>
-          <span className="condensed text-[11px] font-semibold text-graphite">USDC</span>
+          <span className="condensed text-[12px] font-semibold text-graphite">USDC</span>
         </p>
 
         <p className="mt-3 text-[12.5px] leading-snug text-graphite">{confirmationText(t, lang)}</p>

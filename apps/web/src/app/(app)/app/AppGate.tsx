@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
-import { useAccount } from 'wagmi'
+import { useAccount, useReconnect } from 'wagmi'
 import { WalletDealsProvider } from '@/data/wallet-deals'
 import { ChainGate } from '@/ui/NetworkGuard'
 import { useReloadOnAccountChange } from '@/components/use-account-sync'
@@ -25,6 +25,25 @@ export function AppGate({ children }: { children: React.ReactNode }) {
   const { address } = useAccount()
   const router = useRouter()
   useReloadOnAccountChange(address)
+  const { reconnect } = useReconnect()
+
+  // arriving from a page with its own wallet setup can leave the signed-in session without an account: ask wagmi to
+  // reconnect, and if that does not settle, reload once rather than leave the person on a notice
+  useEffect(() => {
+    try {
+      if (address) sessionStorage.removeItem('wb-gate-reload')
+    } catch {}
+    if (!ready || !authenticated || address) return
+    reconnect()
+    const t = setTimeout(() => {
+      try {
+        if (sessionStorage.getItem('wb-gate-reload') === '1') return
+        sessionStorage.setItem('wb-gate-reload', '1')
+        window.location.reload()
+      } catch {}
+    }, 6000)
+    return () => clearTimeout(t)
+  }, [ready, authenticated, address, reconnect])
 
   useEffect(() => {
     if (ready && !authenticated) router.replace('/signin')
@@ -51,7 +70,7 @@ export function AppGate({ children }: { children: React.ReactNode }) {
   return (
     <WalletDealsProvider address={address}>
       <RoleShell address={address}>
-        <ChainGate>{children}</ChainGate>
+        <ChainGate key={address}>{children}</ChainGate>
       </RoleShell>
     </WalletDealsProvider>
   )

@@ -104,10 +104,10 @@ export interface HistoryGroup {
 }
 
 /** Runs of the same kind of event, oldest first, collapsed to one row with a count. The registry events carry no deal number, so they cannot be grouped by deal. */
-export function groupHistory(events: readonly DealEvent[]): HistoryGroup[] {
+export function groupHistory(events: readonly DealEvent[], describe: (e: DealEvent) => string = describeAttestorEvent): HistoryGroup[] {
   const groups: HistoryGroup[] = []
   for (const e of events) {
-    const text = describeAttestorEvent(e)
+    const text = describe(e)
     const last = groups[groups.length - 1]
     if (last && last.text === text) {
       last.count += 1

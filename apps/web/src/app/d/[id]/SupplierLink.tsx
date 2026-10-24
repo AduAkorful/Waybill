@@ -67,8 +67,8 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
 
   return (
     <div translate="no" lang={lang === 'zh' ? 'zh-Hans' : 'en'} className="min-h-dvh">
-      <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 md:px-8">
-        <Link href="/" aria-label="Waybill home"><Wordmark /></Link>
+      <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 md:px-8">
+        <Link href="/" aria-label="Waybill home" className="inline-flex min-h-11 items-center"><Wordmark /></Link>
         <div className="flex items-center gap-2">
           <div role="group" aria-label={t.language} className="inline-flex items-center rounded-full border border-rule p-0.5 text-[13px]">
             <span aria-hidden className="px-2 text-graphite">文 / A</span>
@@ -81,13 +81,13 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
       </header>
 
       {suggestZh && lang === 'en' ? (
-        <div role="status" className="mx-auto max-w-3xl px-4 md:px-8">
+        <div role="status" className="mx-auto max-w-5xl px-4 md:px-8">
           <button type="button" onClick={() => setLang('zh')} className="w-full rounded-md border border-held/50 bg-sheet px-4 py-2.5 text-left text-[14px]">
             <span className="font-semibold">查看中文版本</span> · View this page in Chinese
           </button>
         </div>
       ) : null}
-      <main className="mx-auto max-w-3xl px-4 pb-20 md:px-8">
+      <main className="mx-auto max-w-5xl px-4 pb-20 md:px-8">
         {id === null ? <p role="alert" className="text-hold">{t.notFound}</p> : null}
         {id !== null && read.status === 'loading' ? <p role="status" className="text-graphite">{t.loading}</p> : null}
         {id !== null && read.status === 'error' ? <p role="alert" className="text-hold">{t.notFound}: {read.message}</p> : null}
@@ -142,9 +142,9 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
           )
         })() : null}
       </main>
-      <footer className="mx-auto max-w-3xl border-t border-rule px-4 py-6 text-[12px] text-graphite md:px-8">
+      <footer className="mx-auto max-w-5xl border-t border-rule px-4 py-6 text-[12px] text-graphite md:px-8">
         <p>{t.footer}</p>
-        <p className="mt-1"><Link href="/legal" className="underline">{t.legal}</Link></p>
+        <p className="mt-1"><Link href="/legal" className="inline-flex min-h-11 items-center underline">{t.legal}</Link></p>
       </footer>
     </div>
   )

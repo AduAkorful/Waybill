@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import { usePrivy } from '@privy-io/react-auth'
 import { useAccount } from 'wagmi'
 import { useReloadOnAccountChange } from '@/components/use-account-sync'
 import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api'
@@ -62,7 +63,7 @@ export function Operator() {
           <Link href="/" aria-label="Waybill home"><Wordmark /></Link>
           <span className="label">Operator</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <WalletChip pauser={read.kind === 'ready' ? read.summary.chain.pauser : null} />
           <ThemeToggle />
         </div>
@@ -201,12 +202,16 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
 function WalletChip({ pauser }: { pauser: string | null }) {
   const { address } = useAccount()
   useReloadOnAccountChange(address)
-  if (!address) return <span className="text-[12px] text-graphite">No wallet connected</span>
+  const { logout } = usePrivy()
+  if (!address) return <Link href="/signin" className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] font-semibold whitespace-nowrap hover:bg-sheet">Connect wallet</Link>
   const isPauser = pauser !== null && address.toLowerCase() === pauser.toLowerCase()
   return (
-    <span className="rounded-full border border-rule px-2.5 py-1 text-[12px]">
-      <span className="mono">{shortAddress(address)}</span> · {pauser === null ? 'checking role' : isPauser ? 'pauser' : 'not the pauser (read only)'}
-    </span>
+    <>
+      <span className="rounded-full border border-rule px-2.5 py-1 text-[12px] whitespace-nowrap">
+        <span className="mono">{shortAddress(address)}</span> · {pauser === null ? 'checking' : isPauser ? 'pauser' : 'read only'}
+      </span>
+      <button type="button" onClick={() => void logout()} className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] whitespace-nowrap text-graphite uppercase hover:text-ink md:min-h-0 md:py-1">Sign out</button>
+    </>
   )
 }
 

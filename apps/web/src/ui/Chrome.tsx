@@ -31,10 +31,10 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={() => setTheme(next[label])}
-      className="mono rounded-full border border-rule px-2.5 py-1 text-[10.5px] text-graphite uppercase hover:text-ink"
+      className="mono inline-flex min-h-11 items-center gap-1 rounded-full border border-rule px-3 text-[12px] whitespace-nowrap text-graphite uppercase hover:text-ink md:min-h-0 md:py-1"
       aria-label={`${label === "dark" ? "Night" : label === "light" ? "Day" : "Auto"}, theme. Switch theme`}
     >
-      <span aria-hidden>{label === "dark" ? "◐" : label === "light" ? "○" : "◑"}</span> {label === "dark" ? "Night" : label === "light" ? "Day" : "Auto"}
+      <span aria-hidden>{label === "dark" ? "◐" : label === "light" ? "○" : "◑"}</span><span className="hidden min-[400px]:inline">{label === "dark" ? "Night" : label === "light" ? "Day" : "Auto"}</span>
     </button>
   );
 }

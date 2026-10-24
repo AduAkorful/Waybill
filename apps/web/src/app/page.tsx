@@ -63,7 +63,7 @@ export default async function Home() {
           <ol className="mt-5 grid gap-px overflow-hidden rounded-md border border-rule bg-rule md:grid-cols-4">
             {steps.map(([title, text], i) => (
               <li key={title} className="bg-sheet p-4">
-                <span className="mono text-[11px] text-graphite">{i + 1}</span>
+                <span className="mono text-[12px] text-graphite">{i + 1}</span>
                 <h3 className="mt-1 text-[15px] font-semibold">{title}</h3>
                 <p className="mt-1.5 text-[13.5px] leading-relaxed text-graphite">{text}</p>
               </li>
@@ -78,7 +78,7 @@ export default async function Home() {
               Deal {example.id.toString()} on {net.network === 'testnet' ? 'the test network' : 'Arc'}, read from the contract just now.
             </p>
             <Waybill deal={example} detail="summary" compact redacted />
-            <Link href={`/record/${example.id}`} className="mt-4 inline-block rounded-md border border-rule px-3 py-1.5 text-[13px] font-semibold hover:bg-sheet">
+            <Link href={`/record/${example.id}`} className="mt-4 inline-flex min-h-11 items-center rounded-md border border-rule px-3 text-[13px] font-semibold hover:bg-sheet">
               Open its public record
             </Link>
           </section>

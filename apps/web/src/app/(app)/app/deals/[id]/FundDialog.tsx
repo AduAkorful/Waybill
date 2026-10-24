@@ -7,7 +7,7 @@ import { balanceReadiness } from '@/view/readiness'
 import { LineItems } from '@/ui/Sheet'
 import { TxFlow, type TxStep } from '@/ui/TxFlow'
 import { fundingTotal } from '@/view/derive'
-import { formatAmount, formatAmountsAligned } from '@/view/format'
+import { formatAmount } from '@/view/format'
 import type { DealView } from '@/view/types'
 
 type Allowance = { status: 'checking' } | { status: 'error'; message: string } | { status: 'ready'; enough: boolean; balance: bigint }
@@ -57,15 +57,15 @@ export function FundDialog({ deal, owner, onCancel, onDone }: { deal: DealView; 
       <p className="mt-3 mb-4 text-[12.5px] text-graphite">On Arc. Once sent, Waybill can&apos;t reverse it; only the deal&apos;s rules can move this money.</p>
       {allowance.status === 'checking' ? <p role="status" className="text-[13px] text-graphite">Checking your USDC balance…</p> : null}
       {allowance.status === 'error' ? <p role="alert" className="text-[13px] text-hold">Could not check your USDC balance and allowance, so nothing was offered to sign: {allowance.message}</p> : null}
-      {allowance.status === 'ready' && !balanceReadiness(allowance.balance, total, (a, b) => formatAmountsAligned(a, b) as [string, string]).ok ? (
+      {allowance.status === 'ready' && !balanceReadiness(allowance.balance, total, (a, b) => [formatAmount(a), formatAmount(b)]).ok ? (
         <>
           <p role="alert" className="text-[13px] text-hold">
-            {(balanceReadiness(allowance.balance, total, (a, b) => formatAmountsAligned(a, b) as [string, string]) as { reason: string }).reason} Add USDC to this wallet, then open this again. Nothing was sent.
+            {(balanceReadiness(allowance.balance, total, (a, b) => [formatAmount(a), formatAmount(b)]) as { reason: string }).reason} Add USDC to this wallet, then open this again. Nothing was sent.
           </p>
           <button onClick={onCancel} className="mt-1 w-full py-2 text-[13px] text-graphite hover:text-ink">Close</button>
         </>
       ) : null}
-      {allowance.status === 'ready' && balanceReadiness(allowance.balance, total, (a, b) => formatAmountsAligned(a, b) as [string, string]).ok ? <TxFlow confirmLabel="Fund" steps={steps} onCancel={onCancel} onDone={() => onDone()} /> : null}
+      {allowance.status === 'ready' && balanceReadiness(allowance.balance, total, (a, b) => [formatAmount(a), formatAmount(b)]).ok ? <TxFlow confirmLabel="Fund" steps={steps} onCancel={onCancel} onDone={() => onDone()} /> : null}
     </>
   )
 }

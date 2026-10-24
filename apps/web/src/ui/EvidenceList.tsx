@@ -51,7 +51,7 @@ export function EvidenceList({ dealId, owner, part }: { dealId: bigint; owner: `
         <button type="button" onClick={() => void load()} disabled={state.kind === 'loading'} className="rounded-md border border-rule px-3 py-1.5 text-[13px] font-semibold disabled:opacity-60">
           {state.kind === 'loading' ? (state.phase === 'reading' ? 'Reading the files…' : 'Waiting for your wallet…') : 'Show the files'}
         </button>
-        <p className="mt-1.5 text-[12px] text-graphite">Your wallet signs a message to prove you are named in this deal. Nothing is spent.</p>
+        <p className="mt-1.5 text-[12px] text-graphite">Your wallet signs one message to prove you are named in this deal. It opens the files of every part of this deal for 8 minutes. Nothing is spent.</p>
       </div>
     )
   }

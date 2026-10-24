@@ -1,10 +1,9 @@
 'use client'
 
-import Link from 'next/link'
 import { useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { useAccount } from 'wagmi'
-import { ThemeToggle, Wordmark } from '@/ui/Chrome'
+import { PublicShell } from '@/ui/PublicShell'
 
 /** For a supplier with no wallet: sign in, get one, copy its address to send to the buyer. */
 export function Join() {
@@ -22,11 +21,9 @@ export function Join() {
     }
   }
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-10">
-      <div className="mb-8 flex items-center justify-between">
-        <Link href="/" aria-label="Waybill home"><Wordmark /></Link>
-        <ThemeToggle />
-      </div>
+    <PublicShell>
+    <main className="mx-auto grid max-w-4xl gap-x-12 gap-y-8 px-4 py-10 md:grid-cols-[1fr_1fr] md:px-8 md:py-16">
+      <div>
       <h1 className="text-[26px] leading-tight font-semibold tracking-tight">Get a wallet to be paid</h1>
       <p className="mt-2 text-[14px] leading-relaxed text-graphite">
         Sign in with your email and we create a wallet for you, or connect a wallet you already have. Send its address to your buyer so they can name you in the deal. The address is not secret; it only receives money.
@@ -47,6 +44,20 @@ export function Join() {
       ) : (
         <p role="status" className="mt-6 text-[13px] text-graphite">Preparing your wallet…</p>
       )}
+      </div>
+      <ol className="space-y-4 text-[14px] leading-relaxed md:pt-12">
+        {[
+          ['Get a wallet', 'Sign in with your email. Waybill creates a wallet for you, or you connect one you already have.'],
+          ['Send the address to your buyer', 'They name that wallet as the supplier when they create the deal. The address is not secret.'],
+          ['Open the deal link', 'You see the terms, accept them, and are paid part by part as each one is confirmed. Nothing moves until you accept.'],
+        ].map(([t, b], i) => (
+          <li key={t} className="flex gap-3">
+            <span className="mono mt-0.5 text-[13px] text-graphite">{i + 1}</span>
+            <span><span className="block font-semibold">{t}</span><span className="text-graphite">{b}</span></span>
+          </li>
+        ))}
+      </ol>
     </main>
+    </PublicShell>
   )
 }

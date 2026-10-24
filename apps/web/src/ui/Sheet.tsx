@@ -28,7 +28,7 @@ export function LineItems({ items, total, totalLabel = "Total" }: { items: { lab
       <div data-total className="flex items-baseline justify-between gap-3 pt-1">
         <dt className="font-semibold">{totalLabel}</dt>
         <dd className="mono text-[20px] font-medium">
-          {formatAmount(total)} <span className="condensed text-[11px] font-semibold text-graphite">USDC</span>
+          {formatAmount(total)} <span className="condensed text-[12px] font-semibold text-graphite">USDC</span>
         </dd>
       </div>
     </dl>

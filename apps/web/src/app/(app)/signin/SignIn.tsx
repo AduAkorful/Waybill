@@ -98,28 +98,33 @@ export function SignIn() {
             <Wordmark />
           </Link>
           <div>
-            <p className="label">Waybill</p>
-            <p className="mt-3 max-w-md text-[34px] leading-[1.08] font-semibold tracking-tight">
+            <p className="max-w-md text-[34px] leading-[1.08] font-semibold tracking-tight">
               Pay a deposit. Release the rest when <span className="marked">someone you trust</span> confirms the goods.
             </p>
             <p className="mt-4 max-w-sm text-[14.5px] leading-relaxed text-graphite">
               One sign-in for every role. Your role is set per deal, so you can be a buyer on one and an inspector on another.
             </p>
           </div>
+          <ol className="max-w-sm space-y-2 text-[13.5px] text-graphite">
+            <li><span className="mono mr-2">1</span>The supplier accepts the deal and the buyer locks the money.</li>
+            <li><span className="mono mr-2">2</span>A named person confirms each part with a signed statement.</li>
+            <li><span className="mono mr-2">3</span>Each part is paid when it is confirmed, or refunded if it is not.</li>
+          </ol>
           <p className="text-[12px] text-graphite">Waybill never asks for your seed phrase or private key.</p>
         </div>
       </aside>
 
       <main className="flex flex-col">
         <div className="flex items-center justify-between px-4 py-4 md:px-8">
-          <Link href="/" className="lg:invisible">
+          <Link href="/" className="inline-flex min-h-11 items-center lg:invisible">
             <Wordmark />
           </Link>
           <ThemeToggle />
         </div>
 
-        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 pb-16">
+        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 pb-16 md:max-w-md">
           <h1 className="text-[26px] leading-tight font-semibold tracking-tight">{heading}</h1>
+          {!wrongNetwork && !awaitingCode ? <p className="mt-1 text-[13.5px] text-graphite lg:hidden">Pay a deposit. Release the rest when someone you trust confirms the goods.</p> : null}
 
           {wrongNetwork ? (
             <>
