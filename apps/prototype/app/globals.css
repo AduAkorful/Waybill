@@ -1,0 +1,233 @@
+@import "tailwindcss";
+
+@source "../app";
+@source "../components";
+@source "../demo";
+
+:root {
+  /* Day: manila shipping stock, carbon-copy blue ink, rubber-stamp green and red. */
+  --paper: #ebe3d1;
+  --sheet: #fdfbf6;
+  --ink: #15181e;
+  --graphite: #5a5e66;
+  --rule: #d5cab3;
+  --held: #1c43b8;
+  --released: #0b7a49;
+  --refunded: #b0336b;
+  --hold: #c92f17;
+  /* Highlighter: marks the one thing that needs you. Never a state on its own. */
+  --mark: #f6d55c;
+  --mark-ink: #3b2f00;
+  --wash: 10%;
+  --stamp-blend: multiply;
+  --shadow: 0 1px 0 rgb(60 40 0 / 0.05), 0 10px 28px -14px rgb(60 40 0 / 0.28);
+  color-scheme: light;
+}
+
+/* Night: carbon paper. Blue-black stock, the copy inks glowing through. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0c111c;
+    --sheet: #151c2b;
+    --ink: #ece7db;
+    --graphite: #96a0b3;
+    --rule: #263045;
+    --held: #8ea9ff;
+    --released: #48cf8c;
+    --refunded: #f58ebb;
+    --hold: #ff7b5c;
+    --mark: #f6d55c;
+    --mark-ink: #2a2100;
+    --wash: 16%;
+    --stamp-blend: normal;
+    --shadow: 0 1px 0 rgb(255 255 255 / 0.03), 0 14px 34px -14px rgb(0 0 0 / 0.8);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #0c111c;
+  --sheet: #151c2b;
+  --ink: #ece7db;
+  --graphite: #96a0b3;
+  --rule: #263045;
+  --held: #8ea9ff;
+  --released: #48cf8c;
+  --refunded: #f58ebb;
+  --hold: #ff7b5c;
+  --mark: #f6d55c;
+  --mark-ink: #2a2100;
+  --wash: 16%;
+  --stamp-blend: normal;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.03), 0 14px 34px -14px rgb(0 0 0 / 0.8);
+  color-scheme: dark;
+}
+
+:root {
+  --held-wash: color-mix(in oklab, var(--held) var(--wash), var(--sheet));
+  --released-wash: color-mix(in oklab, var(--released) var(--wash), var(--sheet));
+  --refunded-wash: color-mix(in oklab, var(--refunded) var(--wash), var(--sheet));
+  --hold-wash: color-mix(in oklab, var(--hold) var(--wash), var(--sheet));
+  --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-settle: cubic-bezier(0.2, 0, 0, 1);
+  --ease-depart: cubic-bezier(0.4, 0, 1, 1);
+  --dur-quick: 180ms;
+  --dur-base: 300ms;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-ink: var(--ink);
+  --color-graphite: var(--graphite);
+  --color-rule: var(--rule);
+  --color-held: var(--held);
+  --color-released: var(--released);
+  --color-refunded: var(--refunded);
+  --color-hold: var(--hold);
+  --color-held-wash: var(--held-wash);
+  --color-released-wash: var(--released-wash);
+  --color-refunded-wash: var(--refunded-wash);
+  --color-hold-wash: var(--hold-wash);
+  --color-mark: var(--mark);
+  --color-mark-ink: var(--mark-ink);
+  --font-sans: var(--font-archivo), var(--font-noto-sc), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-archivo), var(--font-noto-sc), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:lang(zh) {
+  font-family: var(--font-noto-sc), var(--font-archivo), sans-serif;
+}
+
+/* Printed box label on the waybill form: condensed, tracked small caps. */
+.label {
+  font-stretch: 75%;
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--graphite);
+}
+
+.mono {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.condensed {
+  font-stretch: 75%;
+}
+
+/* Perforation: a row of punched holes with half-circle notches at both edges. */
+.perf {
+  position: relative;
+  height: 14px;
+}
+.perf::before {
+  content: "";
+  position: absolute;
+  inset: 6px 14px auto;
+  height: 2px;
+  background-image: radial-gradient(circle, var(--rule) 1.2px, transparent 1.6px);
+  background-size: 7px 2px;
+  background-repeat: repeat-x;
+}
+.perf-v {
+  position: relative;
+  width: 2px;
+  align-self: stretch;
+  background-image: radial-gradient(circle, var(--rule) 1.2px, transparent 1.6px);
+  background-size: 2px 7px;
+  background-repeat: repeat-y;
+}
+.notch {
+  position: absolute;
+  top: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--paper);
+}
+
+.stamp {
+  mix-blend-mode: var(--stamp-blend);
+}
+
+:focus-visible {
+  outline: 2px solid var(--held);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* A highlighter stroke behind inline text, slightly uneven like a real marker. */
+.marked {
+  background: linear-gradient(100deg, transparent 0.2em, var(--mark) 0.35em, var(--mark) calc(100% - 0.3em), transparent calc(100% - 0.15em));
+  color: var(--mark-ink);
+  padding: 0 0.3em;
+  border-radius: 0.2em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* A printed or downloaded document is always black on white, whatever theme the app is in. */
+.doc-light {
+  --paper: #ffffff;
+  --sheet: #ffffff;
+  --ink: #15181e;
+  --graphite: #555a62;
+  --rule: #cfd3d9;
+  --held: #1c43b8;
+  --released: #0b7a49;
+  --refunded: #b0336b;
+  --hold: #c92f17;
+  background: #fff;
+  color: #15181e;
+  color-scheme: light;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .doc-light {
+    box-shadow: none !important;
+    border: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .doc-light section {
+    break-inside: avoid;
+  }
+}
