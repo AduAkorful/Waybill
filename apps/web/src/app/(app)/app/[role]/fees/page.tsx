@@ -43,7 +43,7 @@ function Fees({ arbiter }: { arbiter: boolean }) {
   }, [client, network, address, refresh, arbiter])
 
   return (
-    <main className="mx-auto max-w-2xl px-4 pt-6 pb-16 md:px-8 md:pt-10">
+    <main className="max-w-2xl px-4 pt-6 pb-16 md:px-8 md:pt-10">
       <p className="label">{arbiter ? 'Arbiter' : 'Attestor'}</p>
       <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">Fees</h1>
       <p className="mt-1 text-[13.5px] text-graphite">

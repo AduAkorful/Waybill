@@ -38,6 +38,31 @@ These come up in retests. Each has a reason. If one of them is wrong *for a diff
 | Console lines `Privy logout 400` and `sessions 401` after Sign out (SF-15) | The browser reports a failed network call to the wallet library's own server (the session had already ended there). A page cannot hide a failed request from the console, and the person is signed out either way. | – |
 | NF-19 message seen with Rabby (SF-17) | See batch 13: the app now checks the balance first, so the wallet is not opened. | – |
 
+## Batch 15 — 2026-10-21 (findings from the batch 14 retest, report §23)
+
+Web app rebuilt and restarted; no relayer or contract changes. Measured in a browser at 1280 and 1440 px; axe 0 violations on `/attestors/<address>`, `/signin`, `/legal`, `/d/abc`, `/join`, `/operator` at 320 and 1440.
+
+### Fixed
+- **Signed-in header and content alignment (SF-25):** the `/app/*` header and its pages now share the public pages' container, so the logo and the content start at the same x. Narrow pages (settings, fees, profile, share, room) are left-aligned under the logo instead of centred.
+- **`/legal` contents list (NF-34):** it now stays in view while you scroll (the page wrapper had `overflow-x: hidden`, which silently disabled sticky; it now clips instead). Measured: top 140 → 96 and held at 600 and 1500 px of scroll.
+- **Attestor profile (NF-38):** shared container; content at the logo's x (96 / 176).
+- **`/signin` (NF-37):** card and form are vertically centred together; the card's text uses the card's width.
+- **404 (NF-35):** two columns at desktop (explanation left, deal look-up card right).
+- **`/join` (NF-36):** the FAQ answers are capped at a readable line length.
+- **"Preparing your wallet…" (SF-26):** shows a plain "Loading…" first; the "if this does not finish" text and the connect button appear only after 5 s.
+- **Operator "Label deals" (SF-27):** the form fills the card.
+
+### Not changed, and why
+- **`/app/arbiter` empty state (SF-25, space below):** a wallet with nothing to do has one short message; the page is short by design (see the by-design list). A recent-deals block would be new product, not a fix.
+- **Form after a full reload (SF-24):** the escrow's limits are kept only for the visit (memory), on purpose: stored limits could be stale across days, and the form must check against live caps. A reload therefore reads them again (about 2 s on this tunnel).
+
+### Retest checklist for batch 15
+1. Signed in, 1280 and 1440: `/app/buyer`, `/app/arbiter`, `/app/attest/<id>`, `/app/new`: logo x = content x.
+2. `/legal` at 1280: scroll; the contents list stays at the top of the left column.
+3. `/attestors/<address>` at 1440: content at x=176.
+4. `/signin` 1440: card and form centred together.
+5. Back-navigation to a signed-in page: "Loading…", not "Preparing your wallet", for the first seconds.
+
 ## Batch 14 — 2026-10-21 (findings from the batch 13 retest, report §21)
 
 Web app rebuilt and restarted; no relayer or contract changes. Measured in a browser at 1280 and 1440 px: the logo and the page content now start at the same x on `/`, `/record`, `/d`, `/attestors`, `/join`, `/operator` and the 404; axe 0 violations on `/signin`, `/legal`, `/operator`, `/d/abc` at 320 and 1440.

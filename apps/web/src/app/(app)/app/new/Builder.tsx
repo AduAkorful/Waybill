@@ -35,7 +35,7 @@ export function Builder() {
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
-  return <main className="mx-auto max-w-3xl px-4 py-10 md:px-8">{children}</main>
+  return <main className="max-w-3xl px-4 py-10 md:px-8">{children}</main>
 }
 
 function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnType<typeof useBuilderLimits>, { status: 'ready' }>['value'] }) {

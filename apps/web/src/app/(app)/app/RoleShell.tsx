@@ -32,7 +32,7 @@ export function RoleShell({ address, children }: { address: string; children: Re
   return (
     <div className="flex min-h-dvh flex-col pb-[calc(2.85rem+env(safe-area-inset-bottom))] md:pb-0">
       <header className="sticky top-0 z-30 border-b border-rule bg-paper/95 backdrop-blur">
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 md:px-6">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-2.5 md:px-8">
           <div className="flex items-center gap-7">
             <Link href="/app" className="flex items-baseline gap-2" aria-label="Your deals">
               <Wordmark />
@@ -67,7 +67,7 @@ export function RoleShell({ address, children }: { address: string; children: Re
           </div>
         </div>
       </header>
-      <div className="flex-1">{children}</div>
+      <div className="mx-auto w-full max-w-6xl flex-1">{children}</div>
       <nav hidden={read.status === 'loading'} className="fixed inset-x-0 bottom-0 z-30 flex border-t border-rule bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Main">
         {nav.filter((n) => n.href !== '/attestors').map((n) => (
           <Link

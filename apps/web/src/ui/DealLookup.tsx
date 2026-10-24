@@ -36,7 +36,7 @@ export function DealLookup() {
 
   return (
     <form
-      className="mt-8"
+      className=""
       onSubmit={(e) => {
         e.preventDefault()
         void open()

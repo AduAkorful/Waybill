@@ -36,7 +36,7 @@ export function LabelCard({ summary: s, onChanged }: { summary: OperatorSummary;
       </Why>
       {isPauser ? (
         <form
-          className="mt-3 max-w-lg"
+          className="mt-3"
           onSubmit={async (e) => {
             e.preventDefault()
             if (!parsed.ok || !address) return

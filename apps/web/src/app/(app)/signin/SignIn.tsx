@@ -104,18 +104,18 @@ export function SignIn() {
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader signIn="signed-in" />
-      <div className="mx-auto grid w-full max-w-6xl flex-1 gap-x-16 px-4 pb-10 md:px-8 lg:grid-cols-[1fr_26rem]">
-      <aside className="relative hidden self-start rounded-md border border-rule bg-sheet lg:block">
+      <div className="mx-auto grid w-full max-w-6xl flex-1 gap-x-16 px-4 pb-10 md:px-8 lg:grid-cols-[1fr_26rem] lg:items-center">
+      <aside className="relative hidden rounded-md border border-rule bg-sheet lg:block">
         <div className="flex h-full flex-col gap-10 p-10">
           <div>
-            <p className="max-w-md text-[34px] leading-[1.08] font-semibold tracking-tight">
+            <p className="max-w-xl text-[34px] leading-[1.08] font-semibold tracking-tight">
               Pay a deposit. Release the rest when <span className="marked">someone you trust</span> confirms the goods.
             </p>
-            <p className="mt-4 max-w-sm text-[14.5px] leading-relaxed text-graphite">
+            <p className="mt-4 max-w-md text-[14.5px] leading-relaxed text-graphite">
               One sign-in for every role. Your role is set per deal, so you can be a buyer on one and an inspector on another.
             </p>
           </div>
-          <ol className="max-w-sm space-y-2 text-[13.5px] text-graphite">
+          <ol className="max-w-md space-y-2 text-[13.5px] text-graphite">
             <li><span className="mono mr-2">1</span>The supplier accepts the deal and the buyer locks the money.</li>
             <li><span className="mono mr-2">2</span>A named person confirms each part with a signed statement.</li>
             <li><span className="mono mr-2">3</span>Each part is paid when it is confirmed, or refunded if it is not.</li>
@@ -125,7 +125,7 @@ export function SignIn() {
       </aside>
 
       <main className="flex flex-col">
-        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center pb-6 md:max-w-md lg:max-w-none lg:justify-start lg:pt-8">
+        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center pb-6 md:max-w-md lg:max-w-none lg:justify-center">
           <h1 className="text-[26px] leading-tight font-semibold tracking-tight">{heading}</h1>
           {!wrongNetwork && !awaitingCode ? <p className="mt-1 text-[13.5px] text-graphite lg:hidden">Pay a deposit. Release the rest when someone you trust confirms the goods.</p> : null}
 

@@ -35,7 +35,7 @@ export function ShareDeal({ dealId, supplier, buyer, terms, isPublic }: { dealId
     }
   }
   return (
-    <main className="mx-auto max-w-xl px-4 py-12 md:px-8">
+    <main className="max-w-xl px-4 py-12 md:px-8">
       <p className="label">Deal {String(dealId)} created</p>
       <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">Send this link to your supplier</h1>
       <p className="mt-2 text-[14px] leading-relaxed text-graphite">

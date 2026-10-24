@@ -48,7 +48,7 @@ function Profile() {
 
   const valid = name.trim() !== '' && city.trim() !== '' && name.length <= 256 && city.length <= 256
   return (
-    <main className="mx-auto max-w-xl px-4 pt-6 pb-16 md:px-8 md:pt-10">
+    <main className="max-w-xl px-4 pt-6 pb-16 md:px-8 md:pt-10">
       <p className="label">Attestor · <span className="mono normal-case">{address ? shortAddress(address) : ''}</span></p>
       <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">Public profile</h1>
       <p className="mt-1 text-[13.5px] text-graphite">Shown in the attestor directory next to your record. Your counts of confirmed and disputed parts come from the registry and cannot be edited.</p>

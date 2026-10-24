@@ -51,7 +51,7 @@ export function RoomScreen({ idText }: { idText: string }) {
   const needsAccept = who === 'arbiter' && d.state === 'proposed' && !d.arbiterAccepted && accepted?.[me] !== true
 
   return (
-    <main className="mx-auto max-w-4xl px-4 pt-6 pb-24 md:px-8 md:pt-10">
+    <main className="max-w-4xl px-4 pt-6 pb-24 md:px-8 md:pt-10">
       <Link href={who === 'buyer' ? `/app/deals/${d.id}` : who === 'supplier' ? `/d/${d.id}` : '/app/arbiter'} className="text-[12.5px] text-graphite">← Back</Link>
       <p className="label mt-4">{needsAccept ? 'Invitation' : 'Dispute room'} · deal {String(d.id)}</p>
       <h1 className="mt-1 text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
@@ -224,7 +224,7 @@ function Clock({ label, value, active }: { label: string; value: bigint; active:
 
 function Notice({ title, detail, quiet }: { title: string; detail?: string; quiet?: boolean }) {
   return (
-    <main className="mx-auto max-w-xl px-4 py-16">
+    <main className="max-w-xl px-4 py-16">
       <h1 role={quiet ? 'status' : 'alert'} className="text-[22px] font-semibold">{title}</h1>
       {detail ? <p className="mt-2 text-[13px] text-graphite">{detail}</p> : null}
       <Link href="/app" className="mt-4 inline-block text-[13.5px] underline">Back to your deals</Link>

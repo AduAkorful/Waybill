@@ -33,7 +33,7 @@ export default async function AttestorProfile({ params }: { params: Promise<{ ad
 
   return (
     <PublicShell>
-      <main className="mx-auto max-w-5xl px-4 pt-2 pb-12 md:px-8 md:pt-6">
+      <main className="mx-auto max-w-6xl px-4 pt-2 pb-12 md:px-8 md:pt-6">
         <Link href="/attestors" className="inline-flex min-h-11 items-center text-[13px] text-graphite hover:text-ink">← All attestors</Link>
         {read.status === 'unconfigured' ? <p className="mt-6 text-graphite">This site has no attestor source configured.</p> : null}
         {read.status === 'error' ? <p role="alert" className="mt-6 text-hold">This profile is unavailable right now: {read.message}</p> : null}

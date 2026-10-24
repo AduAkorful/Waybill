@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { useAccount, useReconnect } from 'wagmi'
 import { WalletDealsProvider } from '@/data/wallet-deals'
@@ -15,6 +15,27 @@ function Notice({ children }: { children: React.ReactNode }) {
       <p role="status" className="text-[14px] text-graphite">
         {children}
       </p>
+    </main>
+  )
+}
+
+/** A normal, brief wait reads as plain loading; the "connect or create one" fallback appears only if it drags on. */
+function PreparingWallet({ onConnect }: { onConnect: () => void }) {
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 5000)
+    return () => clearTimeout(t)
+  }, [])
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-3 px-4">
+      <p role="status" className="text-[14px] text-graphite">
+        {slow ? 'Preparing your wallet. If this does not finish, connect or create one.' : 'Loading…'}
+      </p>
+      {slow ? (
+        <button type="button" onClick={onConnect} className="self-start rounded-md bg-ink px-3 py-2 text-[13px] font-semibold text-sheet">
+          Connect or create wallet
+        </button>
+      ) : null}
     </main>
   )
 }
@@ -54,22 +75,7 @@ export function AppGate({ children }: { children: React.ReactNode }) {
 
   if (!ready) return <Notice>Loading…</Notice>
   if (!authenticated) return <Notice>Checking your sign-in…</Notice>
-  if (!address) {
-    return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-3 px-4">
-        <p role="status" className="text-[14px] text-graphite">
-          Preparing your wallet. If this does not finish, connect or create one.
-        </p>
-        <button
-          type="button"
-          onClick={() => connectOrCreateWallet()}
-          className="self-start rounded-md bg-ink px-3 py-2 text-[13px] font-semibold text-sheet"
-        >
-          Connect or create wallet
-        </button>
-      </main>
-    )
-  }
+  if (!address) return <PreparingWallet onConnect={() => connectOrCreateWallet()} />
   return (
     <WalletDealsProvider address={address}>
       <RoleShell address={address}>

@@ -55,11 +55,11 @@ export default function Legal() {
           Plain-language statements of how Waybill works today. The full documents are written and reviewed before launch, and nothing here is legal advice.
         </p>
         </div>
-        <nav aria-label="On this page" className="mt-5 flex flex-wrap gap-x-5 text-[13.5px] lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:mt-2 lg:flex-col lg:self-start lg:sticky lg:top-24">
+        <div className="lg:col-start-1 lg:row-span-2 lg:row-start-1"><nav aria-label="On this page" className="mt-5 flex flex-wrap gap-x-5 text-[13.5px] lg:sticky lg:top-24 lg:mt-2 lg:flex-col">
           {sections.map((s) => (
             <a key={s.id} href={`#${s.id}`} className="inline-flex min-h-11 min-w-11 items-center justify-center underline lg:justify-start">{s.title}</a>
           ))}
-        </nav>
+        </nav></div>
         <div className="lg:col-start-2 lg:row-start-2">
         {sections.map((s) => (
           <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`} className="mt-10 scroll-mt-20 border-t border-ink/80 pt-4">

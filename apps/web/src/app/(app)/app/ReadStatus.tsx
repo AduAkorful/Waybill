@@ -10,7 +10,7 @@ export function ReadStatus({ read }: { read: WalletDealsRead }) {
         ? 'Your deals cannot be listed: this site has no Waybill API address configured.'
         : `Your deals could not be loaded: ${read.message}`
   return (
-    <main className="mx-auto max-w-xl px-4 py-10 md:px-8">
+    <main className="max-w-xl px-4 py-10 md:px-8">
       <p role={read.status === 'loading' ? 'status' : 'alert'} className="text-[14px] text-graphite">
         {text}
       </p>
