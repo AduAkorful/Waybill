@@ -562,4 +562,110 @@ contract Dispute04d is Test {
         assertEq(all[2], keccak256("b2"));
         assertEq(all[3], keccak256("s2"));
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 31.7 Early resolve: arbiter may decide as soon as the counterparty responds
+    // ─────────────────────────────────────────────────────────────────────────
+
+    function testEarly_resolveImmediatelyAfterResponse() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("sup-resp"));
+        uint256 supBefore = usdc.balanceOf(supPay);
+        vm.prank(arbiter); escrow.resolve(dealId, 0, true);
+        assertGt(usdc.balanceOf(supPay) - supBefore, 0, "supplier paid");
+        assertEq(uint8(escrow.getDeal(dealId).state), uint8(IWaybillEscrow.DealState.SETTLED), "settled");
+    }
+
+    function testEarly_resolveSplitImmediatelyAfterResponse_supplierRaised() public {
+        uint256 dealId = _setup_supplierDispute();
+        vm.prank(buyer); escrow.respondToDispute(dealId, 0, keccak256("buy-resp"));
+        vm.prank(arbiter); escrow.resolveSplit(dealId, 0, 4_000);
+        assertEq(uint8(escrow.getMilestone(dealId, 0).state), uint8(IWaybillEscrow.MilestoneState.RESOLVED));
+    }
+
+    function testEarly_blockedWithoutResponseInsideWindow() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.warp(escrow.getMilestone(dealId, 0).responseDeadline);
+        vm.prank(arbiter);
+        vm.expectRevert(IWaybillEscrow.ResponseWindowOpen.selector);
+        escrow.resolve(dealId, 0, true);
+    }
+
+    function testEarly_allowedAfterWindowWithNoResponse() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        IWaybillEscrow.Milestone memory m = escrow.getMilestone(dealId, 0);
+        assertFalse(m.responseSubmitted);
+        vm.warp(uint256(m.responseDeadline) + 1);
+        vm.prank(arbiter); escrow.resolve(dealId, 0, false);
+        assertEq(uint8(escrow.getMilestone(dealId, 0).state), uint8(IWaybillEscrow.MilestoneState.RESOLVED));
+    }
+
+    function testEarly_raiserCannotRespondToUnlock() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.prank(buyer);
+        vm.expectRevert(IWaybillEscrow.NotDisputeResponder.selector);
+        escrow.respondToDispute(dealId, 0, keccak256("self"));
+        vm.prank(stranger);
+        vm.expectRevert(IWaybillEscrow.NotParticipant.selector);
+        escrow.respondToDispute(dealId, 0, keccak256("x"));
+        vm.prank(arbiter);
+        vm.expectRevert(IWaybillEscrow.ResponseWindowOpen.selector);
+        escrow.resolve(dealId, 0, true);
+    }
+
+    function testEarly_arbiterDeadlineReanchoredOnResponse() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.warp(block.timestamp + 10 hours);
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
+        IWaybillEscrow.Milestone memory m = escrow.getMilestone(dealId, 0);
+        assertEq(m.arbiterDeadline, uint64(block.timestamp) + uint64(ARB_HOURS) * 1 hours, "re-anchored");
+        assertLt(m.arbiterDeadline, m.responseDeadline + uint64(ARB_HOURS) * 1 hours, "never extended");
+        // default blocked until new deadline, then allowed; arbiter blocked after it
+        vm.warp(m.arbiterDeadline);
+        vm.expectRevert(IWaybillEscrow.ArbiterDeadlineActive.selector);
+        escrow.applyDefault(dealId, 0);
+        vm.warp(uint256(m.arbiterDeadline) + 1);
+        vm.prank(arbiter);
+        vm.expectRevert(IWaybillEscrow.ArbiterDeadlinePassed.selector);
+        escrow.resolve(dealId, 0, true);
+        escrow.applyDefault(dealId, 0);
+        assertEq(uint8(escrow.getMilestone(dealId, 0).state), uint8(IWaybillEscrow.MilestoneState.RESOLVED));
+    }
+
+    function testEarly_noResponseDeadlineUnchanged_defaultPath() public {
+        (uint256 dealId, uint64 t0) = _setup_buyerDispute();
+        IWaybillEscrow.Milestone memory m = escrow.getMilestone(dealId, 0);
+        assertEq(m.arbiterDeadline, t0 + uint64(RESP_HOURS + ARB_HOURS) * 1 hours);
+        vm.warp(uint256(m.arbiterDeadline) + 1);
+        escrow.applyDefault(dealId, 0);
+    }
+
+    function testEarly_withdrawThenRedispute_resetsResponse() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
+        vm.prank(buyer); escrow.withdrawDispute(dealId, 0);
+        IWaybillEscrow.Milestone memory m = escrow.getMilestone(dealId, 0);
+        assertFalse(m.responseSubmitted, "reset on withdraw");
+        // after withdraw the milestone is no longer disputed; arbiter cannot act
+        vm.prank(arbiter);
+        vm.expectRevert(IWaybillEscrow.NotDisputed.selector);
+        escrow.resolve(dealId, 0, true);
+    }
+
+    function testFuzz_Early_gateMatchesResponseOrWindow(uint32 dt, bool respond) public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        IWaybillEscrow.Milestone memory m = escrow.getMilestone(dealId, 0);
+        uint256 span = uint256(m.responseDeadline) - block.timestamp;
+        dt = uint32(bound(dt, 0, span + 1 hours));
+        if (respond) {
+            vm.warp(block.timestamp + (dt > span ? span : dt));
+            vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
+        } else {
+            vm.warp(block.timestamp + dt);
+        }
+        bool expectOk = respond || block.timestamp > m.responseDeadline;
+        vm.prank(arbiter);
+        if (!expectOk) vm.expectRevert(IWaybillEscrow.ResponseWindowOpen.selector);
+        escrow.resolve(dealId, 0, true);
+    }
 }

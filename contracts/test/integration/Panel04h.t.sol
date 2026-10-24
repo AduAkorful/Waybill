@@ -863,4 +863,65 @@ contract Panel04h is Test {
         vm.expectRevert(IWaybillEscrow.ResponseWindowOpen.selector);
         escrow.castPanelVote(dealId, 0, VOTE_SUPPLIER);
     }
+
+    // =========================================================================
+    // 31.7 Early resolve on panel deals
+    // =========================================================================
+
+    function testEarly_Panel_TwoOfThreeImmediatelyAfterResponse() public {
+        uint256 dealId = _createPanelDeal();
+        _acceptAndFund(dealId);
+        vm.prank(buyer); escrow.dispute(dealId, 0, keccak256("ev"));
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("resp"));
+        uint256 supBefore = usdc.balanceOf(supplierPay);
+        vm.prank(p0); escrow.castPanelVote(dealId, 0, VOTE_SUPPLIER);
+        vm.prank(p2); escrow.castPanelVote(dealId, 0, VOTE_SUPPLIER);
+        assertEq(uint8(escrow.getMilestone(dealId, 0).state), uint8(IWaybillEscrow.MilestoneState.RESOLVED));
+        assertEq(usdc.balanceOf(supplierPay) - supBefore, TOTAL);
+    }
+
+    function testEarly_Panel_SplitDisagreeThenMatch_AfterResponse() public {
+        uint256 dealId = _createPanelDeal();
+        _acceptAndFund(dealId);
+        vm.prank(buyer); escrow.dispute(dealId, 0, keccak256("ev"));
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("resp"));
+        vm.prank(p0); escrow.castPanelVote(dealId, 0, VOTE_BUYER);
+        vm.prank(p1); escrow.castPanelVote(dealId, 0, voteSplit(6_000));
+        assertEq(uint8(escrow.getMilestone(dealId, 0).state), uint8(IWaybillEscrow.MilestoneState.DISPUTED));
+        vm.prank(p2); escrow.castPanelVote(dealId, 0, voteSplit(6_000));
+        assertEq(uint8(escrow.getMilestone(dealId, 0).state), uint8(IWaybillEscrow.MilestoneState.RESOLVED));
+    }
+
+    function testEarly_Panel_RaiserResponseRejected_VoteStillBlocked() public {
+        uint256 dealId = _createPanelDeal();
+        _acceptAndFund(dealId);
+        vm.prank(buyer); escrow.dispute(dealId, 0, keccak256("ev"));
+        vm.prank(buyer);
+        vm.expectRevert(IWaybillEscrow.NotDisputeResponder.selector);
+        escrow.respondToDispute(dealId, 0, keccak256("self"));
+        vm.prank(p0);
+        vm.expectRevert(IWaybillEscrow.ResponseWindowOpen.selector);
+        escrow.castPanelVote(dealId, 0, VOTE_BUYER);
+    }
+
+    function testEarly_Panel_NoResponse_After72h_Allowed() public {
+        uint256 dealId = _createPanelDeal();
+        _acceptAndFund(dealId);
+        _dispute(dealId); // warps 73h, no response
+        vm.prank(p1); escrow.castPanelVote(dealId, 0, VOTE_BUYER);
+        vm.prank(p2); escrow.castPanelVote(dealId, 0, VOTE_BUYER);
+        assertEq(uint8(escrow.getMilestone(dealId, 0).state), uint8(IWaybillEscrow.MilestoneState.RESOLVED));
+    }
+
+    function testEarly_Panel_VoteAfterReanchoredDeadline_Reverts() public {
+        uint256 dealId = _createPanelDeal();
+        _acceptAndFund(dealId);
+        vm.prank(buyer); escrow.dispute(dealId, 0, keccak256("ev"));
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("resp"));
+        vm.warp(uint256(escrow.getMilestone(dealId, 0).arbiterDeadline) + 1);
+        vm.prank(p0);
+        vm.expectRevert(IWaybillEscrow.ArbiterDeadlinePassed.selector);
+        escrow.castPanelVote(dealId, 0, VOTE_BUYER);
+        escrow.applyDefault(dealId, 0);
+    }
 }

@@ -73,6 +73,10 @@ library DisputeLogic {
 
         ms.responseSubmitted = true;
         ms.responseHash      = evidenceHash;
+        // (31.7) Early resolve: once the counterparty has responded the arbiter may decide
+        // immediately, so the arbiter window is re-anchored to the response time. This can only
+        // shorten the deadline (response happens at or before responseDeadline), never extend it.
+        ms.arbiterDeadline   = uint64(block.timestamp) + uint64(deal.arbiterDeadlineHours) * 1 hours;
 
         emit IWaybillEscrow.DisputeResponseAdded(dealId, milestoneIndex, msg.sender, evidenceHash);
     }
@@ -340,7 +344,8 @@ library DisputeLogic {
 
         IWaybillEscrow.Milestone storage ms = s.milestones[dealId][milestoneIndex];
         if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED) revert IWaybillEscrow.VoteAfterResolution();
-        if (block.timestamp <= ms.responseDeadline)              revert IWaybillEscrow.ResponseWindowOpen();
+        // (31.7) Decisions open early once the counterparty has responded; otherwise after the window.
+        if (!ms.responseSubmitted && block.timestamp <= ms.responseDeadline) revert IWaybillEscrow.ResponseWindowOpen();
         if (block.timestamp > ms.arbiterDeadline)                revert IWaybillEscrow.ArbiterDeadlinePassed();
 
         // Reject duplicate votes
@@ -415,7 +420,8 @@ library DisputeLogic {
 
         IWaybillEscrow.Milestone storage ms = s.milestones[dealId][milestoneIndex];
         if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED) revert IWaybillEscrow.NotDisputed();
-        if (block.timestamp <= ms.responseDeadline)             revert IWaybillEscrow.ResponseWindowOpen();
+        // (31.7) Decisions open early once the counterparty has responded; otherwise after the window.
+        if (!ms.responseSubmitted && block.timestamp <= ms.responseDeadline) revert IWaybillEscrow.ResponseWindowOpen();
         if (block.timestamp > ms.arbiterDeadline)               revert IWaybillEscrow.ArbiterDeadlinePassed();
 
         ms.state    = IWaybillEscrow.MilestoneState.RESOLVED;
