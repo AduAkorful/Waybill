@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useAccount } from 'wagmi'
 import { useDeal } from '@/data/use-deal'
 import { reviewEnds } from '@/view/derive'
+import { PrivateTerms } from '@/ui/PrivateTerms'
 import { formatAmount, formatDateTime, shortAddress } from '@/view/format'
 import type { DealView, Tranche } from '@/view/types'
 import { AcceptPanel } from './AcceptPanel'
@@ -37,6 +38,7 @@ export function AttestScreen({ idText }: { idText: string }) {
       <p className="mt-1 text-[14px] text-graphite">
         {formatAmount(d.totalAmount)} USDC from <span className="mono">{shortAddress(d.buyer)}</span> to <span className="mono">{shortAddress(d.supplier)}</span>
       </p>
+      <PrivateTerms deal={d} wallet={address} />
       <div className="mt-8 space-y-12">
         {mine.map((p) => (
           <PartSection key={p.position} deal={d} part={p} owner={address} onDone={done} />

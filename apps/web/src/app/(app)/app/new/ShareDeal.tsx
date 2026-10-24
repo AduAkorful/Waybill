@@ -2,11 +2,26 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useSignMessage } from 'wagmi'
+import { saveTerms } from '@/integration/terms'
 import { shortAddress } from '@/view/format'
+import type { DealTerms } from '@/view/types'
 
 /** After creation: the supplier's link, ready to send. The link only opens the deal; accepting needs the supplier's own wallet. */
-export function ShareDeal({ dealId, supplier }: { dealId: bigint; supplier: string }) {
+export function ShareDeal({ dealId, supplier, buyer, terms, isPublic }: { dealId: bigint; supplier: string; buyer: string; terms: DealTerms | null; isPublic: boolean }) {
   const [copied, setCopied] = useState(false)
+  const { signMessageAsync } = useSignMessage()
+  const [saved, setSaved] = useState<{ kind: 'todo' } | { kind: 'working' } | { kind: 'done' } | { kind: 'error'; message: string }>({ kind: 'todo' })
+  const saveDetails = async () => {
+    if (!terms) return
+    setSaved({ kind: 'working' })
+    try {
+      await saveTerms({ dealId, signer: buyer, terms, isPublic, sign: (message) => signMessageAsync({ message }) })
+      setSaved({ kind: 'done' })
+    } catch (e) {
+      setSaved({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
+    }
+  }
   const link = typeof window === 'undefined' ? '' : `${window.location.origin}/d/${dealId}`
   const message = `Please review and accept deal ${dealId} on Waybill: ${link}\nSign in with the wallet ${shortAddress(supplier)} to accept.`
   const copy = async () => {
@@ -33,6 +48,18 @@ export function ShareDeal({ dealId, supplier }: { dealId: bigint; supplier: stri
           <button type="button" onClick={() => navigator.clipboard?.writeText(message)} className="rounded-md border border-rule px-3.5 py-2 font-semibold hover:bg-paper">Copy message (WeChat)</button>
         </div>
       </div>
+      {terms ? (
+        <div className="mt-6 rounded-md border border-rule bg-sheet p-3.5" aria-label="Details">
+          <p className="text-[14px] font-semibold">Save the details you entered</p>
+          <p className="mt-1 text-[13px] text-graphite">One free wallet signature stores them{isPublic ? ' and makes them public' : ' for the people named in the deal'}. The deal itself does not depend on them, and you can do this until it is funded.</p>
+          {saved.kind === 'done' ? <p role="status" className="mt-2 text-[13px] text-released">Saved.</p> : (
+            <button type="button" disabled={saved.kind === 'working'} onClick={() => void saveDetails()} className="mt-3 rounded-md bg-held px-4 py-2 text-[13.5px] font-semibold text-sheet disabled:opacity-40">
+              {saved.kind === 'working' ? 'Waiting for your wallet…' : saved.kind === 'error' ? 'Try again' : 'Sign and save details'}
+            </button>
+          )}
+          {saved.kind === 'error' ? <p role="alert" className="mt-2 text-[12.5px] text-hold">{saved.message}</p> : null}
+        </div>
+      ) : null}
       <Link href={`/app/deals/${dealId}`} className="mt-6 inline-block text-[14px] font-semibold underline">Open the deal</Link>
     </main>
   )

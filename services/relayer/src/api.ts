@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { WaybillNetwork } from '@waybill/network/networks'
 import { EvidenceError, MAX_EVIDENCE_BYTES, type EvidenceService } from './evidence-service'
 import { LabelError, type DealRange, type LabelService } from './deal-labels'
+import { TermsError, type DealTermsService } from './deal-terms'
 import { EmailError, type WalletEmailService } from './wallet-emails'
 import type { HealthResult } from './health'
 
@@ -46,6 +47,8 @@ export interface WaybillApiOptions {
   labels?: LabelService | null
   /** Email settings and verification for wallets. Absent when no email provider is configured. */
   emails?: WalletEmailService | null
+  /** Off-chain deal terms (goods, names, places). Absent when the process has no database. */
+  terms?: DealTermsService | null
 }
 
 function jsonValue(value: unknown): unknown {
@@ -137,6 +140,8 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
     return { status: 400, body: { error: 'invalid_request_url' } }
   }
   const evidenceRoute = /^\/v1\/deals\/([0-9]+)\/evidence(?:\/([0-9a-fA-F-]{36}|[0-9]{1,3}))?$/.exec(url.pathname)
+  const termsRoute = /^\/v1\/deals\/([0-9]+)\/terms$/.exec(url.pathname)
+  if (termsRoute) return dealTerms(request, options, BigInt(termsRoute[1]!))
   if (evidenceRoute) return evidence(request, options, BigInt(evidenceRoute[1]!), evidenceRoute[2])
   if (url.pathname === '/v1/operator/labels') return setLabels(request, options)
   if (url.pathname === '/v1/contacts' || url.pathname === '/v1/contacts/verify') return contacts(request, options, url.pathname)
@@ -247,6 +252,31 @@ async function setLabels(request: ApiRequest, options: WaybillApiOptions): Promi
   } catch (e) {
     if (e instanceof LabelError) return { status: e.status, body: { error: e.code } }
     return { status: 503, body: { error: 'labels_unavailable' } }
+  }
+}
+
+/** Body for POST: {"terms": {...}, "public": false}. GET returns public terms to anyone and private ones to a signed party. */
+async function dealTerms(request: ApiRequest, options: WaybillApiOptions, dealId: bigint): Promise<ApiResponse> {
+  const service = options.terms
+  if (!service) return { status: 503, body: { error: 'terms_unavailable' } }
+  const signed = signedRequest(request)
+  const auth = signed ? { signer: signed.signer, signature: signed.signature, signedAt: signed.signedAt } : null
+  try {
+    if (request.method === 'GET') {
+      const found = await service.read(dealId, auth)
+      return found ? { status: 200, body: found } : { status: 404, body: { error: 'no_terms' } }
+    }
+    if (request.method === 'POST') {
+      if (!auth) return { status: 401, body: { error: 'missing_signature' } }
+      const body = JSON.parse(new TextDecoder().decode(request.body ?? new Uint8Array())) as { terms?: unknown; public?: unknown }
+      if (typeof body.public !== 'boolean') return { status: 400, body: { error: 'invalid_body' } }
+      return { status: 200, body: await service.set(dealId, body.terms, body.public, auth) }
+    }
+    return { status: 405, body: { error: 'method_not_allowed' } }
+  } catch (e) {
+    if (e instanceof TermsError) return { status: e.status, body: { error: e.code } }
+    if (e instanceof SyntaxError) return { status: 400, body: { error: 'invalid_body' } }
+    return { status: 503, body: { error: 'terms_unavailable' } }
   }
 }
 

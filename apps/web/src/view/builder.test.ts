@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { buildDeal, emptyForm, feeFor, parseAmount, percentToBps, TEMPLATES, type BuilderForm, type BuilderLimits } from './builder'
+import { buildDeal, buildTerms, emptyDetails, emptyForm, feeFor, parseAmount, percentToBps, TEMPLATES, type BuilderForm, type BuilderLimits } from './builder'
 
 const buyer = '0x00000000000000000000000000000000000000b1'
 const supplier = '0x00000000000000000000000000000000000000c2'
@@ -124,5 +124,21 @@ describe('a deal with a three-member panel', () => {
   test('a single-arbiter deal carries no panel', () => {
     const r = buildDeal(form(), buyer, limits, { allowed: true, fee: 0n }, NOW)
     expect(r.ok && r.deal.panel).toBe(null)
+  })
+})
+
+describe('off-chain details', () => {
+  const parts = [{ title: 'Deposit' }, { title: '' }]
+  test('nothing typed means nothing to store, even with a template name', () => {
+    expect(buildTerms(emptyDetails(), [{ title: '' }], 'Standard')).toEqual({ ok: true, terms: null })
+  })
+  test('typed details become the terms the relayer stores, with titles by part', () => {
+    const d = { ...emptyDetails(), goods: ' Tea ', units: '500', originCode: 'cn', originCity: 'Shenzhen' }
+    expect(buildTerms(d, parts, 'Standard')).toEqual({ ok: true, terms: { goods: 'Tea', units: 500, origin: { code: 'CN', city: 'Shenzhen' }, template: 'Standard', milestoneTitles: ['Deposit', ''] } })
+  })
+  test('says what is wrong', () => {
+    const r = buildTerms({ ...emptyDetails(), units: '5x', originCode: 'China', originCity: 'x', goods: 'g'.repeat(301) }, parts)
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.errors.length).toBe(3)
   })
 })

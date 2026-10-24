@@ -1,11 +1,14 @@
 import { isAddress, type Address } from 'viem'
 import type { FeePayer, MilestoneInput, ReleaseCondition } from '@/integration/current-actions'
+import type { DealTerms } from './types'
 
 export const INDEPENDENT = 65_535
 const DAY = 86_400
 const HOUR = 3_600
 
 export interface PartForm {
+  /** What this part is for, shown to the parties (optional; kept off-chain) */
+  title: string
   /** Share of the total, as typed: up to two decimals */
   percent: string
   condition: ReleaseCondition
@@ -59,6 +62,7 @@ export const CONDITION_LABEL: Record<ReleaseCondition, string> = {
 }
 
 const part = (percent: string, condition: ReleaseCondition, dueDays: number, review = '24'): PartForm => ({
+  title: '',
   percent,
   condition,
   attestors: condition === 1 ? [''] : [],
@@ -284,4 +288,80 @@ export function buildDeal(
     }
   }
   return { ok: false, errors }
+}
+
+/** Optional details about the goods and the people, as typed. Kept off-chain and saved after the deal is created. */
+export interface DetailsForm {
+  goods: string
+  units: string
+  cartons: string
+  originCode: string
+  originCity: string
+  destinationCode: string
+  destinationCity: string
+  buyerName: string
+  supplierName: string
+  /** Whether anyone may read these on the public record */
+  isPublic: boolean
+}
+
+export const emptyDetails = (): DetailsForm => ({ goods: '', units: '', cartons: '', originCode: '', originCity: '', destinationCode: '', destinationCity: '', buyerName: '', supplierName: '', isPublic: false })
+
+export type TermsResult = { ok: true; terms: DealTerms | null } | { ok: false; errors: string[] }
+
+/**
+ * Turns what was typed into the terms the relayer stores, or says what is wrong. Nothing typed gives `terms: null`
+ * (details are optional). Limits mirror the relayer's, which checks them again.
+ */
+export function buildTerms(details: DetailsForm, parts: readonly Pick<PartForm, 'title'>[], template?: string): TermsResult {
+  const errors: string[] = []
+  const terms: DealTerms = {}
+  const plain = (value: string, max: number, what: string): string | null => {
+    const t = value.trim()
+    if (t === '') return null
+    if (t.length > max) errors.push(`${what} is too long (at most ${max} characters).`)
+    // eslint-disable-next-line no-control-regex
+    else if (/[\u0000-\u001f\u007f]/.test(t)) errors.push(`${what} contains characters that cannot be stored.`)
+    return t
+  }
+  const count = (value: string, what: string): number | null => {
+    const t = value.trim()
+    if (t === '') return null
+    if (!/^\d{1,9}$/.test(t)) {
+      errors.push(`${what} must be a whole number.`)
+      return null
+    }
+    return Number(t)
+  }
+  const place = (code: string, city: string, what: string) => {
+    const c = code.trim().toUpperCase()
+    const k = plain(city, 80, `${what} city`)
+    if (c === '' && k === null) return undefined
+    if (!/^[A-Z]{2,3}$/.test(c) || k === null) {
+      errors.push(`${what}: give a 2 or 3 letter country code and a city.`)
+      return undefined
+    }
+    return { code: c, city: k }
+  }
+  const goods = plain(details.goods, 300, 'Goods')
+  if (goods) terms.goods = goods
+  const units = count(details.units, 'Units')
+  if (units !== null) terms.units = units
+  const cartons = count(details.cartons, 'Cartons')
+  if (cartons !== null) terms.cartons = cartons
+  const origin = place(details.originCode, details.originCity, 'Origin')
+  if (origin) terms.origin = origin
+  const destination = place(details.destinationCode, details.destinationCity, 'Destination')
+  if (destination) terms.destination = destination
+  const buyerName = plain(details.buyerName, 120, 'Your name')
+  if (buyerName) terms.buyerName = buyerName
+  const supplierName = plain(details.supplierName, 120, 'The supplier’s name')
+  if (supplierName) terms.supplierName = supplierName
+  if (template) terms.template = template
+  const titles = parts.map((p, i) => plain(p.title, 80, `Part ${i + 1} title`) ?? '')
+  if (titles.some((t) => t !== '')) terms.milestoneTitles = titles
+  if (errors.length > 0) return { ok: false, errors }
+  // the template name alone is not a detail worth storing
+  const meaningful = Object.keys(terms).filter((k) => k !== 'template')
+  return { ok: true, terms: meaningful.length === 0 ? null : terms }
 }

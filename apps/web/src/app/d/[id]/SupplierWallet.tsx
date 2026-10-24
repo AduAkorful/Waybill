@@ -9,6 +9,7 @@ import { encodeEscrowAction } from '@/integration/escrow'
 import { AddressChanges } from '@/ui/AddressChanges'
 import { DisputeDialog } from '@/ui/DisputeDialog'
 import { LiveWaybill } from '@/ui/Live'
+import { PrivateTerms } from '@/ui/PrivateTerms'
 import { Modal } from '@/ui/Modal'
 import { TxFlow } from '@/ui/TxFlow'
 import { formatAmount, shortAddress } from '@/view/format'
@@ -114,6 +115,7 @@ function Inner({ deal: d, lang, autoLogin, onMounted, onChanged }: { deal: DealV
       <h2 className="label mb-3">{t.tracker}</h2>
       <LiveWaybill deal={d} lang={lang} detail="summary" compact showLockStamp={false} actions={actions} />
     </section>
+    {isSupplier && address ? <PrivateTerms deal={d} wallet={address} /> : null}
     {isSupplier ? <AddressChanges deal={d} viewer="supplier" onChanged={() => onChanged()} /> : null}
 
     <Modal open={dialog === 'accept'} onClose={() => setDialog(null)} label={t.accept}>

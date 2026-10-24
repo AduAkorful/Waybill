@@ -2,6 +2,7 @@ import { createPublicClient, http, type PublicClient } from 'viem'
 import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api'
 import { readNextDealId } from '@/integration/escrow'
 import { getBrowserChain, getBrowserNetwork } from '@/integration/network'
+import { readPublicTerms } from '@/integration/terms'
 import { parseDealEvents, withEvents } from '@/view/events'
 import { loadDealView } from '@/view/from-chain'
 import type { DealView } from '@/view/types'
@@ -32,7 +33,9 @@ export async function getPublicDeal(id: bigint): Promise<PublicDeal> {
   const network = getBrowserNetwork()
   const rpc = client()
   if (id >= (await readNextDealId(rpc, network))) return { status: 'missing' }
-  const view = await loadDealView(rpc, network, id)
+  // only details the buyer made public: the public record never reads private ones
+  const publicTerms = await readPublicTerms(id).catch(() => null)
+  const view = await loadDealView(rpc, network, id, publicTerms?.terms)
 
   let api: ReturnType<typeof createWaybillApiClient> | null = null
   try {

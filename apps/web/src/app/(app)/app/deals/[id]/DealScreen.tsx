@@ -10,6 +10,7 @@ import { getBrowserNetwork } from '@/integration/network'
 import { Acceptances } from '@/ui/Acceptances'
 import { LiveLedger, LiveWaybill } from '@/ui/Live'
 import { AddressChanges } from '@/ui/AddressChanges'
+import { PrivateTerms } from '@/ui/PrivateTerms'
 import { DisputeDialog } from '@/ui/DisputeDialog'
 import { EvidenceList } from '@/ui/EvidenceList'
 import { Modal } from '@/ui/Modal'
@@ -165,6 +166,8 @@ export function DealScreen({ idText }: { idText: string }) {
         <div className="mt-8">
           <LiveWaybill deal={d} detail="summary" compact showLockStamp={false} actions={actions} />
         </div>
+
+        {address ? <PrivateTerms deal={d} wallet={address} /> : null}
 
         {isBuyer || (!!address && address.toLowerCase() === d.supplier.toLowerCase()) ? (
           <AddressChanges deal={d} viewer={isBuyer ? 'buyer' : 'supplier'} onChanged={() => setRefresh((n) => n + 1)} />

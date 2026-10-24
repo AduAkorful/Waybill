@@ -10,7 +10,7 @@ import { getBrowserNetwork } from '@/integration/network'
 import { Modal } from '@/ui/Modal'
 import { LineItems } from '@/ui/Sheet'
 import { TxFlow } from '@/ui/TxFlow'
-import { buildDeal, CONDITION_LABEL, emptyForm, feeFor, TEMPLATES, type BuilderForm, type PartForm, type Template } from '@/view/builder'
+import { buildDeal, buildTerms, CONDITION_LABEL, emptyDetails, emptyForm, feeFor, TEMPLATES, type BuilderForm, type DetailsForm, type PartForm, type Template } from '@/view/builder'
 import { formatAmount, shortAddress } from '@/view/format'
 import { ShareDeal } from './ShareDeal'
 
@@ -48,6 +48,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   const [signing, setSigning] = useState(false)
   const [created, setCreated] = useState<bigint | null>(null)
   const [lookup, setLookup] = useState('')
+  const [details, setDetails] = useState<DetailsForm>(emptyDetails)
   const [now] = useState(() => Math.floor(Date.now() / 1000))
 
   const checked = arbiter?.status === 'ready' ? arbiter.value : null
@@ -62,7 +63,8 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
     setForm((f) => ({ ...f, parts: t.parts() }))
   }
 
-  if (created !== null) return <ShareDeal dealId={created} supplier={form.supplier} />
+  const terms = buildTerms(details, form.parts, template.id === 'custom' ? undefined : template.name)
+  if (created !== null) return <ShareDeal dealId={created} supplier={form.supplier} buyer={buyer} terms={terms.ok ? terms.terms : null} isPublic={details.isPublic} />
 
   const total = built.ok ? built.deal.totalAmount : null
   const isPanel = form.panel.length > 0
@@ -183,6 +185,10 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                     {directory.note ? <p className="mt-1 text-[12px] text-graphite">{directory.note}</p> : null}
                   </div>
                 ) : null}
+                <div className="mt-3">
+                  <label className="label block" htmlFor={`title-${i}`}>What this part is for (optional)</label>
+                  <input id={`title-${i}`} className={input} value={p.title} maxLength={80} onChange={(e) => setPart(i, { title: e.target.value })} placeholder="Deposit, production, delivery…" />
+                </div>
                 <div className="mt-3 grid grid-cols-3 gap-3">
                   <Small label="Due in, days" value={p.dueDays} onChange={(v) => setPart(i, { dueDays: v })} />
                   <Small label="Grace, days" value={p.graceDays} onChange={(v) => setPart(i, { graceDays: v })} />
@@ -192,8 +198,42 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
             ))}
           </ol>
           {form.parts.length < 8 ? (
-            <button type="button" onClick={() => set({ parts: [...form.parts, { percent: '', condition: 1, attestors: [''], dueDays: String(60), graceDays: '7', reviewHours: '24' }] })} className="mt-3 text-[13px] font-semibold underline">Add a part</button>
+            <button type="button" onClick={() => set({ parts: [...form.parts, { title: '', percent: '', condition: 1, attestors: [''], dueDays: String(60), graceDays: '7', reviewHours: '24' }] })} className="mt-3 text-[13px] font-semibold underline">Add a part</button>
           ) : null}
+        </section>
+
+        <section className="mt-8" aria-label="Details">
+          <h2 className="label mb-1">Details for the supplier (optional)</h2>
+          <p className="mb-3 max-w-xl text-[12.5px] leading-relaxed text-graphite">What is being bought and who is who. The contract stores none of this: Waybill keeps it off-chain, visible to the people named in the deal unless you choose to make it public. It is saved after the deal is created and cannot be changed once the deal is funded.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="label block" htmlFor="goods">Goods</label>
+              <input id="goods" className={input} value={details.goods} maxLength={300} onChange={(e) => setDetails({ ...details, goods: e.target.value })} placeholder="e.g. Cotton t-shirts, 5,000 units" />
+            </div>
+            <Small label="Units" value={details.units} onChange={(v) => setDetails({ ...details, units: v })} />
+            <Small label="Cartons" value={details.cartons} onChange={(v) => setDetails({ ...details, cartons: v })} />
+            <div>
+              <label className="label block" htmlFor="origin-code">Ships from (country code, city)</label>
+              <div className="flex gap-2"><input id="origin-code" className={`${input} mono w-20`} maxLength={3} value={details.originCode} onChange={(e) => setDetails({ ...details, originCode: e.target.value })} placeholder="CN" /><input aria-label="Origin city" className={input} value={details.originCity} onChange={(e) => setDetails({ ...details, originCity: e.target.value })} placeholder="Shenzhen" /></div>
+            </div>
+            <div>
+              <label className="label block" htmlFor="destination-code">Ships to (country code, city)</label>
+              <div className="flex gap-2"><input id="destination-code" className={`${input} mono w-20`} maxLength={3} value={details.destinationCode} onChange={(e) => setDetails({ ...details, destinationCode: e.target.value })} placeholder="GH" /><input aria-label="Destination city" className={input} value={details.destinationCity} onChange={(e) => setDetails({ ...details, destinationCity: e.target.value })} placeholder="Accra" /></div>
+            </div>
+            <div>
+              <label className="label block" htmlFor="buyer-name">Your name or company</label>
+              <input id="buyer-name" className={input} value={details.buyerName} maxLength={120} onChange={(e) => setDetails({ ...details, buyerName: e.target.value })} />
+            </div>
+            <div>
+              <label className="label block" htmlFor="supplier-name">Supplier’s name or company</label>
+              <input id="supplier-name" className={input} value={details.supplierName} maxLength={120} onChange={(e) => setDetails({ ...details, supplierName: e.target.value })} />
+            </div>
+            <label className="flex items-start gap-2 text-[13px] sm:col-span-2">
+              <input type="checkbox" className="mt-1" checked={details.isPublic} onChange={(e) => setDetails({ ...details, isPublic: e.target.checked })} />
+              <span>Show these details on the deal&apos;s public record. Anyone with the link could read them. Leave this off to keep them to the people named in the deal.</span>
+            </label>
+          </div>
+          {!terms.ok ? <ul role="alert" className="mt-2 space-y-0.5 text-[12.5px] text-hold">{terms.errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
         </section>
 
         <section className="mt-8 grid gap-4 sm:grid-cols-2" aria-label="Fees and timing">

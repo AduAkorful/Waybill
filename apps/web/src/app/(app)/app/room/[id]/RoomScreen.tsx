@@ -10,6 +10,7 @@ import { getBrowserNetwork } from '@/integration/network'
 import { DisputeDialog } from '@/ui/DisputeDialog'
 import { EvidenceList } from '@/ui/EvidenceList'
 import { Modal } from '@/ui/Modal'
+import { PrivateTerms } from '@/ui/PrivateTerms'
 import { TxFlow } from '@/ui/TxFlow'
 import { formatAmount, formatDateTime, shortAddress, shortHash } from '@/view/format'
 import { describeVote, isArbiterOf, panelAccepted, panelOutcome, panelStanding } from '@/view/panel'
@@ -66,6 +67,8 @@ export function RoomScreen({ idText }: { idText: string }) {
           <button type="button" onClick={() => setDialog({ kind: 'accept' })} className="mt-3 rounded-md bg-held px-4 py-2.5 text-[14px] font-semibold text-sheet">Accept this role</button>
         </div>
       ) : null}
+
+      <PrivateTerms deal={d} wallet={address} />
 
       {decided.length === 0 && !needsAccept ? <p className="mt-8 text-[14px] text-graphite">When a part is disputed it appears here with its files and deadlines.</p> : null}
 

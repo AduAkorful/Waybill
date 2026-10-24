@@ -11,6 +11,7 @@ import { createWaybillApi } from './api'
 import { ARBITER_EVENT_ABI, ARBITER_EVENT_NAMES, readArbiter } from './arbiters'
 import { loadApiConfig } from './api-config'
 import { LabelService } from './deal-labels'
+import { DealTermsService, PostgresTermsStore } from './deal-terms'
 import { loadEmailSetup } from './email-config'
 import { EventNotifier } from './event-notifier'
 import { NotificationDispatcher } from './notification-dispatcher'
@@ -168,10 +169,19 @@ export function createBackendApplication(
   const notifications = dispatcher
     ? new RelayerRuntime({ pollOnce: () => dispatcher.dispatchBatch() }, { pollIntervalMs: 10_000, reportError: (error) => console.error('[waybill-notifications]', error) })
     : null
+  const terms = new DealTermsService({
+    context: (dealId) => ({ network: config.network.network, chainId: config.network.chainId, escrow: config.network.contracts.escrow, dealId }),
+    network: config.network.network,
+    store: new PostgresTermsStore(pool),
+    isBuyer: async (dealId, address) => (await readModel.listDealParties(config.network.network, dealId)).some((p) => p.role === 'buyer' && p.address.toLowerCase() === address.toLowerCase()),
+    isParty: (dealId, address) => readModel.isDealParty(config.network.network, dealId, address),
+    dealState: async (dealId) => (await readModel.getDeal(config.network.network, dealId))?.state ?? null,
+  })
   const api = apiConfig
     ? createWaybillApi({
         evidence,
         labels,
+        terms,
         emails,
         network: config.network.network,
         allowedOrigins: apiConfig.allowedOrigins,

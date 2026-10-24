@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPublicClient, http, type PublicClient } from 'viem'
 import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api'
 import { getBrowserChain, getBrowserNetwork } from '@/integration/network'
+import { readPublicTerms } from '@/integration/terms'
 import { parseDealEvents, withEvents } from '@/view/events'
 import { loadDealView } from '@/view/from-chain'
 import type { DealView } from '@/view/types'
@@ -58,7 +59,9 @@ export function useDeal(id: bigint | null, refreshKey = 0, initial?: DealView | 
 
     const run = async () => {
       try {
-        const view = await loadDealView(client, network, id)
+        // details the buyer chose to make public; private ones are read on request with a signature
+        const publicTerms = api ? await readPublicTerms(id).catch(() => null) : null
+        const view = await loadDealView(client, network, id, publicTerms?.terms)
         let deal = view
         let history: HistoryStatus = { status: 'unconfigured' }
         if (api) {
