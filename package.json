@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "test:backend": "bun test config services/relayer/src",
+    "typecheck:backend": "tsc -p tsconfig.backend.json"
+  },
   "dependencies": {
     "@openzeppelin/contracts": "^5.1.0",
     "pg": "^8.23.1",

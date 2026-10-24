@@ -102,7 +102,9 @@ export async function readMilestone(
   })
   const milestone = result as readonly unknown[] | Record<string, unknown>
   const value = (index: number, name: string): unknown =>
-    Array.isArray(milestone) ? milestone[index] : milestone[name]
+    Array.isArray(milestone)
+      ? milestone[index]
+      : (milestone as Record<string, unknown>)[name]
 
   return {
     state: Number(value(6, 'state')),
