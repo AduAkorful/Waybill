@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 
 import { loadAlertConfig } from './alert-config'
-import { AlertMonitor, alertForEvent, evaluateWatch, type Alert, type AlertSink, type WatchReading } from './alerts'
+import { discordMessage, slackText, usdc } from './alert-format'
+import { AlertMonitor, WebhookAlertSink, alertForEvent, evaluateWatch, type Alert, type AlertSink, type WatchReading } from './alerts'
 
 const NOW = 1_800_000_000
 const event = (eventName: string, overrides: Record<string, unknown> = {}) => ({
@@ -44,7 +45,8 @@ describe('alertForEvent', () => {
     const alert = alertForEvent(event('PayoutFailed', { dealId: 7n, milestoneIndex: 1 }), true, NOW)!
     expect(alert.level).toBe('critical')
     expect(alert.title).toBe('A payout to a supplier failed (deal 7, part 2)')
-    expect(alert.detail).toContain('"maxDealAmount":"5000000000"')
+    expect(alert.detail).toContain('Largest single deal: 5,000.00 USDC')
+    expect(alert.fields).toContainEqual({ name: 'Deal', value: '7' })
     expect(alert.key).toBe('0xabc:3')
   })
 
@@ -72,7 +74,8 @@ describe('evaluateWatch', () => {
   test('formats gas in 18 decimals and money held in 6', () => {
     const [gas, , , held] = evaluateWatch({ ...HEALTHY, relayerGas: 1_500_000_000_000_000_000n, currentLocked: 9_000_000n, cursors: [] }, LIMITS)
     expect(gas!.detail).toContain('1.50 USDC')
-    expect(held!.detail).toContain('9.00 of 10.00 USDC')
+    expect(held!.detail).toContain('Held: 9.00 USDC')
+    expect(held!.detail).toContain('Total limit: 10.00 USDC')
   })
 })
 
@@ -88,15 +91,15 @@ describe('AlertMonitor', () => {
 
     await m.pollOnce()
     await m.pollOnce()
-    expect(sink.sent.map((a) => a.title)).toEqual(['The relayer is low on gas'])
+    expect(sink.sent.map((a) => a.title)).toEqual(['Relayer is low on gas'])
 
     clock.t += 3_600
     await m.pollOnce()
-    expect(sink.sent.at(-1)!.title).toBe('Still: The relayer is low on gas')
+    expect(sink.sent.at(-1)!.title).toBe('Still: Relayer is low on gas')
 
     reading = HEALTHY
     await m.pollOnce()
-    expect(sink.sent.at(-1)!.title).toBe('Resolved: The relayer is low on gas')
+    expect(sink.sent.at(-1)!.title).toBe('Resolved: Relayer is low on gas')
     await m.pollOnce()
     expect(sink.sent).toHaveLength(3)
   })
@@ -153,10 +156,79 @@ describe('loadAlertConfig', () => {
       fetcher,
     )
     const alert: Alert = { key: 'k', level: 'critical', title: 'A payout to a supplier failed', detail: 'tx 0xabc' }
-    for (const sink of config.sinks) await sink.send(alert, 'mainnet')
+    for (const sink of config.sinks) await sink.send(alert, { network: 'mainnet' })
     expect(calls[0]!.url).toBe('https://hooks.example/x')
     expect(JSON.parse(calls[0]!.body).text).toBe('[Waybill mainnet] CRITICAL: A payout to a supplier failed\ntx 0xabc')
     expect(calls[1]!.url).toBe('https://api.resend.com/emails')
     expect(JSON.parse(calls[1]!.body).to).toEqual(['ops@example.com'])
+  })
+})
+
+describe('alert formatting', () => {
+  const EXPLORER = 'https://explorer.arc.io'
+  const writer = alertForEvent(
+    event('WriterAdded', { payload: { writer: '0x8a13ff4FbfBd67cE10e1Fd015bD4a8De3179C5ff' }, transactionHash: '0xa60f3e8fe807bebbe57e947304f2cea6a7368e1b1c090b09b7f9b1f3668dc3d7' }),
+    true,
+    NOW,
+    EXPLORER,
+  )!
+
+  test('usdc keeps sub-cent digits and groups thousands', () => {
+    expect(usdc(1_000_000_000n)).toBe('1,000.00 USDC')
+    expect(usdc(1_234_567n)).toBe('1.234567 USDC')
+    expect(usdc(1_500_000n)).toBe('1.50 USDC')
+  })
+
+  test('events get a note, labelled fields and an explorer link in the plain text', () => {
+    expect(writer.note).toContain('Expected only during a deployment')
+    expect(writer.fields).toEqual([{ name: 'Writer', value: '0x8a13ff4FbfBd67cE10e1Fd015bD4a8De3179C5ff', kind: 'address' }])
+    expect(writer.detail).toContain(`Transaction: ${EXPLORER}/tx/0xa60f`)
+  })
+
+  test('Discord gets one coloured embed with explorer links and local-time stamps', () => {
+    const message = discordMessage(writer, { network: 'mainnet', explorerUrl: EXPLORER }, new Date(NOW * 1000))
+    const embed = message.embeds[0]!
+    expect(message.allowed_mentions).toEqual({ parse: [] })
+    expect(embed.title).toBe('🔴 Attestor-registry writer added')
+    expect(embed.color).toBe(0xe5484d)
+    expect(embed.url).toBe(`${EXPLORER}/tx/0xa60f3e8fe807bebbe57e947304f2cea6a7368e1b1c090b09b7f9b1f3668dc3d7`)
+    expect(embed.fields[0]).toEqual({ name: 'Writer', value: `[0x8a13…C5ff](${EXPLORER}/address/0x8a13ff4FbfBd67cE10e1Fd015bD4a8De3179C5ff)`, inline: true })
+    expect(embed.fields.at(-1)!.name).toBe('Transaction')
+
+    const eta = alertForEvent(event('CapsRaiseScheduled', { payload: { maxDealAmount: '5000000000', maxLocked: '50000000000', eta: '1800172800' } }), true, NOW)!
+    const fields = discordMessage(eta, { network: 'mainnet' }).embeds[0]!.fields
+    expect(fields.map((f) => f.value)).toEqual(['5,000.00 USDC', '50,000.00 USDC', '<t:1800172800:F> (<t:1800172800:R>)', '0xabc'])
+  })
+
+  test('Slack gets bullets and its own link syntax', () => {
+    const text = slackText(writer, { network: 'mainnet', explorerUrl: EXPLORER })
+    expect(text.split('\n')[0]).toBe('🔴 *Attestor-registry writer added* (Waybill mainnet)')
+    expect(text).toContain(`• Writer: <${EXPLORER}/address/0x8a13ff4FbfBd67cE10e1Fd015bD4a8De3179C5ff|0x8a13…C5ff>`)
+    expect(text).toContain('|View transaction>')
+  })
+
+  test('the webhook sink picks the format from the URL', async () => {
+    const bodies: Record<string, unknown>[] = []
+    const fetcher = (async (_url: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)))
+      return new Response('', { status: 204 })
+    }) as unknown as typeof fetch
+    await new WebhookAlertSink('https://discord.com/api/webhooks/1/x', fetcher).send(writer, { network: 'mainnet', explorerUrl: EXPLORER })
+    await new WebhookAlertSink('https://hooks.slack.com/services/x', fetcher).send(writer, { network: 'mainnet', explorerUrl: EXPLORER })
+    expect(Object.keys(bodies[0]!)).toEqual(['username', 'allowed_mentions', 'embeds'])
+    expect(Object.keys(bodies[1]!)).toEqual(['text'])
+  })
+})
+
+describe('AlertMonitor startup', () => {
+  test('lag alerts wait out the startup grace; gas alerts do not', async () => {
+    const sink = new RecordingSink()
+    const clock = { t: NOW }
+    const m = new AlertMonitor({ network: 'mainnet', sinks: [sink], thresholds: LIMITS, read: async () => ({ ...HEALTHY, relayerGas: 1n, cursors: [] }), now: () => clock.t, startupGraceSeconds: 600, log: () => {} })
+    await m.pollOnce()
+    expect(sink.sent.map((a) => a.key)).toEqual(['relayer-gas-low'])
+    clock.t += 601
+    await m.pollOnce()
+    expect(sink.sent.map((a) => a.key)).toEqual(['relayer-gas-low', 'lag-escrow-indexer', 'lag-escrow-relayer'])
   })
 })

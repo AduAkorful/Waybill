@@ -120,6 +120,7 @@ export function createBackendApplication(
   const relayerAddress = privateKeyToAccount(config.privateKey).address
   const monitor = new AlertMonitor({
     network: config.network.network,
+    explorerUrl: config.network.explorerUrl,
     sinks: alertConfig.sinks,
     thresholds: {
       minRelayerGas: alertConfig.minRelayerGas,
@@ -132,7 +133,7 @@ export function createBackendApplication(
         readOperatorChain(chain.client, config.network, relayerAddress),
         new PostgresOperatorStore(pool).cursors(STREAMS),
       ])
-      return { relayerGas: live.relayer.gasBalance, currentLocked: live.currentLocked, maxLocked: live.maxLocked, head: live.head, cursors }
+      return { relayerGas: live.relayer.gasBalance, currentLocked: live.currentLocked, maxLocked: live.maxLocked, head: live.head, cursors, relayerAddress }
     },
   })
   const alerts = new RelayerRuntime(
