@@ -11,7 +11,7 @@ Pass means: the screen states the outcome plainly, the explorer link of the tran
 | 1.1 | Open `/app` signed out | Redirects to `/signin` |
 | 1.2 | Sign in with email code | Lands in the app; a wallet address is shown; `/join` shows the same address and a copy button |
 | 1.3 | Sign in with an external wallet on the wrong network | "Switch to Arc" prompt; no signing surface is shown until the chain is right |
-| 1.4 | Fresh wallet with no deals opens `/app` | An empty state with "New deal"; no role tabs invented |
+| 1.4 | Fresh wallet with no deals opens `/app` | "No deals name this wallet yet", with "Create your first deal" and the attestor directory; no role tabs invented |
 | 1.5 | Wallet that is buyer in one deal and attestor in another | Both role tabs shown; each lists only its own deals |
 | 1.6 | Switch light/dark/auto; reload | Choice is kept; Privy dialog follows the theme |
 | 1.7 | Sign out | Returns to signed-out state; `/app` redirects again |
@@ -146,7 +146,7 @@ Needs the email variables in the runbook.
 | 10.5 | As P: label deals `0-N` as `self-dealing`; then `third-party` for one deal | Volume table regroups; a different wallet is refused |
 | 10.6 | As P: schedule adding an arbiter | Shown with the time it can be executed; "Add now" disabled until then |
 | 10.7 | As P after the delay: Add now | The arbiter appears in the builder picker |
-| 10.8 | Stop the relayer; reload | The health card shows the failing components and the lag; the app does not show stale numbers as fresh |
+| 10.8 | Stop the relayer; reload `/operator` | "The monitor could not be loaded, so no figures are shown"; no stale numbers. With the relayer up but its RPC failing, the health card lists the failing component and each stream's lag |
 
 ## 11. Accessibility and layout
 
