@@ -232,10 +232,10 @@ describe('API CORS', () => {
     expect(res.headers?.['access-control-allow-origin']).toBeUndefined()
   })
 
-  test('answers a preflight for a listed origin, GET only', async () => {
+  test('answers a preflight for a listed origin (GET and the signed evidence POST)', async () => {
     const res = await get('https://app.example', 'OPTIONS')
     expect(res.status).toBe(204)
-    expect(res.headers?.['access-control-allow-methods']).toBe('GET')
+    expect(res.headers?.['access-control-allow-methods']).toBe('GET, POST')
     expect((await get('https://evil.example', 'OPTIONS')).status).toBe(403)
   })
 

@@ -7,6 +7,8 @@ import { createRelayerChain, readLiveDeal } from './chain'
 import { REGISTRY_EVENT_ABI, REGISTRY_EVENT_NAMES, readAttestor } from './registry'
 import { createWaybillApi } from './api'
 import { loadApiConfig } from './api-config'
+import { loadEvidenceService } from './evidence-config'
+import { PostgresEvidenceStore } from './evidence-store'
 import { checkHealth, databaseHealth, rpcHealth } from './health'
 import type { RelayerConfig } from './config'
 import { loadRelayerConfig } from './config'
@@ -116,8 +118,16 @@ export function createBackendApplication(
   const readService = new WaybillReadService(readModel, {
     readDeal: (_network, dealId) => readLiveDeal(chain, dealId),
   })
+  const evidenceStore = new PostgresEvidenceStore(pool)
+  const evidence = apiConfig
+    ? loadEvidenceService(environment, config.network, {
+        pointers: evidenceStore,
+        isDealParty: (dealId, address) => readModel.isDealParty(config.network.network, dealId, address),
+      })
+    : null
   const api = apiConfig
     ? createWaybillApi({
+        evidence,
         network: config.network.network,
         allowedOrigins: apiConfig.allowedOrigins,
         health: () =>

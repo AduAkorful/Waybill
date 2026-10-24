@@ -73,3 +73,23 @@ fall back to the checked-in testnet manifest.
 Set `WAYBILL_API_PORT` to serve the read-only HTTP API from the same process as the relayer and indexer; leave it empty to run the loops only. Routes: `GET /health`, `/v1/network`, `/v1/deals/:id` (live chain read with projection), `/v1/deals/:id/events` (indexed events, oldest first, with block time when known). Browsers are served only for origins listed in `WAYBILL_API_ALLOWED_ORIGINS`. Start with `npm run start --workspace @waybill/relayer`.
 
 The indexer fetches logs by address and decodes them itself: the public Arc RPC rejects any filter that lists about 30 or more event topics with "requested range too large", whatever the block range. Keep `WAYBILL_RELAYER_MAX_BLOCK_RANGE` at or below 5,000. Set `WAYBILL_RELAYER_START_BLOCK` to the escrow deployment block (testnet: 67900503) so the first run backfills the whole history.
+
+## Evidence upload
+
+Deal parties (any wallet the escrow names in the deal) can store dispute and attestation evidence. It is opt-in: set
+all of `WAYBILL_EVIDENCE_KEY`, `WAYBILL_EVIDENCE_S3_*` (any S3-compatible bucket: endpoint, bucket, region, access key
+id, secret) and `WAYBILL_EVIDENCE_PINATA_JWT`, or none. A partial set stops the process at start.
+
+- `POST /v1/deals/:id/evidence/:part` takes the raw file as the body. The wallet signs one message that lists every
+  file digest of the batch (`evidenceMessage` in `src/evidence-auth.ts`; the browser builds the same text). Headers:
+  `x-waybill-signer`, `x-waybill-signature`, `x-waybill-signed-at`, `x-waybill-files`, `x-waybill-file-name`. A
+  signature binds the network, escrow, deal, part and files, expires after 10 minutes, and the signer must be a party
+  of the deal as indexed from the contract.
+- `GET /v1/deals/:id/evidence` lists the files, `GET /v1/deals/:id/evidence/:evidenceId` returns the original bytes,
+  both signed the same way with action `read`.
+- Files are encrypted with AES-256-GCM before they reach the bucket or IPFS, so both stores hold only ciphertext. The
+  record keeps the SHA-256 of the original file; a download whose bytes no longer match it is refused. Losing
+  `WAYBILL_EVIDENCE_KEY` makes stored evidence unreadable, so keep it in the secret store with a backup.
+- On-chain, a dispute records `keccak256` of the file digests in upload order (`evidenceCommitment` in the web app).
+- Limits: 10 MiB per file, 10 files per signature. Not live-tested against a real bucket or Pinata yet: the S3
+  signing is checked against AWS's published test vector and both providers against fakes.

@@ -93,6 +93,10 @@ const WALLET_DEALS_SQL = `
   ORDER BY p.deal_id DESC, p.role ASC, p.milestone_index ASC
 `
 
+const IS_PARTY_SQL = `
+  SELECT 1 FROM waybill_deal_parties WHERE network = $1 AND deal_id = $2 AND address = lower($3) LIMIT 1
+`
+
 const DEAL_UPSERT_SQL = `
   INSERT INTO waybill_deal_projections
     (network, deal_id, state, buyer, supplier, supplier_payout,
@@ -330,5 +334,12 @@ export class PostgresReadModelStore {
       deals.set(key, deal)
     }
     return [...deals.values()]
+  }
+
+  /** Whether the escrow names this wallet in the deal in any role, as indexed from the contract. */
+  async isDealParty(network: WaybillNetwork, dealId: bigint, address: string): Promise<boolean> {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(address)) throw new Error('Invalid wallet address')
+    const result = await this.database.query<{ '?column?': number }>(IS_PARTY_SQL, [network, dealId.toString(), address])
+    return result.rows.length > 0
   }
 }

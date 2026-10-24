@@ -10,6 +10,8 @@ export interface ObjectStore {
     bytes: Uint8Array
     mimeType: string
   }): Promise<{ uri: string }>
+  /** Reads a stored file back. Optional so write-only test stores stay valid. */
+  get?(uri: string): Promise<Uint8Array>
   remove?(uri: string): Promise<void>
 }
 

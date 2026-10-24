@@ -1,18 +1,23 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 
 import type { WaybillNetwork } from '@waybill/network/networks'
+import { EvidenceError, MAX_EVIDENCE_BYTES, type EvidenceService } from './evidence-service'
 import type { HealthResult } from './health'
 
 export interface ApiRequest {
   method?: string
   url?: string
   headers?: Record<string, string | string[] | undefined>
+  /** Raw request body, present only for the evidence upload route */
+  body?: Uint8Array
 }
 
 export interface ApiResponse {
   status: number
   body: unknown
   headers?: Record<string, string>
+  /** Raw bytes to send instead of JSON (evidence download) */
+  bytes?: Uint8Array
 }
 
 export interface WaybillApiOptions {
@@ -29,6 +34,8 @@ export interface WaybillApiOptions {
   readAttestor(address: string): Promise<unknown | null>
   /** Every deal that names a wallet, with the role it holds in each. */
   listWalletDeals(address: string): Promise<unknown>
+  /** Evidence upload, listing and download for deal parties. Absent when no storage is configured. */
+  evidence?: EvidenceService | null
 }
 
 function jsonValue(value: unknown): unknown {
@@ -101,8 +108,8 @@ export async function handleApiRequest(
       body: null,
       headers: {
         ...cors,
-        'access-control-allow-methods': 'GET',
-        'access-control-allow-headers': 'content-type',
+        'access-control-allow-methods': 'GET, POST',
+        'access-control-allow-headers': 'content-type, x-waybill-signer, x-waybill-signature, x-waybill-signed-at, x-waybill-files, x-waybill-file-name',
         'access-control-max-age': '600',
       },
     }
@@ -119,6 +126,8 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
   } catch {
     return { status: 400, body: { error: 'invalid_request_url' } }
   }
+  const evidenceRoute = /^\/v1\/deals\/([0-9]+)\/evidence(?:\/([0-9a-fA-F-]{36}|[0-9]{1,3}))?$/.exec(url.pathname)
+  if (evidenceRoute) return evidence(request, options, BigInt(evidenceRoute[1]!), evidenceRoute[2])
   if (request.method !== 'GET') return { status: 405, body: { error: 'method_not_allowed' } }
   if (url.pathname === '/health') {
     return { status: 200, body: await options.health() }
@@ -173,11 +182,85 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
   return { status: 404, body: { error: 'not_found' } }
 }
 
+function signedRequest(request: ApiRequest): { signer: string; signature: string; signedAt: number; files: string[] } | null {
+  const signer = headerValue(request, 'x-waybill-signer')
+  const signature = headerValue(request, 'x-waybill-signature')
+  const signedAt = headerValue(request, 'x-waybill-signed-at')
+  if (!signer || !signature || !signedAt || !/^\d+$/.test(signedAt)) return null
+  const files = (headerValue(request, 'x-waybill-files') ?? '').split(',').map((f) => f.trim()).filter((f) => f !== '')
+  return { signer, signature, signedAt: Number(signedAt), files }
+}
+
+async function evidence(request: ApiRequest, options: WaybillApiOptions, dealId: bigint, tail: string | undefined): Promise<ApiResponse> {
+  const service = options.evidence
+  if (!service) return { status: 503, body: { error: 'evidence_unavailable' } }
+  const signed = signedRequest(request)
+  if (!signed) return { status: 401, body: { error: 'missing_signature' } }
+  try {
+    if (request.method === 'POST' && tail !== undefined && /^[0-9]{1,3}$/.test(tail)) {
+      const contentType = headerValue(request, 'content-type') ?? ''
+      const rawName = headerValue(request, 'x-waybill-file-name')
+      let fileName: string | null = null
+      if (rawName) {
+        try {
+          fileName = decodeURIComponent(rawName).slice(0, 200)
+        } catch {
+          return { status: 400, body: { error: 'invalid_file_name' } }
+        }
+      }
+      const result = await service.upload({
+        dealId,
+        part: Number(tail),
+        signed,
+        files: signed.files,
+        bytes: request.body ?? new Uint8Array(),
+        mimeType: /^[\w.+-]+\/[\w.+-]+$/.test(contentType) ? contentType : 'application/octet-stream',
+        fileName,
+      })
+      return { status: 201, body: result }
+    }
+    if (request.method === 'GET' && tail === undefined) return { status: 200, body: await service.list(dealId, signed) }
+    if (request.method === 'GET' && tail !== undefined && tail.length === 36) {
+      const file = await service.download(dealId, tail, signed)
+      return {
+        status: 200,
+        body: null,
+        bytes: file.bytes,
+        headers: {
+          'content-type': file.mimeType,
+          'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(file.fileName ?? 'evidence')}`,
+          'x-content-type-options': 'nosniff',
+        },
+      }
+    }
+    return { status: 405, body: { error: 'method_not_allowed' } }
+  } catch (e) {
+    if (e instanceof EvidenceError) return { status: e.status, body: { error: e.code } }
+    return { status: 503, body: { error: 'evidence_unavailable' } }
+  }
+}
+
 export function createWaybillApi(options: WaybillApiOptions): Server {
   return createServer(async (request: IncomingMessage, response: ServerResponse) => {
-    const result = await handleApiRequest(request, options)
+    let body: Uint8Array | undefined
+    if (request.method === 'POST') {
+      const chunks: Buffer[] = []
+      let size = 0
+      for await (const chunk of request) {
+        size += (chunk as Buffer).length
+        if (size > MAX_EVIDENCE_BYTES + 1024) {
+          response.statusCode = 413
+          response.setHeader('content-type', 'application/json')
+          return response.end(JSON.stringify({ error: 'file_too_large' }))
+        }
+        chunks.push(chunk as Buffer)
+      }
+      body = Buffer.concat(chunks)
+    }
+    const result = await handleApiRequest(Object.assign(request, body ? { body } : {}), options)
     response.statusCode = result.status
     for (const [name, value] of Object.entries(result.headers ?? {})) response.setHeader(name, value)
+    if (result.bytes) return response.end(Buffer.from(result.bytes))
     if (result.body === null) return response.end()
     response.setHeader('content-type', 'application/json')
     response.end(JSON.stringify(result.body))

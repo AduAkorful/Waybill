@@ -15,9 +15,10 @@ import { fundingTotal, reviewEnds } from '@/view/derive'
 import { formatAmount, formatDateTime, shortAddress, shortHash } from '@/view/format'
 import { describeEvent } from '@/view/timeline'
 import type { DealView, Tranche } from '@/view/types'
+import { DisputeDialog } from './DisputeDialog'
 import { FundDialog } from './FundDialog'
 
-type Dialog = { kind: 'fund' } | { kind: 'approve'; t: Tranche } | { kind: 'refund'; t: Tranche } | { kind: 'cancel' } | null
+type Dialog = { kind: 'fund' } | { kind: 'dispute'; t: Tranche } | { kind: 'withdraw'; t: Tranche } | { kind: 'approve'; t: Tranche } | { kind: 'refund'; t: Tranche } | { kind: 'cancel' } | null
 
 const stateLabel: Record<DealView['state'], string> = {
   proposed: 'Waiting for acceptance',
@@ -65,7 +66,22 @@ export function DealScreen({ idText }: { idText: string }) {
               <button onClick={() => setDialog({ kind: 'approve', t })} className="rounded-md bg-held px-3.5 py-2 text-[13px] font-semibold text-sheet hover:opacity-90">
                 Approve and release
               </button>
+              <button onClick={() => setDialog({ kind: 'dispute', t })} className="rounded-md px-3 py-2 text-[13px] font-semibold text-hold hover:bg-hold-wash">
+                Dispute
+              </button>
             </div>
+          </div>
+        )
+      } else if (t.state === 'disputed' && t.buyerRaisedDispute) {
+        actions[t.index] = (
+          <div data-action className="text-[13px]">
+            <p className="font-semibold text-hold">You disputed this part.</p>
+            <p className="mt-1 text-[12.5px] text-graphite">
+              The supplier can respond until {formatDateTime(t.responseDeadline)}. Then the arbiter decides; other parts are not affected.
+            </p>
+            <button onClick={() => setDialog({ kind: 'withdraw', t })} className="mt-2.5 rounded-md px-2.5 py-1.5 text-[12.5px] text-graphite hover:text-ink">
+              Withdraw dispute
+            </button>
           </div>
         )
       } else if (t.state === 'refundable') {
@@ -182,6 +198,26 @@ export function DealScreen({ idText }: { idText: string }) {
           <TxFlow
             confirmLabel="Approve and release"
             steps={[step('Approve this part', encodeEscrowAction({ kind: 'approveMilestone', dealId: d.id, milestoneIndex: dialog.t.position }))]}
+            onCancel={close}
+            onDone={finished}
+          />
+        </Modal>
+      ) : null}
+
+      {dialog?.kind === 'dispute' && address ? (
+        <Modal open onClose={close} label="Dispute this part">
+          <DisputeDialog deal={d} part={dialog.t} owner={address} onCancel={close} onDone={finished} />
+        </Modal>
+      ) : null}
+
+      {dialog?.kind === 'withdraw' ? (
+        <Modal open onClose={close} label="Withdraw the dispute">
+          <p className="label">Part {dialog.t.index}</p>
+          <h2 className="mt-1 text-[19px] leading-tight font-semibold">Withdraw this dispute?</h2>
+          <p className="mt-2 mb-4 text-[13.5px] leading-relaxed">The part goes back to where it was before you disputed it. You can only withdraw until the arbiter decides.</p>
+          <TxFlow
+            confirmLabel="Withdraw dispute"
+            steps={[step('Withdraw the dispute', encodeCurrentEscrowAction({ kind: 'withdrawDispute', dealId: d.id, milestoneIndex: dialog.t.position }))]}
             onCancel={close}
             onDone={finished}
           />

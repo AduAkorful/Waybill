@@ -11,9 +11,14 @@ export interface EvidencePointerInput {
   ipfsUri: string
   mimeType: string
   byteSize: number
+  /** The uploader's own file name, shown back to parties; never used as a storage key */
+  fileName?: string | null
 }
 
-export interface EvidencePointer extends EvidencePointerInput {}
+export interface EvidencePointer extends EvidencePointerInput {
+  /** Unix seconds the pointer was recorded */
+  createdAt: number | null
+}
 
 interface EvidenceRow {
   id: string
@@ -26,6 +31,8 @@ interface EvidenceRow {
   ipfs_uri: string
   mime_type: string
   byte_size: number
+  file_name: string | null
+  created_unix: string | number | null
 }
 
 interface SqlResult<Row> {
@@ -39,18 +46,27 @@ interface SqlExecutor {
 const INSERT_SQL = `
   INSERT INTO waybill_evidence_pointers
     (id, network, deal_id, milestone_index, uploaded_by, content_sha256,
-     object_uri, ipfs_uri, mime_type, byte_size)
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     object_uri, ipfs_uri, mime_type, byte_size, file_name, created_unix)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, EXTRACT(EPOCH FROM NOW())::BIGINT)
   ON CONFLICT (network, deal_id, milestone_index, content_sha256) DO NOTHING
   RETURNING id, network, deal_id, milestone_index, uploaded_by,
-            content_sha256, object_uri, ipfs_uri, mime_type, byte_size
+            content_sha256, object_uri, ipfs_uri, mime_type, byte_size, file_name, created_unix
 `
 
 const GET_SQL = `
   SELECT id, network, deal_id, milestone_index, uploaded_by,
-         content_sha256, object_uri, ipfs_uri, mime_type, byte_size
+         content_sha256, object_uri, ipfs_uri, mime_type, byte_size, file_name, created_unix
   FROM waybill_evidence_pointers
   WHERE network = $1 AND deal_id = $2 AND milestone_index = $3
+  ORDER BY created_unix, id
+`
+
+const GET_DEAL_SQL = `
+  SELECT id, network, deal_id, milestone_index, uploaded_by,
+         content_sha256, object_uri, ipfs_uri, mime_type, byte_size, file_name, created_unix
+  FROM waybill_evidence_pointers
+  WHERE network = $1 AND deal_id = $2
+  ORDER BY created_unix, id
 `
 
 const UUID_PATTERN =
@@ -95,6 +111,8 @@ function toPointer(row: EvidenceRow): EvidencePointer {
     ipfsUri: row.ipfs_uri,
     mimeType: row.mime_type,
     byteSize: row.byte_size,
+    fileName: row.file_name,
+    createdAt: row.created_unix === null ? null : Number(row.created_unix),
   }
 }
 
@@ -114,6 +132,7 @@ export class PostgresEvidenceStore {
       pointer.ipfsUri,
       pointer.mimeType,
       pointer.byteSize,
+      pointer.fileName ?? null,
     ])
     return result.rows[0] ? toPointer(result.rows[0]) : null
   }
@@ -132,6 +151,12 @@ export class PostgresEvidenceStore {
       dealId.toString(),
       milestoneIndex,
     ])
+    return result.rows.map(toPointer)
+  }
+
+  async listForDeal(network: WaybillNetwork, dealId: bigint): Promise<EvidencePointer[]> {
+    if (dealId < 0n) throw new Error('dealId must be non-negative')
+    const result = await this.database.query<EvidenceRow>(GET_DEAL_SQL, [network, dealId.toString()])
     return result.rows.map(toPointer)
   }
 }

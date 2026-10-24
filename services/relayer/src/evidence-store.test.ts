@@ -24,6 +24,8 @@ class FakeDatabase {
           ipfs_uri: values[7],
           mime_type: values[8],
           byte_size: values[9],
+          file_name: values[10],
+          created_unix: 1_700_000_000,
         }] as Row[],
       }
     }
@@ -49,7 +51,11 @@ describe('PostgresEvidenceStore', () => {
     const database = new FakeDatabase()
     const store = new PostgresEvidenceStore(database)
 
-    await expect(store.insert(pointer)).resolves.toEqual(pointer)
+    await expect(store.insert({ ...pointer, fileName: 'invoice.pdf' })).resolves.toEqual({
+      ...pointer,
+      fileName: 'invoice.pdf',
+      createdAt: 1_700_000_000,
+    })
     expect(database.calls[0]?.values).toEqual([
       pointer.id,
       'testnet',
@@ -61,6 +67,7 @@ describe('PostgresEvidenceStore', () => {
       pointer.ipfsUri,
       pointer.mimeType,
       1024,
+      'invoice.pdf',
     ])
     expect(database.calls[0]?.text).not.toContain(pointer.ipfsUri)
   })
