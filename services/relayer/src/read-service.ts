@@ -1,4 +1,4 @@
-import type { WaybillNetwork } from '../../../config/networks'
+import type { WaybillNetwork } from '@waybill/network/networks'
 import type { DealProjection } from './read-model-store'
 
 export interface DealProjectionReader {

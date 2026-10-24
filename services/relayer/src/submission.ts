@@ -8,7 +8,7 @@ import {
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
-import type { WaybillNetworkManifest } from '../../../config/networks'
+import type { WaybillNetworkManifest } from '@waybill/network/networks'
 import type { RelayerPrivateKey } from './config'
 import type { RelayerCandidate } from './chain'
 import type { EligibilityResult } from './eligibility'

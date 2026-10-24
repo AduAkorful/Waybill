@@ -1,12 +1,15 @@
 import {
+  type Abi,
   parseAbi,
+  parseEventLogs,
   type PublicClient,
 } from 'viem'
 
-import type { WaybillNetworkManifest } from '../../../config/networks'
+import type { WaybillNetworkManifest } from '@waybill/network/networks'
 import type { CursorStore, EventCursor } from './eligibility'
 import { MAX_LOG_INDEX } from './event-worker'
 import type { RelayerChain } from './chain'
+import { readDealParties, type DealParty } from './parties'
 import type { DealProjection, ChainEventRecord, PostgresReadModelStore } from './read-model-store'
 
 export const INDEXER_EVENT_ABI = parseAbi([
@@ -74,9 +77,13 @@ export interface IndexerLog {
 
 export interface IndexerLogReader {
   getBlockNumber(): Promise<bigint>
+  /** Unix seconds of a block. Optional so a reader without it records events with no time. */
+  getBlockTimestamp?(blockNumber: bigint): Promise<bigint>
+  /** Everyone the escrow names in a deal, read at the block it was created in. */
+  getDealParties?(dealId: bigint, blockNumber: bigint): Promise<readonly DealParty[]>
   getLogs(parameters: {
     address: `0x${string}`
-    events: typeof INDEXER_EVENT_ABI
+    events: Abi
     fromBlock: bigint
     toBlock: bigint
   }): Promise<readonly IndexerLog[]>
@@ -84,6 +91,11 @@ export interface IndexerLogReader {
 
 export interface ReadModelWriter {
   recordEvent(event: ChainEventRecord): Promise<boolean>
+  recordParties?(
+    network: WaybillNetworkManifest['network'],
+    dealId: bigint,
+    parties: readonly DealParty[],
+  ): Promise<void>
   upsertDeal(projection: DealProjection): Promise<void>
 }
 
@@ -175,7 +187,10 @@ export class ChainEventIndexer {
     private readonly config: Pick<
       WaybillNetworkManifest & { startBlock: bigint; maxBlockRange: bigint; confirmations: 1 },
       'network' | 'contracts' | 'startBlock' | 'maxBlockRange' | 'confirmations'
-    >,
+    > & {
+      /** Index another contract's events instead of the escrow's (for example the attestor registry) */
+      target?: { address: `0x${string}`; events: Abi }
+    },
   ) {}
 
   async pollOnce(): Promise<IndexerResult | null> {
@@ -192,11 +207,18 @@ export class ChainEventIndexer {
         ? fromBlock + this.config.maxBlockRange - 1n
         : confirmedHead
     const logs = [...(await this.reader.getLogs({
-      address: this.config.contracts.escrow,
-      events: INDEXER_EVENT_ABI,
+      address: this.config.target?.address ?? this.config.contracts.escrow,
+      events: this.config.target?.events ?? INDEXER_EVENT_ABI,
       fromBlock,
       toBlock,
     }))].sort(compareLog)
+
+    const timestamps = new Map<bigint, bigint>()
+    if (this.reader.getBlockTimestamp) {
+      for (const blockNumber of new Set(logs.map((log) => log.blockNumber))) {
+        timestamps.set(blockNumber, await this.reader.getBlockTimestamp(blockNumber))
+      }
+    }
 
     let projectedDeals = 0
     let previous = current
@@ -218,8 +240,18 @@ export class ChainEventIndexer {
           log.args?.milestoneIndex === undefined
             ? undefined
             : Number(asBigInt(log.args.milestoneIndex, 'milestoneIndex')),
+        blockTimestamp: timestamps.get(log.blockNumber),
         payload,
       })
+      if (log.eventName === 'DealCreated' && this.reader.getDealParties && this.writer.recordParties) {
+        // A failure here stops the poll before the cursor moves, so the deal is retried, never skipped.
+        const dealId = asBigInt(log.args?.dealId, 'dealId')
+        await this.writer.recordParties(
+          this.config.network,
+          dealId,
+          await this.reader.getDealParties(dealId, log.blockNumber),
+        )
+      }
       const projection = projectionFor(this.config.network, log)
       if (projection) {
         await this.writer.upsertDeal(projection)
@@ -239,13 +271,19 @@ export function createIndexerLogReader(
   const client = chain.client as PublicClient
   return {
     getBlockNumber: () => client.getBlockNumber(),
+    getDealParties: (dealId, blockNumber) => readDealParties(chain, dealId, blockNumber),
+    async getBlockTimestamp(blockNumber) {
+      return (await client.getBlock({ blockNumber })).timestamp
+    },
     async getLogs(parameters) {
-      const logs = await client.getLogs({
+      // The public Arc RPC answers "requested range too large" to any filter that lists about 30 or
+      // more event topics, however short the block range. Fetch by address and decode here instead.
+      const raw = await client.getLogs({
         address: parameters.address,
-        events: parameters.events,
         fromBlock: parameters.fromBlock,
         toBlock: parameters.toBlock,
       })
+      const logs = parseEventLogs({ abi: parameters.events, logs: raw })
       return logs.map((log) => ({
         blockNumber: log.blockNumber,
         logIndex: BigInt(log.logIndex),

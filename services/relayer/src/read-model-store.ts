@@ -1,4 +1,4 @@
-import type { WaybillNetwork } from '../../../config/networks'
+import type { WaybillNetwork } from '@waybill/network/networks'
 
 export interface ChainEventRecord {
   network: WaybillNetwork
@@ -8,6 +8,8 @@ export interface ChainEventRecord {
   eventName: string
   dealId?: bigint
   milestoneIndex?: number
+  /** Unix seconds of the emitting block, when the indexer could read it */
+  blockTimestamp?: bigint
   payload: Record<string, unknown>
 }
 
@@ -48,10 +50,47 @@ interface DealProjectionRow {
 const EVENT_INSERT_SQL = `
   INSERT INTO waybill_chain_events
     (network, block_number, log_index, transaction_hash, event_name,
-     deal_id, milestone_index, payload)
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+     deal_id, milestone_index, payload, block_timestamp)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)
   ON CONFLICT (network, block_number, log_index) DO NOTHING
   RETURNING block_number
+`
+
+const DEAL_EVENTS_SQL = `
+  SELECT block_number, log_index, transaction_hash, event_name, milestone_index,
+         block_timestamp, payload
+  FROM waybill_chain_events
+  WHERE network = $1 AND deal_id = $2
+  ORDER BY block_number ASC, log_index ASC
+`
+
+const ATTESTOR_ADDRESSES_SQL = `
+  SELECT DISTINCT ON (lower(payload->>'attestor')) payload->>'attestor' AS attestor
+  FROM waybill_chain_events
+  WHERE network = $1 AND event_name = ANY($2::text[]) AND payload ? 'attestor'
+  ORDER BY lower(payload->>'attestor')
+`
+
+const ATTESTOR_EVENTS_SQL = `
+  SELECT block_number, log_index, transaction_hash, event_name, milestone_index,
+         block_timestamp, payload
+  FROM waybill_chain_events
+  WHERE network = $1 AND event_name = ANY($2::text[]) AND lower(payload->>'attestor') = lower($3)
+  ORDER BY block_number ASC, log_index ASC
+`
+
+const PARTY_INSERT_SQL = `
+  INSERT INTO waybill_deal_parties (network, deal_id, address, role, milestone_index)
+  VALUES ($1, $2, lower($3), $4, $5)
+  ON CONFLICT DO NOTHING
+`
+
+const WALLET_DEALS_SQL = `
+  SELECT p.deal_id, p.role, p.milestone_index, d.state
+  FROM waybill_deal_parties p
+  LEFT JOIN waybill_deal_projections d ON d.network = p.network AND d.deal_id = p.deal_id
+  WHERE p.network = $1 AND p.address = lower($2)
+  ORDER BY p.deal_id DESC, p.role ASC, p.milestone_index ASC
 `
 
 const DEAL_UPSERT_SQL = `
@@ -105,6 +144,9 @@ function validateEvent(event: ChainEventRecord): void {
   if (!HASH_PATTERN.test(event.transactionHash)) throw new Error('Invalid transaction hash')
   if (!event.eventName.trim()) throw new Error('Event name cannot be empty')
   if (event.dealId !== undefined && event.dealId < 0n) throw new Error('dealId must be non-negative')
+  if (event.blockTimestamp !== undefined && event.blockTimestamp < 0n) {
+    throw new Error('blockTimestamp must be non-negative')
+  }
   if (
     event.milestoneIndex !== undefined &&
     (!Number.isInteger(event.milestoneIndex) || event.milestoneIndex < 0 || event.milestoneIndex > 255)
@@ -145,6 +187,46 @@ function toProjection(row: DealProjectionRow): DealProjection {
   }
 }
 
+export interface DealEvent {
+  blockNumber: bigint
+  logIndex: bigint
+  transactionHash: `0x${string}`
+  eventName: string
+  milestoneIndex: number | null
+  /** Unix seconds; null when the indexer did not record it */
+  blockTimestamp: bigint | null
+  payload: Record<string, unknown>
+}
+
+interface DealEventRow {
+  block_number: string | number | bigint
+  log_index: string | number | bigint
+  transaction_hash: `0x${string}`
+  event_name: string
+  milestone_index: number | null
+  block_timestamp: string | number | bigint | null
+  payload: Record<string, unknown>
+}
+
+function toDealEvent(row: DealEventRow): DealEvent {
+  return {
+    blockNumber: BigInt(row.block_number),
+    logIndex: BigInt(row.log_index),
+    transactionHash: row.transaction_hash,
+    eventName: row.event_name,
+    milestoneIndex: row.milestone_index,
+    blockTimestamp: row.block_timestamp === null ? null : BigInt(row.block_timestamp),
+    payload: row.payload,
+  }
+}
+
+export interface WalletDeal {
+  dealId: bigint
+  /** The indexed state of the deal, or null before the projection has one */
+  state: string | null
+  roles: { role: string; milestoneIndex: number | null }[]
+}
+
 export class PostgresReadModelStore {
   constructor(private readonly database: SqlExecutor) {}
 
@@ -159,6 +241,7 @@ export class PostgresReadModelStore {
       event.dealId?.toString() ?? null,
       event.milestoneIndex ?? null,
       JSON.stringify(event.payload),
+      event.blockTimestamp?.toString() ?? null,
     ])
     return result.rows.length > 0
   }
@@ -186,5 +269,66 @@ export class PostgresReadModelStore {
       dealId.toString(),
     ])
     return result.rows[0] ? toProjection(result.rows[0]) : null
+  }
+
+  /** Every indexed event for one deal, oldest first. */
+  async getDealEvents(network: WaybillNetwork, dealId: bigint): Promise<DealEvent[]> {
+    if (dealId < 0n) throw new Error('dealId must be non-negative')
+    const result = await this.database.query<DealEventRow>(DEAL_EVENTS_SQL, [
+      network,
+      dealId.toString(),
+    ])
+    return result.rows.map(toDealEvent)
+  }
+
+  /** Every address with a presence in the attestor registry's indexed events. */
+  async listAttestorAddresses(network: WaybillNetwork, eventNames: readonly string[]): Promise<`0x${string}`[]> {
+    const result = await this.database.query<{ attestor: `0x${string}` }>(ATTESTOR_ADDRESSES_SQL, [network, eventNames])
+    return result.rows.map((row) => row.attestor)
+  }
+
+  /** The registry events for one attestor, oldest first. */
+  async getAttestorEvents(network: WaybillNetwork, address: string, eventNames: readonly string[]): Promise<DealEvent[]> {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(address)) throw new Error('Invalid attestor address')
+    const result = await this.database.query<DealEventRow>(ATTESTOR_EVENTS_SQL, [network, eventNames, address])
+    return result.rows.map(toDealEvent)
+  }
+
+  /** Records who is named in a deal. Safe to repeat. */
+  async recordParties(
+    network: WaybillNetwork,
+    dealId: bigint,
+    parties: readonly { address: string; role: string; milestoneIndex: number | null }[],
+  ): Promise<void> {
+    if (dealId < 0n) throw new Error('dealId must be non-negative')
+    for (const party of parties) {
+      if (!/^0x[0-9a-fA-F]{40}$/.test(party.address)) throw new Error('Invalid party address')
+      await this.database.query(PARTY_INSERT_SQL, [
+        network,
+        dealId.toString(),
+        party.address,
+        party.role,
+        party.milestoneIndex ?? -1,
+      ])
+    }
+  }
+
+  /** Every deal that names this wallet, newest first, with the roles it holds in each. */
+  async getWalletDeals(network: WaybillNetwork, address: string): Promise<WalletDeal[]> {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(address)) throw new Error('Invalid wallet address')
+    const result = await this.database.query<{
+      deal_id: string | number | bigint
+      role: string
+      milestone_index: number
+      state: string | null
+    }>(WALLET_DEALS_SQL, [network, address])
+    const deals = new Map<string, WalletDeal>()
+    for (const row of result.rows) {
+      const key = String(row.deal_id)
+      const deal = deals.get(key) ?? { dealId: BigInt(row.deal_id), state: row.state, roles: [] }
+      deal.roles.push({ role: row.role, milestoneIndex: row.milestone_index === -1 ? null : row.milestone_index })
+      deals.set(key, deal)
+    }
+    return [...deals.values()]
   }
 }

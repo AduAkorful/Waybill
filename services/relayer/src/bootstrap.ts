@@ -1,8 +1,13 @@
+import type { Server } from 'node:http'
 import { fileURLToPath } from 'node:url'
 
-import type { RuntimeEnvironment } from '../../../config/runtime-network'
+import type { RuntimeEnvironment } from '@waybill/network/runtime'
 import type { RelayerChain } from './chain'
-import { createRelayerChain } from './chain'
+import { createRelayerChain, readLiveDeal } from './chain'
+import { REGISTRY_EVENT_ABI, REGISTRY_EVENT_NAMES, readAttestor } from './registry'
+import { createWaybillApi } from './api'
+import { loadApiConfig } from './api-config'
+import { checkHealth, databaseHealth, rpcHealth } from './health'
 import type { RelayerConfig } from './config'
 import { loadRelayerConfig } from './config'
 import { PostgresAttemptStore } from './attempt-store'
@@ -19,6 +24,7 @@ import {
   type MigrationPool,
 } from './postgres'
 import { PostgresReadModelStore } from './read-model-store'
+import { WaybillReadService } from './read-service'
 import { createRelayerSubmissionClient } from './submission'
 import { RelayerRuntime } from './runtime'
 
@@ -31,6 +37,9 @@ export interface BackendApplication {
   readonly config: RelayerConfig
   readonly relayer: RelayerRuntime
   readonly indexer: RelayerRuntime
+  readonly registryIndexer: RelayerRuntime
+  /** The HTTP read API, or null when WAYBILL_API_PORT is not set */
+  readonly api: Server | null
   start(): Promise<void>
   stop(): Promise<void>
 }
@@ -103,17 +112,78 @@ export function createBackendApplication(
     },
   )
 
+  const apiConfig = loadApiConfig(environment)
+  const readService = new WaybillReadService(readModel, {
+    readDeal: (_network, dealId) => readLiveDeal(chain, dealId),
+  })
+  const api = apiConfig
+    ? createWaybillApi({
+        network: config.network.network,
+        allowedOrigins: apiConfig.allowedOrigins,
+        health: () =>
+          checkHealth([
+            rpcHealth('rpc', () => chain.client.getBlockNumber()),
+            databaseHealth('database', () => pool.query('SELECT 1')),
+          ]),
+        readDeal: (dealId) => readService.getDeal(config.network.network, dealId),
+        readDealEvents: (dealId) => readModel.getDealEvents(config.network.network, dealId),
+        listWalletDeals: (address) => readModel.getWalletDeals(config.network.network, address),
+        listAttestors: async () => {
+          const addresses = await readModel.listAttestorAddresses(config.network.network, REGISTRY_EVENT_NAMES)
+          return Promise.all(addresses.map((address) => readAttestor(chain.client, config.network, address)))
+        },
+        readAttestor: async (address) => {
+          const events = await attestorHistory(address)
+          if (events.length === 0) return null
+          return { ...(await readAttestor(chain.client, config.network, address as `0x${string}`)), events }
+        },
+      })
+    : null
+
+  const registryIndexer = new RelayerRuntime(
+    new ChainEventIndexer(
+      createIndexerLogReader(chain),
+      new PostgresCursorStore(pool, 'registry-indexer'),
+      readModel,
+      {
+        ...config.network,
+        startBlock: config.network.attestorRegistryDeployBlock ?? config.startBlock,
+        maxBlockRange: config.maxBlockRange,
+        confirmations: config.confirmations,
+        target: { address: config.network.contracts.attestorRegistry, events: REGISTRY_EVENT_ABI },
+      },
+    ),
+    {
+      pollIntervalMs: config.pollIntervalMs,
+      reportError: (error) => console.error('[waybill-registry-indexer]', error),
+    },
+  )
+
+  const attestorHistory = (address: string) =>
+    readModel.getAttestorEvents(config.network.network, address, REGISTRY_EVENT_NAMES)
+
   let loopPromise: Promise<void> | null = null
   let stopped = false
   return {
     config,
     relayer,
     indexer,
+    registryIndexer,
+    api,
     async start() {
       if (loopPromise) return loopPromise
       await applyMigrations(pool, await dependencies.loadMigrations())
       stopped = false
-      loopPromise = Promise.all([relayer.run(), indexer.run()]).then(() => undefined)
+      if (api && apiConfig) {
+        await new Promise<void>((resolve, reject) => {
+          api.once('error', reject)
+          api.listen(apiConfig.port, () => {
+            api.off('error', reject)
+            resolve()
+          })
+        })
+      }
+      loopPromise = Promise.all([relayer.run(), indexer.run(), registryIndexer.run()]).then(() => undefined)
       return loopPromise
     },
     async stop() {
@@ -121,6 +191,8 @@ export function createBackendApplication(
       stopped = true
       relayer.stop()
       indexer.stop()
+      registryIndexer.stop()
+      if (api?.listening) await new Promise<void>((resolve) => api.close(() => resolve()))
       await loopPromise
       loopPromise = null
       await pool.end()

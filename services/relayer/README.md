@@ -7,7 +7,7 @@ notifications, evidence pointers, and labelled test flags only.
 
 ## Current boundaries
 
-- `config/runtime-network.ts` is the single testnet/mainnet switch.
+- `packages/network/src/runtime-network.ts` (`@waybill/network/runtime`) is the single testnet/mainnet switch.
 - `src/event-worker.ts` scans one-confirmed-block ranges and persists a
   monotonic cursor.
 - `src/candidate-processor.ts` re-reads each milestone before any write.
@@ -67,3 +67,9 @@ Mainnet is a separate deployment and key set. Before switching the environment:
 
 The application must refuse an incomplete mainnet manifest and must never
 fall back to the checked-in testnet manifest.
+
+## Read API
+
+Set `WAYBILL_API_PORT` to serve the read-only HTTP API from the same process as the relayer and indexer; leave it empty to run the loops only. Routes: `GET /health`, `/v1/network`, `/v1/deals/:id` (live chain read with projection), `/v1/deals/:id/events` (indexed events, oldest first, with block time when known). Browsers are served only for origins listed in `WAYBILL_API_ALLOWED_ORIGINS`. Start with `npm run start --workspace @waybill/relayer`.
+
+The indexer fetches logs by address and decodes them itself: the public Arc RPC rejects any filter that lists about 30 or more event topics with "requested range too large", whatever the block range. Keep `WAYBILL_RELAYER_MAX_BLOCK_RANGE` at or below 5,000. Set `WAYBILL_RELAYER_START_BLOCK` to the escrow deployment block (testnet: 67900503) so the first run backfills the whole history.

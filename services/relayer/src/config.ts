@@ -1,8 +1,8 @@
 import {
   loadRuntimeNetwork,
   type RuntimeEnvironment,
-} from '../../../config/runtime-network'
-import type { WaybillNetworkManifest } from '../../../config/networks'
+} from '@waybill/network/runtime'
+import type { WaybillNetworkManifest } from '@waybill/network/networks'
 
 export const RELAYER_OPERATIONS = ['claim', 'refund', 'applyDefault'] as const
 export type RelayerOperation = (typeof RELAYER_OPERATIONS)[number]

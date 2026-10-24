@@ -1,4 +1,4 @@
-import type { WaybillNetwork } from '../../../config/networks'
+import type { WaybillNetwork } from '@waybill/network/networks'
 
 export const CONTACT_ROLES = ['buyer', 'supplier', 'attestor', 'arbiter', 'operator'] as const
 export type ContactRole = (typeof CONTACT_ROLES)[number]

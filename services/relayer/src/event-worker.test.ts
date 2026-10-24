@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { ARC_TESTNET } from '../../../config/networks'
+import { ARC_TESTNET } from '@waybill/network/networks'
 import { MemoryCursorStore } from './eligibility'
 import {
   MAX_LOG_INDEX,

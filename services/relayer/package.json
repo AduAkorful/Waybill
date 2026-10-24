@@ -1,0 +1,19 @@
+{
+  "name": "@waybill/relayer",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "bun src/main.ts",
+    "test": "bun test src",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@waybill/network": "*",
+    "pg": "^8.23.1",
+    "viem": "^2.57.7"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1"
+  }
+}
