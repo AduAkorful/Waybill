@@ -193,11 +193,13 @@ describe('inbox', () => {
     expect(needsFrom('arbiter', d(91n), wallet)).toBeNull()
   })
 
-  test('arbiter on testnet (no early rule): a response does not ask for a decision before the window ends', () => {
-    const d = (now: bigint) => deal({ arbiter: wallet, chainTime: now }, [tranche({ state: 'disputed', responseSubmitted: true, responseDeadline: 50n, arbiterDeadline: 90n })])
-    expect(needsFrom('arbiter', d(10n), wallet)).toBeNull()
-    expect(needsFrom('arbiter', d(51n), wallet)).toBe('Decide')
-    expect(needsFrom('arbiter', d(91n), wallet)).toBeNull()
+  test('arbiter on testnet (rebuttal rule): a response asks for a decision only once decisions open', () => {
+    const d = (now: bigint, opens?: bigint) =>
+      deal({ arbiter: wallet, chainTime: now }, [tranche({ state: 'disputed', responseSubmitted: true, responseDeadline: 50n, arbiterDeadline: 90n, ...(opens === undefined ? {} : { decisionOpensAt: opens }) })])
+    expect(needsFrom('arbiter', d(10n, 30n), wallet)).toBeNull()
+    expect(needsFrom('arbiter', d(30n, 30n), wallet)).toBe('Decide')
+    expect(needsFrom('arbiter', d(60n), wallet)).toBeNull() // opening time not read: never offered
+    expect(needsFrom('arbiter', d(91n, 30n), wallet)).toBeNull()
   })
 
   test('arbiter: accepts a proposed deal once', () => {

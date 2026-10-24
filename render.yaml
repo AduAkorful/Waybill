@@ -20,9 +20,9 @@ services:
       # Render sends traffic to the port in PORT (10000 by default); the relayer reads WAYBILL_API_PORT.
       - key: WAYBILL_API_PORT
         value: "10000"
-      # A recent block (just before the first QA deals) keeps the first sync short. Use 67900503 for the full history.
+      # A recent block (just before the first QA deals) keeps the first sync short. Use 68854415 (the plan-50 escrow deployment) for the full history.
       - key: WAYBILL_RELAYER_START_BLOCK
-        value: "68143000"
+        value: "68854415"
       - key: WAYBILL_RELAYER_POLL_INTERVAL_MS
         value: "5000"
       - key: WAYBILL_RELAYER_MAX_BLOCK_RANGE

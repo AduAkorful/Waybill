@@ -5,6 +5,8 @@ import {
   databaseSsl,
   secureTables,
   createPostgresPool,
+  parseSchema,
+  schemaSql,
   type Migration,
   type MigrationClient,
   type MigrationPool,
@@ -64,6 +66,18 @@ describe('database TLS and table locking', () => {
     expect(seen[0]).toContain('ENABLE ROW LEVEL SECURITY')
     expect(seen[0]).toContain("tablename LIKE 'waybill\\_%'")
     expect(seen[0]).toContain('REVOKE ALL')
+  })
+})
+
+describe('separate schema per deployment', () => {
+  test('accepts plain lowercase names and refuses anything that could break the SQL', () => {
+    expect(parseSchema(undefined)).toBeNull()
+    expect(parseSchema('  ')).toBeNull()
+    expect(parseSchema('waybill_t50')).toBe('waybill_t50')
+    for (const bad of ['Waybill', 'a-b', 'x"; DROP TABLE t; --', 'pg_catalog', '1abc', 'a'.repeat(42)]) {
+      expect(() => parseSchema(bad)).toThrow('WAYBILL_DATABASE_SCHEMA')
+    }
+    expect(schemaSql('waybill_t50')).toBe('CREATE SCHEMA IF NOT EXISTS "waybill_t50"; SET search_path TO "waybill_t50"')
   })
 })
 

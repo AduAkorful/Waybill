@@ -47,20 +47,24 @@ export const ARC_TESTNET: WaybillNetworkManifest = {
   },
   nativeGasDecimals: 18,
   contracts: {
-    escrow: '0xcf08585EdCEb9b8612046b2205cf1aa2C42E5EfA',
-    arbiterList: '0xcA46c6A2665F2A5F9b021ad256D00002144d7492',
-    attestorRegistry: '0x5D68F4f934F49c39Ce1Be134254FAbd1AECcB225',
-    bondVault: '0x977cCa77f36D84949cc959635Da41c85ce470b43',
-    financingVault: '0x375Eed4d2E0030E33c491F8570693ebC03ff84f5',
+    // Plan 50 deploy, commit 5df7e2b, 2026-10-24 (plans/50-deploy.json). Previous escrow 0xcf08…5EfA is retired:
+    // the app no longer reads it; its last open deals are recorded in AGENTS.md.
+    escrow: '0x542601ad285c9845cBEd91c18af34fD06993f831',
+    arbiterList: '0x9748a603B1E6503DDF2350D17d17ea98fE09c33c',
+    attestorRegistry: '0x19Ea53a8B6C8D8Ed776e8004D88BEf4Ff19E6555',
+    bondVault: '0x6d2d6652A2b7AaB352E8EB2E24Fc1954c14142d5',
+    financingVault: '0xAB278803a95E87bBa82a3C8A26B91f02dFD5461F',
   },
   // Checked on Arc testnet: `cast code` returns the contract and getChainId() returns 5042002.
   multicall3: '0xcA11bde05977b3631167028862bE2a173976CA11',
-  // Checked on Arc testnet: `cast code` is empty at block 67900502 and present at 67900503.
-  escrowDeployBlock: 67_900_503n,
-  // Checked on Arc testnet: `cast code` is empty at block 67899718 and present at 67899719.
-  attestorRegistryDeployBlock: 67_899_719n,
-  // Checked on Arc testnet: `cast code` is empty at block 67899712 and present at 67899713.
-  arbiterListDeployBlock: 67_899_713n,
+  // Checked on Arc testnet: `cast code` is empty at block 68854414 and present at 68854415.
+  escrowDeployBlock: 68_854_415n,
+  // Checked on Arc testnet: `cast code` is empty at block 68854409 and present at 68854410.
+  attestorRegistryDeployBlock: 68_854_410n,
+  // Checked on Arc testnet: `cast code` is empty at block 68854404 and present at 68854405.
+  arbiterListDeployBlock: 68_854_405n,
+  // This escrow has the decide-after-response rule with the 24-hour rebuttal (DisputeLogic, 31.7 + 33).
+  earlyResolve: true,
 }
 
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/

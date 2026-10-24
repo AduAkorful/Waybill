@@ -14,9 +14,9 @@ Contract addresses (public, from `packages/network/src/networks.ts`):
 
 | | Address |
 |---|---|
-| Escrow | `0xcf08585EdCEb9b8612046b2205cf1aa2C42E5EfA` |
-| ArbiterList | `0xcA46c6A2665F2A5F9b021ad256D00002144d7492` |
-| AttestorRegistry | `0x5D68F4f934F49c39Ce1Be134254FAbd1AECcB225` |
+| Escrow | `0x542601ad285c9845cBEd91c18af34fD06993f831` |
+| ArbiterList | `0x9748a603B1E6503DDF2350D17d17ea98fE09c33c` |
+| AttestorRegistry | `0x19Ea53a8B6C8D8Ed776e8004D88BEf4Ff19E6555` |
 | USDC (6 decimals, ERC-20 view of Arc's native USDC) | `0x3600000000000000000000000000000000000000` |
 | Pauser (operator console, labels, arbiter list) | `0x4632A278FEb0a4D249561e7fC3f3708C4329D0F1` (the team holds this wallet; QA needs it for section 6 of the matrix only) |
 
@@ -35,7 +35,7 @@ npm install
 | Variable | Value for QA |
 |---|---|
 | `WAYBILL_NETWORK` | `testnet` |
-| `WAYBILL_RELAYER_START_BLOCK` | `67900503` (the first run backfills history; with the public RPC this takes a while, a dedicated RPC is much faster) |
+| `WAYBILL_RELAYER_START_BLOCK` | `68854415` (the first run backfills history; with the public RPC this takes a while, a dedicated RPC is much faster) |
 | `WAYBILL_DATABASE_URL` | your Postgres |
 | `WAYBILL_API_PORT` | `3001` |
 | `WAYBILL_API_ALLOWED_ORIGINS` | the web origin, exact, e.g. `http://localhost:3000` |

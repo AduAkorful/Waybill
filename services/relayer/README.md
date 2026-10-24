@@ -76,7 +76,7 @@ fall back to the checked-in testnet manifest.
 
 Set `WAYBILL_API_PORT` to serve the read-only HTTP API from the same process as the relayer and indexer; leave it empty to run the loops only. Routes: `GET /health`, `/v1/network`, `/v1/deals/:id` (live chain read with projection), `/v1/deals/:id/events` (indexed events, oldest first, with block time when known), `/v1/wallets/:address/deals`, `/v1/attestors[/:address]`, `/v1/operator` (live escrow limits, pause state, pauser, relayer gas balance, plus index aggregates: deals by state, volume by deal label, open disputes, stream cursors, recent setting changes), `/v1/arbiters` (everyone with an event on the arbiter list, with live `isAllowed`, advertised fee and any scheduled addition or removal). Browsers are served only for origins listed in `WAYBILL_API_ALLOWED_ORIGINS`. Start with `npm run start --workspace @waybill/relayer`.
 
-The indexer fetches logs by address and decodes them itself: the public Arc RPC rejects any filter that lists about 30 or more event topics with "requested range too large", whatever the block range. Keep `WAYBILL_RELAYER_MAX_BLOCK_RANGE` at or below 5,000. Set `WAYBILL_RELAYER_START_BLOCK` to the escrow deployment block (testnet: 67900503) so the first run backfills the whole history.
+The indexer fetches logs by address and decodes them itself: the public Arc RPC rejects any filter that lists about 30 or more event topics with "requested range too large", whatever the block range. Keep `WAYBILL_RELAYER_MAX_BLOCK_RANGE` at or below 5,000. Set `WAYBILL_RELAYER_START_BLOCK` to the escrow deployment block (testnet: 68854415) so the first run backfills the whole history.
 
 ## Email notifications
 

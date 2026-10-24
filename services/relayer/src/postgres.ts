@@ -68,8 +68,25 @@ export function createPostgresPool(environment: NodeJS.ProcessEnv = process.env)
     max: parsePoolSize(environment.WAYBILL_DATABASE_POOL_SIZE),
     ssl: databaseSsl(environment),
   }
-  return new Pool(config)
+  const pool = new Pool(config)
+  const schema = parseSchema(environment.WAYBILL_DATABASE_SCHEMA)
+  // a client runs its queries in order, so this runs before anything the relayer sends on the connection
+  if (schema) pool.on('connect', (client) => void client.query(schemaSql(schema)))
+  return pool
 }
+
+/**
+ * Optional WAYBILL_DATABASE_SCHEMA: keeps one deployment's index apart from another's in the same database (a new
+ * escrow starts from an empty index without deleting the old one). Only plain lowercase names are accepted.
+ */
+export function parseSchema(value: string | undefined): string | null {
+  const name = value?.trim()
+  if (!name) return null
+  if (!/^[a-z_][a-z0-9_]{0,40}$/.test(name) || name.startsWith('pg_')) throw new Error('WAYBILL_DATABASE_SCHEMA must be a lowercase name (letters, digits, underscores)')
+  return name
+}
+
+export const schemaSql = (schema: string) => `CREATE SCHEMA IF NOT EXISTS "${schema}"; SET search_path TO "${schema}"`
 
 /**
  * Locks every Waybill table to the connecting role. Hosted Postgres such as Supabase exposes the public schema to

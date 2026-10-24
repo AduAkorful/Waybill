@@ -12,6 +12,7 @@ lib/
 !apps/web/src/lib/**
 contracts/out/
 contracts/cache/
+contracts/broadcast/
 dist/
 .next/
 *.tsbuildinfo
