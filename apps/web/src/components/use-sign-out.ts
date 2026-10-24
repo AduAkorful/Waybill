@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { usePrivy } from '@privy-io/react-auth'
+import { usePrivy } from '@/auth'
 
 /**
  * Sign out that always ends signed out. The wallet library's own logout can fail (it asks its server to end the

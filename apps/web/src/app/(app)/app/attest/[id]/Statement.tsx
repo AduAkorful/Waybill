@@ -17,7 +17,7 @@ export function Statement({ deal, part, signer }: { deal: DealView; part: Tranch
         <li>The terms of the deal; you are confirming one fact.</li>
       </ul>
       <p className="mt-4 text-[12.5px] text-graphite">
-        Signing is not a payment. When enough attestors sign, the buyer has {Math.round(part.reviewWindow / 3600)} hours to review; the part is then paid to the supplier unless the buyer disputes it.
+        Signing is not a payment. When enough attestors sign, the buyer has {part.reviewWindow} hours to review; the part is then paid to the supplier unless the buyer disputes it.
         If a dispute is decided against your statement, it counts on your public record.
       </p>
     </section>

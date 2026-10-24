@@ -12,7 +12,7 @@ import { Modal } from '@/ui/Modal'
 import { LineItems } from '@/ui/Sheet'
 import { Combobox } from '@/ui/Combobox'
 import { TxFlow } from '@/ui/TxFlow'
-import { feeShares, partAmount, buildDeal, buildTerms, CONDITION_LABEL, emptyDetails, emptyForm, feeFor, TEMPLATES, type BuilderForm, type DetailsForm, type PartForm, type Template } from '@/view/builder'
+import { feeShares, partAmount, buildDeal, buildTerms, arbiterFieldClash, CONDITION_LABEL, emptyDetails, emptyForm, feeFor, TEMPLATES, type BuilderForm, type DetailsForm, type PartForm, type Template } from '@/view/builder'
 import { formatAmount, shortAddress } from '@/view/format'
 import { ShareDeal } from './ShareDeal'
 
@@ -30,7 +30,14 @@ export function Builder() {
   const limits = useBuilderLimits()
   if (!address) return null
   if (limits.status === 'loading') return <Shell><p role="status" className="text-[14px] text-graphite">Reading the escrow&apos;s limits…</p></Shell>
-  if (limits.status === 'error') return <Shell><p role="alert" className="text-[14px] text-hold">The escrow&apos;s limits could not be read, so no deal can be built: {limits.message}</p></Shell>
+  if (limits.status === 'error')
+    return (
+      <Shell>
+        <p role="alert" className="text-[14px] text-hold">The escrow&apos;s limits could not be read, so a deal can&apos;t be built yet. Check your connection and try again.</p>
+        <button type="button" onClick={() => window.location.reload()} className="mt-3 rounded-[10px] border border-rule px-4 py-2 text-[14px] text-ink">Try again</button>
+        <details className="mt-3 text-[12px] text-graphite"><summary>Details</summary><p className="mt-1 break-all">{limits.message.split('\n')[0]}</p></details>
+      </Shell>
+    )
   return <Form buyer={address} limits={limits.value} />
 }
 
@@ -58,6 +65,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   }, [client, buyer])
   const [frozen, setFrozen] = useState<Extract<typeof built, { ok: true }> | null>(null)
   const [created, setCreated] = useState<bigint | null>(null)
+  const [createdTx, setCreatedTx] = useState<Hex | null>(null)
   // a click on Create while something is still wrong must answer, not do nothing
   const [attempted, setAttempted] = useState(false)
   const [flash, setFlash] = useState(false)
@@ -75,12 +83,22 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   const [lookup, setLookup] = useState('')
   const [details, setDetails] = useState<DetailsForm>(emptyDetails)
   const [now] = useState(() => Math.floor(Date.now() / 1000))
+  // Deadlines are checked against the chain's clock, not this device's: if the chain runs ahead (a skewed device
+  // clock, or a test fork that was moved forward), build from the chain's time so the deadline is still in the future.
+  const [chainAhead, setChainAhead] = useState(0)
+  useEffect(() => {
+    let live = true
+    client?.getBlock({ blockTag: 'latest' }).then((b) => {
+      if (live) setChainAhead(Math.max(0, Number(b.timestamp) - Math.floor(Date.now() / 1000)))
+    }).catch(() => {})
+    return () => { live = false }
+  }, [client])
 
   const checked = arbiter?.status === 'ready' ? arbiter.value : null
   // the checks are new objects on every render, so key the memo on what they say
   const checksKey = JSON.stringify(panelChecks.map((c) => (c ? [c.allowed, String(c.fee)] : null)))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const built = useMemo(() => buildDeal(form, buyer, limits, checked, Math.floor(Date.now() / 1000), panelChecks), [form, buyer, limits, checked, checksKey])
+  const built = useMemo(() => buildDeal(form, buyer, limits, checked, Math.floor(Date.now() / 1000) + chainAhead, panelChecks), [form, buyer, limits, checked, checksKey, chainAhead])
   const set = (patch: Partial<BuilderForm>) => setForm((f) => ({ ...f, ...patch }))
   const setPart = (i: number, patch: Partial<PartForm>) => setForm((f) => ({ ...f, parts: f.parts.map((p, j) => (j === i ? { ...p, ...patch } : p)) }))
   const pick = (t: Template) => {
@@ -89,7 +107,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   }
 
   const terms = buildTerms(details, form.parts, template.id === 'custom' ? undefined : template.name)
-  if (created !== null) return <ShareDeal dealId={created} supplier={form.supplier} buyer={buyer} terms={terms.ok ? terms.terms : null} isPublic={details.isPublic} />
+  if (created !== null) return <ShareDeal dealId={created} txHash={createdTx} supplier={form.supplier} buyer={buyer} terms={terms.ok ? terms.terms : null} isPublic={details.isPublic} />
 
   const total = built.ok ? built.deal.totalAmount : null
   const isPanel = form.panel.length > 0
@@ -146,20 +164,24 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
             </fieldset>
             {!isPanel ? (
               <div className="mt-3">
-                <ArbiterField id="arbiter" label="Arbiter's wallet" value={form.arbiter} onChange={(v) => set({ arbiter: v })} check={arbiter} choices={arbiters} />
+                <ArbiterField id="arbiter" label="Arbiter's wallet" value={form.arbiter} onChange={(v) => set({ arbiter: v })} check={arbiter} choices={arbiters} clash={!!arbiterFieldClash(form, buyer, null)} />
+                {arbiterFieldClash(form, buyer, null) ? <p role="alert" data-inline-clash className="mt-1 text-[12.5px] text-hold">{arbiterFieldClash(form, buyer, null)}</p> : null}
               </div>
             ) : (
               <div className="mt-3 space-y-4">
                 {[0, 1, 2].map((i) => (
+                  <div key={i}>
                   <ArbiterField
-                    key={i}
                     id={`panel-${i}`}
                     label={i === 0 ? 'Panel arbiter 1 (receives the arbiter fee)' : `Panel arbiter ${i + 1}`}
                     value={form.panel[i] ?? ''}
                     onChange={(v) => set({ panel: form.panel.map((m, j) => (j === i ? v : m)) })}
                     check={panelRead[i] ?? null}
                     choices={arbiters}
+                    clash={!!arbiterFieldClash(form, buyer, i)}
                   />
+                  {arbiterFieldClash(form, buyer, i) ? <p role="alert" data-inline-clash className="mt-1 text-[12.5px] text-hold">{arbiterFieldClash(form, buyer, i)}</p> : null}
+                  </div>
                 ))}
                 <p className="text-[12px] text-graphite">All three must be on the approved list and must accept before you can fund. They vote on a disputed part; when two vote the same way it is decided at once.</p>
               </div>
@@ -302,7 +324,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
               })()}
             </div>
           ) : (
-            <p className="mt-2 text-[13px] text-graphite">Fill in the total, supplier and arbiter to see what you would lock.</p>
+            <p className="mt-2 text-[13px] text-graphite">{arbiter?.status === 'loading' || panelRead.some((r) => r?.status === 'loading') ? 'Checking the arbiter on the approved list…' : 'Fill in the total, supplier and arbiter to see what you would lock.'}</p>
           )}
           {!built.ok && showErrors ? (
             <ul id="build-problems" tabIndex={-1} aria-label="Problems to fix before creating" className={`mt-4 list-disc space-y-1 rounded-md pl-4 text-[12.5px] text-hold outline-none transition-colors ${flash ? 'bg-hold-wash ring-2 ring-hold/60' : ''}`}>
@@ -338,6 +360,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                   const log = parseEventLogs({ abi: CREATED, logs: receipt.logs, eventName: 'DealCreated' }).find((l) => l.address.toLowerCase() === getBrowserNetwork().contracts.escrow.toLowerCase())
                   if (!log) throw new Error('The transaction confirmed but its deal number could not be read.')
                   setFrozen(null)
+                  setCreatedTx(hash)
                   setCreated(log.args.dealId)
                 } catch (e) {
                   setFrozen(null)
@@ -373,7 +396,8 @@ function Small({ label, value, onChange }: { label: string; value: string; onCha
 type ArbiterChoices = ReturnType<typeof useArbiterChoices>
 
 /** One arbiter wallet: a pick from the approved list or a pasted address, checked against the list contract. */
-function ArbiterField({ id, label, value, onChange, check, choices }: { id: string; label: string; value: string; onChange: (v: string) => void; check: ReturnType<typeof useArbiterCheck>; choices: ArbiterChoices }) {
+/** With a clash (the buyer's own wallet, or a repeat on the panel) only the clash error shows, not the list check as well. */
+function ArbiterField({ id, label, value, onChange, check, choices, clash = false }: { id: string; label: string; value: string; onChange: (v: string) => void; check: ReturnType<typeof useArbiterCheck>; choices: ArbiterChoices; clash?: boolean }) {
   return (
     <div>
       <label className="label block" htmlFor={id}>{label}</label>
@@ -387,13 +411,13 @@ function ArbiterField({ id, label, value, onChange, check, choices }: { id: stri
       ) : null}
       {choices.note ? <p className="mb-1 text-[12px] text-graphite">{choices.note}</p> : null}
       <input id={id} className={`${input} mono`} value={value} onChange={(e) => onChange(e.target.value)} placeholder="0x… from the approved list" spellCheck={false} />
-      <p className="mt-1 text-[12px]" role="status">
+      {clash ? null : <p className="mt-1 text-[12px]" role="status">
         {check === null ? <span className="text-graphite">Decides disputes. Must be on the approved list.</span> : null}
         {check?.status === 'loading' ? <span className="text-graphite">Checking the approved list…</span> : null}
         {check?.status === 'error' ? <span className="text-hold">Could not check the list: {check.message}</span> : null}
         {check?.status === 'ready' && check.value.allowed ? <span className="text-released">On the approved list · fee {formatAmount(check.value.fee)} USDC, paid only if they decide in time</span> : null}
         {check?.status === 'ready' && !check.value.allowed ? <span className="text-hold">Not on the approved list.</span> : null}
-      </p>
+      </p>}
     </div>
   )
 }

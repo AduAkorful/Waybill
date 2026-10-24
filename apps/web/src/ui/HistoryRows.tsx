@@ -1,4 +1,5 @@
 import { formatDateTime, formatDay, shortHash } from '@/view/format'
+import { ExplorerLink } from '@/ui/ExplorerLink'
 import type { HistoryGroup } from '@/view/attestor'
 
 /** Same-day range collapses to one date. */
@@ -22,9 +23,9 @@ function Row({ g, explorer }: { g: HistoryGroup; explorer: string }) {
       <span className="mono text-[12px] text-graphite">
         <span className="block sm:inline">{when(g)}</span>
         <span className="hidden sm:inline"> · </span>
-        <a className="inline-flex min-h-11 items-center whitespace-nowrap underline" href={`${explorer}/tx/${g.lastTx}`} target="_blank" rel="noreferrer">
+        <ExplorerLink className="inline-flex min-h-11 items-center whitespace-nowrap underline" href={`${explorer}/tx/${g.lastTx}`}>
           {shortHash(g.lastTx)} ↗
-        </a>
+        </ExplorerLink>
       </span>
     </li>
   )

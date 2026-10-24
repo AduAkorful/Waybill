@@ -66,6 +66,12 @@ describe('relayer eligibility', () => {
     expect(checkCandidateEligibility(candidate('applyDefault'), disputed, 20n).eligible).toBe(false)
     expect(checkCandidateEligibility(candidate('applyDefault'), disputed, 21n)).toEqual({ eligible: true })
 
+    // After an early response the escrow resets arbiterDeadline from the response time; the
+    // relayer must use that fresh on-chain value, not responseDeadline + arbiterDeadlineHours.
+    const respondedEarly = { ...disputed, responseDeadline: 100n, arbiterDeadline: 50n }
+    expect(checkCandidateEligibility(candidate('applyDefault'), respondedEarly, 50n).eligible).toBe(false)
+    expect(checkCandidateEligibility(candidate('applyDefault'), respondedEarly, 51n)).toEqual({ eligible: true })
+
     const overdue = {
       state: MILESTONE_STATES.OVERDUE,
       deadline: 100n,

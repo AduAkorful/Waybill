@@ -102,6 +102,30 @@ describe('frontend transaction lifecycle boundary', () => {
     expect(classifyWalletError(limit).code).toBe('rpc_error')
   })
 
+  test('an RPC that refuses the method is a setup fault, not a busy network', () => {
+    const inner = Object.assign(new Error('Method not available on this endpoint'), { code: -32601 })
+    const rpc = Object.assign(new Error('RPC Request failed.'), { name: 'RpcRequestError', code: -32601, cause: inner })
+    const wrapped = Object.assign(new Error('Estimate gas failed'), { name: 'EstimateGasExecutionError', cause: rpc })
+    const classified = classifyWalletError(wrapped)
+    expect(classified.code).toBe('config')
+    expect(classified.message).not.toMatch(/try again/i)
+    expect(plainError(wrapped)).toMatch(/setup problem.*Nothing was sent\.$/)
+    expect(classifyWalletError(Object.assign(new Error('x'), { name: 'MethodNotSupportedRpcError' })).code).toBe('config')
+  })
+
+  test('a revert relayed through the RPC proxy is named, never called a busy network', () => {
+    // what viem builds from the proxy's {code: 3, message: 'execution reverted', data} for a create preflight
+    const selector = keccak256(toBytes('InvalidAcceptanceDeadline()')).slice(0, 10)
+    const inner = Object.assign(new Error('execution reverted'), { name: 'RpcRequestError', code: 3, data: selector })
+    const wrapped = Object.assign(new Error('The contract function "createDeal" reverted'), { name: 'CallExecutionError', cause: inner })
+    const classified = classifyWalletError(wrapped)
+    expect(classified.code).toBe('reverted')
+    expect(classified.message).toContain('acceptance deadline')
+    expect(plainError(wrapped)).not.toMatch(/busy/i)
+    const unknown = Object.assign(new Error('execution reverted'), { name: 'RpcRequestError', code: 3, data: '0xdeadbeef' })
+    expect(classifyWalletError(unknown).message).toContain('0xdeadbeef')
+  })
+
   test('plain wording for a declined signature never shows library text', () => {
     const raw = Object.assign(new Error('User rejected the request. Details: x Version: viem@2.57.7'), { code: 4001 })
     expect(plainError(raw)).toBe('You declined it in your wallet. Nothing was sent. You can try again.')

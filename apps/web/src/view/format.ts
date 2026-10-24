@@ -75,6 +75,13 @@ export function formatDateTime(seconds: bigint): string {
   return `${p.day}, ${p.time} UTC`
 }
 
+const TEN_YEARS = 10n * 365n * 86_400n
+
+/** A deadline as a date, unless it is so far off it means nothing as a date (a mis-set window): then "more than 10 years from now". */
+export function formatUntil(seconds: bigint, now: bigint): string {
+  return seconds - now > TEN_YEARS ? `more than 10 years from now (${parts(seconds).day})` : formatDateTime(seconds)
+}
+
 /** Chinese date in UTC: "2026年10月19日" */
 export function formatDayZh(seconds: bigint): string {
   const d = new Date(Number(seconds) * 1000)

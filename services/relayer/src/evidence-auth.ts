@@ -30,10 +30,15 @@ export function evidenceMessage(
     `chain: ${context.chainId}`,
     `escrow: ${context.escrow.toLowerCase()}`,
     `deal: ${context.dealId}`,
-    `part: ${part === null ? 'all' : part}`,
+    `part: ${partLabel(part)}`,
     `files: ${files.map((f) => f.toLowerCase()).join(',')}`,
     `signed: ${signedAt}`,
   ].join('\n')
+}
+
+/** Human text is 1-based like the UI ("Part 1"); the index the API and contract use is kept beside it. */
+export function partLabel(part: number | null): string {
+  return part === null ? 'all' : `${part + 1} (index ${part})`
 }
 
 export interface SignedRequest {

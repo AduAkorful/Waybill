@@ -1,7 +1,8 @@
 'use client'
 
+import { statementTime } from '@/view/attest-time'
 import { useState } from 'react'
-import { useSignMessage, useWalletClient } from 'wagmi'
+import { usePublicClient, useSignMessage, useWalletClient } from 'wagmi'
 import type { Hex } from 'viem'
 import { attestAction, signAttestation } from '@/integration/attestation'
 import { describeUploadError, readFile, sha256Hex, uploadEvidence, type EvidenceFile } from '@/integration/evidence'
@@ -23,6 +24,7 @@ type Stage = { kind: 'form' } | { kind: 'working'; text: string } | { kind: 'rea
 export function WorkPanel({ deal, part, owner, onDone }: { deal: DealView; part: Tranche; owner: `0x${string}`; onDone: () => void }) {
   const { signMessageAsync } = useSignMessage()
   const { data: walletClient } = useWalletClient()
+  const client = usePublicClient()
   const [files, setFiles] = useState<File[]>([])
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
@@ -45,7 +47,9 @@ export function WorkPanel({ deal, part, owner, onDone }: { deal: DealView; part:
       setStage({ kind: 'working', text: 'Step 1 of 2: approve the upload in your wallet. This signs a message and costs nothing.' })
       const evidenceHash = await uploadEvidence({ dealId: deal.id, part: part.position, signer: owner, files: all, sign: (message) => signMessageAsync({ message }) })
       setStage({ kind: 'working', text: 'Step 2 of 2: sign the statement in your wallet. This is not a payment.' })
-      const signedAt = BigInt(Math.floor(Date.now() / 1000))
+      // the escrow checks expiry against block.timestamp, so stamp from the later of this device's clock and the
+      // chain's: a device clock behind the chain (skew, or a forked chain moved forward) would sign an already-expired statement
+      const signedAt = await statementTime(client)
       const input = { dealId: deal.id, milestoneIndex: part.position, evidenceHash, signedAt, expiry: signedAt + BigInt(VALID_FOR), signer: owner }
       const signature = await signAttestation(walletClient, input, getBrowserNetwork())
       setStage({ kind: 'ready', input, signature })

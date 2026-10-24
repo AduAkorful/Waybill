@@ -47,7 +47,12 @@ function Snapshot({ compact, onRetry }: { compact: boolean; onRetry: () => void 
   const [slow, setSlow] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => setSlow(true), SLOW_MS)
+    // a read with no answer by now is given up on, so a first visit with nothing cached ends in "Try again", not "…"
+    const timer = setTimeout(() => {
+      setSlow(true)
+      setRecent((prev) => (prev.status === 'loading' ? { status: 'error' } : prev))
+      setPeople((prev) => (prev.status === 'loading' ? { status: 'unavailable' } : prev))
+    }, SLOW_MS)
     return () => clearTimeout(timer)
   }, [])
 
@@ -95,7 +100,7 @@ function Snapshot({ compact, onRetry }: { compact: boolean; onRetry: () => void 
     limits.status === 'ready'
       ? formatAmountsAligned(limits.value.currentLocked, limits.value.maxLocked, limits.value.maxDealAmount)
       : ['', '', '']
-  const stillWaiting = slow && (limits.status === 'loading' || recent.status === 'loading' || people.status === 'loading')
+  const stillWaiting = slow && limits.status === 'loading'
   const failed = limits.status === 'error' || recent.status === 'error' || people.status === 'unavailable' || stillWaiting
   const updating = (limits.status === 'ready' && !limitsFresh) || (recent.status === 'ready' && !recent.fresh)
 
@@ -103,7 +108,7 @@ function Snapshot({ compact, onRetry }: { compact: boolean; onRetry: () => void 
     <div className="bg-sheet px-4 py-3.5">
       <dt className="label">{label}</dt>
       <dd className="mt-1">
-        <span className="mono block text-[20px] md:text-[22px]">{value ?? '…'}</span>
+        <span className="mono block text-[20px] md:text-[22px]">{value ?? (slow ? '—' : '…')}</span>
         {mark ? <span className="mt-0.5 block text-[12px] text-graphite">updating…</span> : note ? <span className="mt-0.5 block text-[12px] text-graphite">{note}</span> : null}
       </dd>
     </div>
@@ -112,7 +117,7 @@ function Snapshot({ compact, onRetry }: { compact: boolean; onRetry: () => void 
   return (
     <section aria-labelledby="snapshot-h" className="mt-12 border-t border-rule pt-8">
       <h2 id="snapshot-h" className="text-[20px] font-semibold tracking-tight">On this network right now</h2>
-      <p className="mt-1 text-[13px] text-graphite">Read from the {network.network === 'testnet' ? 'Arc test network' : 'Arc'} when this page opened. {network.network === 'testnet' ? 'Test money only.' : ''}</p>
+      <p className="mt-1 text-[13px] text-graphite">Read from {network.network === 'testnet' ? 'the Arc test network' : 'Arc'} when this page opened. {network.network === 'testnet' ? 'Test money only.' : ''}</p>
 
       <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule">
         {tile('Deals created', recent.status === 'ready' ? recent.total.toString() : null, undefined, recent.status === 'ready' && !recent.fresh)}

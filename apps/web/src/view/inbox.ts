@@ -1,3 +1,5 @@
+import { disputeStage } from './room'
+import { earlyResolve } from '@/integration/network'
 import type { Address } from 'viem'
 import { formatAmount } from './format'
 import { isClosed } from './derive'
@@ -7,6 +9,9 @@ import type { Shell } from './wallet'
 
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 
+/** A buyer-approval part nobody has acted on: only the buyer's approve moves it (there is no supplier "delivered" call). */
+const awaitsBuyerConfirm = (t: Tranche) => t.state === 'waiting' && t.condition === 'buyer_approval'
+
 /** What this wallet has to do next on a deal, in one word, or null when nothing is waiting on it. Read from the escrow only. */
 export function needsFrom(shell: Shell, d: DealView, wallet: Address): string | null {
   if (d.state === 'settled' || d.state === 'cancelled') return null
@@ -15,6 +20,7 @@ export function needsFrom(shell: Shell, d: DealView, wallet: Address): string | 
       if (d.tranches.some((t) => t.state === 'in_review')) return 'Review'
       if (d.state === 'accepted') return 'Fund'
       if (d.tranches.some((t) => t.state === 'refundable')) return 'Refund'
+      if (d.state === 'funded' && d.tranches.some(awaitsBuyerConfirm)) return 'Confirm'
       return null
     case 'supplier':
       if (d.state === 'proposed' && d.supplierPayout === null) return 'Accept'
@@ -33,7 +39,7 @@ export function needsFrom(shell: Shell, d: DealView, wallet: Address): string | 
       if (d.state === 'proposed' && !d.arbiterAccepted && panelAccepted(d)?.[wallet.toLowerCase()] !== true) return 'Accept'
       // a panel member who has already voted on a part has nothing left to do on it
       const voted = (t: Tranche) => panelStanding(d, t).some((s) => same(s.member, wallet) && s.vote !== 0)
-      if (d.tranches.some((t) => t.state === 'disputed' && d.chainTime > t.responseDeadline && d.chainTime <= t.arbiterDeadline && !voted(t))) return 'Decide'
+      if (d.tranches.some((t) => t.state === 'disputed' && disputeStage(t, d.chainTime, earlyResolve()) === 'decision_open' && !voted(t))) return 'Decide'
       return null
   }
 }
@@ -59,6 +65,8 @@ export function statusLine(d: DealView, needs: string | null = null): string {
   const refundable = d.tranches.find((t) => t.state === 'refundable')
   if (refundable) return `Part ${refundable.index} was never confirmed · refund available`
   if (d.tranches.some((t) => t.state === 'claimable')) return 'Paying the supplier now'
+  const confirm = d.tranches.find(awaitsBuyerConfirm)
+  if (confirm) return `Part ${confirm.index} of ${d.tranches.length} · waiting for the buyer to confirm delivery`
   const next = d.tranches.find((t) => !isClosed(t))
   return next ? `Part ${next.index} of ${d.tranches.length} is next` : 'In progress'
 }

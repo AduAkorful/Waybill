@@ -1,10 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import { earlyResolve, explorerBase } from '@/integration/network'
+import { disputeStage } from '@/view/room'
+import { ExplorerLink } from '@/ui/ExplorerLink'
 import { useState } from 'react'
 import { useAccount } from 'wagmi'
 import { useDeal } from '@/data/use-deal'
-import { encodeEscrowAction } from '@/integration/escrow'
+import { encodeEscrowAction, readMilestone } from '@/integration/escrow'
 import { encodeCurrentEscrowAction } from '@/integration/current-actions'
 import { getBrowserNetwork } from '@/integration/network'
 import { Acceptances, missingAcceptances } from '@/ui/Acceptances'
@@ -17,15 +20,15 @@ import { Skeleton } from '@/ui/Skeleton'
 import { NamedPartyBanner } from '@/ui/NamedPartyBanner'
 import { Modal } from '@/ui/Modal'
 import { TxFlow, type TxStep } from '@/ui/TxFlow'
-import { fundingTotal, reviewEnds } from '@/view/derive'
+import { fundingTotal, graceEnds, overdueStatus, reviewEnds } from '@/view/derive'
 import { dealHeadline } from '@/view/status'
 import { cancelReadiness, fundReadiness } from '@/view/readiness'
-import { formatAmount, formatDateTime, shortAddress, shortHash } from '@/view/format'
+import { formatAmount, formatDateTime, formatUntil, shortAddress, shortHash } from '@/view/format'
 import { describeEvent } from '@/view/timeline'
 import type { DealView, Tranche } from '@/view/types'
 import { FundDialog } from './FundDialog'
 
-type Dialog = { kind: 'fund' } | { kind: 'evidence'; t: Tranche } | { kind: 'dispute'; t: Tranche } | { kind: 'withdraw'; t: Tranche } | { kind: 'approve'; t: Tranche } | { kind: 'refund'; t: Tranche } | { kind: 'cancel' } | null
+type Dialog = { kind: 'fund' } | { kind: 'evidence'; t: Tranche } | { kind: 'dispute'; t: Tranche } | { kind: 'withdraw'; t: Tranche } | { kind: 'approve'; t: Tranche } | { kind: 'confirm'; t: Tranche } | { kind: 'refund'; t: Tranche } | { kind: 'cancel' } | null
 
 const stateLabel: Record<DealView['state'], string> = {
   proposed: 'Waiting for acceptance',
@@ -43,7 +46,7 @@ export function DealScreen({ idText }: { idText: string }) {
   const read = useDeal(id, refresh)
   const { address } = useAccount()
   const [dialog, setDialog] = useState<Dialog>(null)
-  const explorer = getBrowserNetwork().explorerUrl.replace(/\/+$/, '')
+  const explorer = explorerBase()
 
   const close = () => setDialog(null)
   const finished = () => {
@@ -67,7 +70,7 @@ export function DealScreen({ idText }: { idText: string }) {
         actions[t.index] = (
           <div data-action>
             <p className="text-[13px] leading-snug">
-              Confirmed. Your review closes <span className="mono font-semibold">{formatDateTime(ends)}</span>; the part releases then if you do nothing.
+              Confirmed. Your review closes <span className="mono font-semibold">{formatUntil(ends, d.chainTime)}</span>; the part releases then if you do nothing.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button onClick={() => setDialog({ kind: 'evidence', t })} className="rounded-md border border-rule px-3.5 py-2 text-[13px] font-semibold hover:bg-sheet">
@@ -87,7 +90,11 @@ export function DealScreen({ idText }: { idText: string }) {
           <div data-action className="text-[13px]">
             <p className="font-semibold text-hold">{t.buyerRaisedDispute ? 'You disputed this part.' : 'The supplier disputed this part.'}</p>
             <p className="mt-1 text-[12.5px] text-graphite">
-              {t.buyerRaisedDispute ? 'The supplier' : 'You'} can respond until {formatDateTime(t.responseDeadline)}. Then the arbiter decides; other parts are not affected.
+              {t.responseSubmitted
+                ? earlyResolve()
+                  ? 'The other side has responded, so the arbiter can decide now. Other parts are not affected.'
+                  : <>The other side has responded. The arbiter can decide after {formatUntil(t.responseDeadline, d.chainTime)}. Other parts are not affected.</>
+                : <>{t.buyerRaisedDispute ? 'The supplier' : 'You'} can respond until {formatUntil(t.responseDeadline, d.chainTime)}. The arbiter can decide after that{earlyResolve() ? '; a response lets them decide straight away' : ''}. Other parts are not affected.</>}
             </p>
             <div className="mt-2.5 flex flex-wrap gap-2">
               <Link href={`/app/room/${d.id}`} className="inline-flex min-h-11 items-center rounded-md border border-rule px-3 text-[12.5px] font-semibold md:min-h-0 md:py-1.5">Open dispute room</Link>
@@ -97,6 +104,45 @@ export function DealScreen({ idText }: { idText: string }) {
                 </button>
               ) : null}
             </div>
+          </div>
+        )
+      } else if (d.state === 'funded' && overdueStatus(t, d.chainTime) === 'overdue') {
+        actions[t.index] = (
+          <div data-action data-overdue className="text-[13px]">
+            <p className="leading-snug">
+              Overdue: the due time {formatDateTime(t.deadline)} passed without a confirmation. The supplier can dispute until {formatUntil(graceEnds(t), d.chainTime)}; after that you can take this part back.
+            </p>
+            {t.condition === 'buyer_approval' ? (
+              <button onClick={() => setDialog({ kind: 'confirm', t })} className="mt-3 rounded-md border border-rule px-3.5 py-2 text-[13px] font-semibold hover:bg-sheet">
+                Confirm delivery anyway
+              </button>
+            ) : null}
+          </div>
+        )
+      } else if (d.state === 'funded' && overdueStatus(t, d.chainTime) === 'default') {
+        actions[t.index] = (
+          <div data-action data-default className="text-[13px]">
+            <p className="font-semibold">Grace period over. No one confirmed this part.</p>
+            <button onClick={() => setDialog({ kind: 'refund', t })} className="mt-3 rounded-md bg-refunded px-3.5 py-2 text-[13px] font-semibold text-sheet">
+              Refund {formatAmount(t.amount + (d.feePayer === 'buyer' ? t.fee : 0n))} USDC to me
+            </button>
+            <p className="mt-1.5 text-[12px] text-graphite">One signature from you applies the default the contract allows. Waybill's relayer then returns the money; if it hasn't yet, you sign the refund too. No one else needs to sign.</p>
+          </div>
+        )
+      } else if (t.state === 'waiting' && t.condition === 'buyer_approval' && d.state === 'funded') {
+        // the contract has no supplier "delivered" call: a buyer-approval part waits for the buyer, whose approve
+        // either starts the review window (dispute still possible until it closes) or, with no window, makes it claimable
+        actions[t.index] = (
+          <div data-action data-confirm-delivery className="text-[13px]">
+            <p className="leading-snug">
+              Waiting on you. When this part is delivered, confirm it here. {t.reviewWindow > 0
+                ? <>That starts your {reviewLength(t.reviewWindow)} review: you can still dispute until it closes, then the supplier can claim the money.</>
+                : <>The supplier can then claim the money straight away.</>}
+              {' '}Due {formatDateTime(t.deadline)}; if it is not confirmed by then the supplier can dispute during the grace period, and after that you can take a refund.
+            </p>
+            <button onClick={() => setDialog({ kind: 'confirm', t })} className="mt-3 rounded-md bg-held px-3.5 py-2 text-[13px] font-semibold text-sheet hover:opacity-90">
+              Confirm delivery
+            </button>
           </div>
         )
       } else if (t.state === 'refundable') {
@@ -110,6 +156,63 @@ export function DealScreen({ idText }: { idText: string }) {
           </div>
         )
       }
+    }
+  }
+
+  if (!isBuyer && address && address.toLowerCase() === d.supplier.toLowerCase() && d.state === 'funded') {
+    for (const t of d.tranches) {
+      const late = overdueStatus(t, d.chainTime)
+      if (late === 'overdue') {
+        actions[t.index] = (
+          <div data-action data-overdue className="text-[13px]">
+            <p className="font-semibold">This part was not confirmed by {formatDateTime(t.deadline)}. You can dispute it until {formatUntil(graceEnds(t), d.chainTime)}.</p>
+            <button onClick={() => setDialog({ kind: 'dispute', t })} className="mt-2.5 rounded-md border border-hold/50 px-3 py-1.5 text-[12.5px] font-semibold text-hold">Dispute (overdue)</button>
+          </div>
+        )
+        continue
+      }
+      if (late === 'default') {
+        actions[t.index] = (
+          <div data-action data-default className="text-[13px] text-graphite">
+            <p className="leading-snug">The grace period ended {formatDateTime(graceEnds(t))} with no confirmation and no dispute. The buyer can now take this part back.</p>
+          </div>
+        )
+        continue
+      }
+      if (t.state !== 'waiting' || t.condition !== 'buyer_approval') continue
+      actions[t.index] = (
+        <div data-action data-waiting-buyer className="text-[13px] text-graphite">
+          <p className="leading-snug">
+            Waiting for the buyer to confirm delivery. There is nothing for you to sign here: deliver, then ask the buyer to confirm.
+            {t.reviewWindow > 0 ? ` Their confirmation starts a ${reviewLength(t.reviewWindow)} review; after it you can claim.` : ' After it you can claim.'}
+            {' '}If they have not confirmed by {formatDateTime(t.deadline)}, you can dispute during the grace period.
+          </p>
+        </div>
+      )
+    }
+  }
+
+  if (!isBuyer && address) {
+    // the arbiter, a panel member or the supplier: the room is where a disputed part is answered or decided
+    const lower = address.toLowerCase()
+    const judges = d.arbiter.toLowerCase() === lower || (d.panel?.members ?? []).some((m) => m.toLowerCase() === lower)
+    for (const t of d.tranches) {
+      if (t.state !== 'disputed') continue
+      actions[t.index] = (
+        <div data-action className="text-[13px]">
+          <p className="font-semibold text-hold">{t.buyerRaisedDispute ? 'The buyer disputed this part.' : 'The supplier disputed this part.'}</p>
+          <p className="mt-1 text-[12.5px] text-graphite">
+            {judges
+              ? disputeStage(t, d.chainTime, earlyResolve()) === 'decision_open'
+                ? t.responseSubmitted ? 'The other side has responded, so you can decide now.' : 'The window to respond has closed, so you can decide now.'
+                : earlyResolve()
+                  ? <>You can decide after {formatDateTime(t.responseDeadline)}, or straight away if the other side responds sooner.</>
+                  : <>You can decide after {formatDateTime(t.responseDeadline)}, when the window to respond ends.</>
+              : 'Files, responses and the decision are in the dispute room.'}
+          </p>
+          <Link href={`/app/room/${d.id}`} className="mt-2.5 inline-flex min-h-11 items-center rounded-md border border-rule px-3 text-[12.5px] font-semibold md:min-h-0 md:py-1.5">{judges ? 'Open the dispute room to decide' : 'Open dispute room'}</Link>
+        </div>
+      )
     }
   }
 
@@ -217,9 +320,9 @@ export function DealScreen({ idText }: { idText: string }) {
                 <p>{describeEvent(e)}</p>
                 <p className="mono text-[12px] text-graphite">
                   {e.time === null ? 'time unknown' : formatDateTime(e.time)} ·{' '}
-                  <a className="underline" href={`${explorer}/tx/${e.txHash}`} target="_blank" rel="noreferrer">
+                  <ExplorerLink className="underline" href={`${explorer}/tx/${e.txHash}`}>
                     {shortHash(e.txHash)} ↗
-                  </a>
+                  </ExplorerLink>
                 </p>
               </li>
             ))}
@@ -230,6 +333,24 @@ export function DealScreen({ idText }: { idText: string }) {
       <Modal open={dialog?.kind === 'fund'} onClose={close} label="Fund this deal">
         {dialog?.kind === 'fund' && address ? <FundDialog deal={d} owner={address} onCancel={close} onDone={finished} /> : null}
       </Modal>
+
+      {dialog?.kind === 'confirm' ? (
+        <Modal open onClose={close} label="Confirm delivery">
+          <p className="label">Part {dialog.t.index}</p>
+          <h2 className="mt-1 text-[19px] leading-tight font-semibold">Confirm part {dialog.t.index} was delivered?</h2>
+          <p className="mt-2 mb-4 text-[13.5px] leading-relaxed">
+            {dialog.t.reviewWindow > 0
+              ? <>This starts your {reviewLength(dialog.t.reviewWindow)} review of {formatAmount(dialog.t.amount)} USDC. You can still dispute until it closes; then the supplier can claim it.</>
+              : <>The supplier can then claim {formatAmount(dialog.t.amount)} USDC straight away, and Waybill can&apos;t return it.</>}
+          </p>
+          <TxFlow
+            confirmLabel="Confirm delivery"
+            steps={[step('Confirm delivery', encodeEscrowAction({ kind: 'approveMilestone', dealId: d.id, milestoneIndex: dialog.t.position }))]}
+            onCancel={close}
+            onDone={finished}
+          />
+        </Modal>
+      ) : null}
 
       {dialog?.kind === 'approve' ? (
         <Modal open onClose={close} label="Approve and release">
@@ -287,7 +408,16 @@ export function DealScreen({ idText }: { idText: string }) {
           <TxFlow
             confirmLabel="Refund"
             tone="refunded"
-            steps={[step('Refund this part', encodeEscrowAction({ kind: 'refund', dealId: d.id, milestoneIndex: dialog.t.position }))]}
+            steps={[
+              // a part past grace still reads WAITING/OVERDUE until someone applies the default, which makes it REFUNDABLE
+              ...(dialog.t.state === 'refundable' ? [] : [step('Apply the default', encodeEscrowAction({ kind: 'applyDefault', dealId: d.id, milestoneIndex: dialog.t.position }))]),
+              {
+                ...step('Refund this part', encodeEscrowAction({ kind: 'refund', dealId: d.id, milestoneIndex: dialog.t.position })),
+                // Waybill's relayer refunds a REFUNDABLE part on its own; a second signature then reverts with InvalidDealState
+                alreadyDone: async (client) => (await readMilestone(client, BigInt(d.id), dialog.t.position)).state === MILESTONE_REFUNDED,
+                doneNote: `Refunded. ${formatAmount(dialog.t.amount + (d.feePayer === 'buyer' ? dialog.t.fee : 0n))} USDC went back to your refund address; Waybill's relayer sent it, so there was nothing more to sign.`,
+              },
+            ]}
             onCancel={close}
             onDone={finished}
           />
@@ -311,6 +441,9 @@ export function DealScreen({ idText }: { idText: string }) {
   )
 }
 
+/** MilestoneState.REFUNDED in the escrow */
+const MILESTONE_REFUNDED = 6
+
 function step(label: string, action: TxStep['action']): TxStep {
   return { label, action }
 }
@@ -325,3 +458,7 @@ function Message({ title, detail, quiet }: { title: string; detail?: string; qui
   )
 }
 
+function reviewLength(hours: number): string {
+  const h = hours
+  return h % 24 === 0 ? `${h / 24}-day` : `${h}-hour`
+}

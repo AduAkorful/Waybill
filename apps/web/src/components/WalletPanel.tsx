@@ -1,7 +1,7 @@
 'use client'
 
-import { usePrivy, useWallets } from '@privy-io/react-auth'
-import { useSetActiveWallet } from '@privy-io/wagmi'
+import { usePrivy, useWallets } from '@/auth'
+import { useSetActiveWallet } from '@/auth'
 import { useAccount, useChainId } from 'wagmi'
 import { getBrowserNetwork } from '../integration/network'
 

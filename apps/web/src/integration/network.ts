@@ -7,6 +7,7 @@ import {
 } from '@waybill/network/networks'
 
 import { publicEnvironment } from './env'
+import { resolveSameOrigin } from './same-origin'
 
 export type BrowserEnvironment = Record<string, string | undefined>
 
@@ -24,6 +25,8 @@ const MAINNET_VARIABLES = {
 
 /** Optional: set only after checking Multicall3 on the mainnet chain. */
 const MAINNET_MULTICALL3 = 'NEXT_PUBLIC_WAYBILL_MAINNET_MULTICALL3_ADDRESS'
+/** Optional: "1" only when the mainnet escrow was deployed with the decide-after-response rule. */
+const MAINNET_EARLY_RESOLVE = 'NEXT_PUBLIC_WAYBILL_MAINNET_EARLY_RESOLVE'
 
 function required(environment: BrowserEnvironment, name: string): string {
   const value = environment[name]?.trim()
@@ -40,7 +43,7 @@ function mainnetManifest(environment: BrowserEnvironment): WaybillNetworkManifes
   return {
     network: 'mainnet',
     chainId: Number(chainIdText),
-    rpcUrl: required(environment, MAINNET_VARIABLES.rpcUrl),
+    rpcUrl: resolveSameOrigin(required(environment, MAINNET_VARIABLES.rpcUrl), MAINNET_VARIABLES.rpcUrl),
     explorerUrl: required(environment, MAINNET_VARIABLES.explorerUrl),
     usdc: {
       address: required(environment, MAINNET_VARIABLES.usdcAddress) as `0x${string}`,
@@ -48,6 +51,7 @@ function mainnetManifest(environment: BrowserEnvironment): WaybillNetworkManifes
     },
     nativeGasDecimals: 18,
     ...(environment[MAINNET_MULTICALL3]?.trim() ? { multicall3: environment[MAINNET_MULTICALL3]!.trim() as `0x${string}` } : {}),
+    ...(environment[MAINNET_EARLY_RESOLVE]?.trim() === '1' ? { earlyResolve: true } : {}),
     contracts: {
       escrow: required(environment, MAINNET_VARIABLES.escrowAddress) as `0x${string}`,
       arbiterList: required(environment, MAINNET_VARIABLES.arbiterListAddress) as `0x${string}`,
@@ -102,10 +106,26 @@ export function toViemChain(manifest: WaybillNetworkManifest): Chain {
   })
 }
 
+/** One manifest and chain per page load, so hooks that depend on them do not re-run on every render. */
+let browserNetwork: WaybillNetworkManifest | undefined
+let browserChain: Chain | undefined
+
 export function getBrowserNetwork(): WaybillNetworkManifest {
-  return loadBrowserNetwork()
+  return (browserNetwork ??= loadBrowserNetwork())
 }
 
 export function getBrowserChain(): Chain {
-  return toViemChain(loadBrowserNetwork())
+  return (browserChain ??= toViemChain(getBrowserNetwork()))
+}
+
+/** Whether this deployment's escrow lets the arbiter decide as soon as the other side responds. */
+export function earlyResolve(): boolean {
+  return getBrowserNetwork().earlyResolve === true
+}
+
+/** The explorer root without a trailing slash, or '' when this network has no explorer (empty, or a local fork's /no-explorer placeholder). */
+export function explorerBase(): string {
+  const url = getBrowserNetwork().explorerUrl.trim().replace(/\/+$/, '')
+  if (url === '' || /\/no-explorer$/.test(url)) return ''
+  return url
 }

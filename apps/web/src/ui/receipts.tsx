@@ -1,6 +1,8 @@
 'use client'
 
 import { useSyncExternalStore } from 'react'
+import { explorerBase } from '@/integration/network'
+import { ExplorerLink } from '@/ui/ExplorerLink'
 import type { Hex } from 'viem'
 import { getBrowserNetwork } from '@/integration/network'
 import { shortHash } from '@/view/format'
@@ -35,7 +37,7 @@ const subscribe = (l: () => void) => {
 export function ReceiptStrip() {
   const list = useSyncExternalStore(subscribe, () => receipts, () => [] as readonly Receipt[])
   if (list.length === 0) return null
-  const explorer = getBrowserNetwork().explorerUrl.replace(/\/+$/, '')
+  const explorer = explorerBase()
   return (
     <ul aria-label="Confirmed transactions" className="fixed right-3 bottom-16 z-40 w-[min(22rem,calc(100vw-1.5rem))] space-y-2 lg:bottom-4">
       {list.map((r) => (
@@ -43,7 +45,7 @@ export function ReceiptStrip() {
           <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-released" />
           <span className="min-w-0 flex-1">
             <span className="block truncate font-semibold">{r.label} · confirmed</span>
-            <a className="mono underline" href={`${explorer}/tx/${r.hash}`} target="_blank" rel="noreferrer">{shortHash(r.hash)} ↗</a>
+            <ExplorerLink className="mono underline" href={`${explorer}/tx/${r.hash}`}>{shortHash(r.hash)} ↗</ExplorerLink>
           </span>
           <button type="button" onClick={() => dismiss(r.hash)} aria-label={`Dismiss receipt ${shortHash(r.hash)}`} className="px-2 text-graphite hover:text-ink">×</button>
         </li>

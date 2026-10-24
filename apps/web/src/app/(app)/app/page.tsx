@@ -29,7 +29,7 @@ export default function AppHome() {
       <p className="mt-2 text-[14px] text-graphite">
         Signed in as <span className="mono">{address ? shortAddress(address) : ''}</span>.{' '}
         {shells.length === 0
-          ? 'Deals appear here once one names this wallet as buyer, supplier, attestor or arbiter.'
+          ? 'No deals yet. A deal shows up here when it names this wallet as buyer, supplier, attestor or arbiter.'
           : 'Roles are set per deal, so you may have more than one.'}
       </p>
       {shells.length > 0 ? (

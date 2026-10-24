@@ -1,5 +1,6 @@
 'use client'
 
+import { DEV_WALLET_AUTH, DEV_WALLET_SESSION_KEY } from '@/integration/dev-wallet-flag'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
@@ -7,8 +8,8 @@ import { useDeal } from '@/data/use-deal'
 import { getBrowserNetwork } from '@/integration/network'
 import { SiteHeader } from '@/ui/SiteHeader'
 import { LiveWaybill } from '@/ui/Live'
-import { heldFor, releasedFor } from '@/view/derive'
-import { formatAmount, formatDateTime, formatDateTimeZh } from '@/view/format'
+import { heldFor, refundedFor, releasedFor } from '@/view/derive'
+import { formatAmount, formatCents, formatDateTime, formatDateTimeZh, toCents } from '@/view/format'
 import type { DealView } from '@/view/types'
 import { COPY, type Lang } from './copy'
 
@@ -16,9 +17,23 @@ import { COPY, type Lang } from './copy'
 const SupplierWallet = dynamic(() => import('./SupplierWallet'), { ssr: false })
 
 /** A returning supplier already has a Privy session in this browser; their actions need the wallet without another click. */
+/** wagmi's persisted store names the connection it will reconnect, under state.current. */
+function wagmiHasCurrent(): boolean {
+  try {
+    const raw = localStorage.getItem('wagmi.store')
+    return raw !== null && Boolean((JSON.parse(raw) as { state?: { current?: unknown } }).state?.current)
+  } catch {
+    return false
+  }
+}
+
 function hasWalletSession(): boolean {
   try {
-    return localStorage.getItem('privy:token') !== null
+    if (localStorage.getItem('privy:token') !== null) return true
+    if (!DEV_WALLET_AUTH) return false
+    // dev wallet mode: /app counts any wagmi-connected injected wallet as signed in, even one reconnected without our
+    // flag (an /app session restored by wagmi), so /d must recognise the same session
+    return localStorage.getItem(DEV_WALLET_SESSION_KEY) !== null || localStorage.getItem('wagmi.recentConnectorId') !== null || localStorage.getItem('wagmi.injected.connected') !== null || wagmiHasCurrent()
   } catch {
     return false
   }
@@ -61,6 +76,7 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
   const [walletOn, setWalletOn] = useState(false)
   const [signInAsked, setSignInAsked] = useState(false)
   const [walletReady, setWalletReady] = useState(false)
+  const [viewer, setViewer] = useState<'supplier' | 'buyer' | null>(null)
 
   useEffect(() => {
     if (hasWalletSession()) setWalletOn(true)
@@ -106,17 +122,25 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
           const d = read.deal
           const expired = d.state === 'proposed' && d.chainTime > d.acceptanceDeadline
           const mustAccept = d.state === 'proposed' && d.supplierPayout === null && !expired
+          // a part the buyer disputed waits for the supplier's side; the public view must offer a way in
+          const mustRespond = d.tranches.some((p) => p.state === 'disputed' && !p.responseSubmitted && p.disputeRaiser !== null && p.disputeRaiser.toLowerCase() !== d.supplier.toLowerCase())
           return (
             <>
               <p className="label">{t.eyebrow} {String(d.id)}</p>
               <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">{d.state === 'proposed' ? t.title : t.titleOngoing}</h1>
               <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-graphite">{d.state === 'proposed' ? t.intro : t.introOngoing}</p>
 
-              <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 rounded-md border border-rule bg-sheet px-4 py-3.5 sm:grid-cols-3">
+              <div className={`mt-6 grid grid-cols-2 gap-x-6 gap-y-3 rounded-md border border-rule bg-sheet px-4 py-3.5 ${refundedFor(d) > 0n ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
                 <div className="col-span-2 sm:col-span-1"><p className="label">{t.total}</p><p className="mono text-[22px] whitespace-nowrap sm:text-[26px]">{formatAmount(d.totalAmount)} <span className="text-[14px] text-graphite">USDC</span></p></div>
-                <div><p className="label">{t.releasedTile}</p><p className="mono text-[22px] whitespace-nowrap sm:text-[26px] text-released">{formatAmount(releasedFor(d))} <span className="text-[14px] text-graphite">USDC</span></p></div>
-                <div><p className="label">{t.heldTile}</p><p className="mono text-[22px] whitespace-nowrap sm:text-[26px] text-held">{formatAmount(heldFor(d))} <span className="text-[14px] text-graphite">USDC</span></p><p className="text-[12px] text-graphite">{t.inclFees}</p></div>
+                <div><p className="label">{viewer === 'supplier' ? t.releasedTile : t.releasedTileNeutral}</p><p className="mono text-[22px] whitespace-nowrap sm:text-[26px] text-released" aria-label={`${formatAmount(releasedFor(d))} USDC`}>{formatCents(toCents(releasedFor(d)))} <span className="text-[14px] text-graphite">USDC</span></p></div>
+                <div><p className="label">{t.heldTile}</p><p className="mono text-[22px] whitespace-nowrap sm:text-[26px] text-held" aria-label={`${formatAmount(heldFor(d))} USDC`}>{formatCents(toCents(heldFor(d)))} <span className="text-[14px] text-graphite">USDC</span></p><p className="text-[12px] text-graphite">{t.inclFees}</p></div>
+                {refundedFor(d) > 0n ? (
+                  <div data-refunded-tile><p className="label">{t.refundedTile}</p><p className="mono text-[22px] whitespace-nowrap sm:text-[26px] text-refunded" aria-label={`${formatAmount(refundedFor(d))} USDC`}>{formatCents(toCents(refundedFor(d)))} <span className="text-[14px] text-graphite">USDC</span></p></div>
+                ) : null}
               </div>
+              {releasedFor(d) % 10_000n !== 0n || heldFor(d) % 10_000n !== 0n || d.totalAmount % 10_000n !== 0n ? (
+                <p data-exact className="mt-1.5 text-[12px] text-graphite">{t.exact(formatAmount(releasedFor(d)), formatAmount(heldFor(d)))}</p>
+              ) : null}
 
               <div className="mt-6">
                 {d.state === 'funded' ? <Banner tone="released" title={t.funded} body={t.fundedBody} /> : null}
@@ -127,18 +151,18 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
               </div>
 
               {walletOn ? (
-                <SupplierWallet deal={d} lang={lang} autoLogin={signInAsked} onMounted={() => setWalletReady(true)} onChanged={() => setRefresh((n) => n + 1)} />
+                <SupplierWallet deal={d} lang={lang} autoLogin={signInAsked} onMounted={() => setWalletReady(true)} onChanged={() => setRefresh((n) => n + 1)} onViewer={setViewer} />
               ) : null}
               {!walletReady ? (
                 <>
-                  {mustAccept ? (
+                  {mustAccept || mustRespond ? (
                     <div className="mt-6">
                       {walletOn ? (
                         <p role="status" className="text-[13px] text-graphite">{t.loading}</p>
                       ) : (
                         <>
-                          <button type="button" onClick={() => { setSignInAsked(true); setWalletOn(true) }} className="rounded-md bg-ink px-5 py-3 text-[15px] font-semibold text-paper">{t.signIn}</button>
-                          <p className="mt-2 text-[12.5px] text-graphite">{t.signInHelp}</p>
+                          <button type="button" onClick={() => { setSignInAsked(true); setWalletOn(true) }} className="rounded-md bg-ink px-5 py-3 text-[15px] font-semibold text-paper">{mustAccept ? t.signIn : t.signInRespond}</button>
+                          <p className="mt-2 text-[12.5px] text-graphite">{mustAccept ? t.signInHelp : t.signInRespondHelp}</p>
                         </>
                       )}
                     </div>
@@ -149,7 +173,7 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
                   </section>
                 </>
               ) : null}
-              <p className="mt-8 text-[12px] text-graphite">{lang === "zh" ? formatDateTimeZh(d.chainTime) : formatDateTime(d.chainTime)} · {getBrowserNetwork().network}</p>
+              <p className="mt-8 text-[12px] text-graphite">{lang === "zh" ? formatDateTimeZh(d.chainTime) : formatDateTime(d.chainTime)} · {getBrowserNetwork().network === 'mainnet' ? 'Arc' : 'Arc testnet'}</p>
             </>
           )
         })() : null}

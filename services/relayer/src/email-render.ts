@@ -44,7 +44,7 @@ function words(template: string, data: Record<string, string>): Words | null {
     case 'dispute_raised':
       return { subject: `A dispute was raised on deal ${deal}${part}`, line: `A dispute was raised on${part} of deal ${deal}. The money for that part is held until it is decided. Open the room to respond or add evidence.` }
     case 'dispute_response':
-      return { subject: `A response was filed on deal ${deal}${part}`, line: `A response was filed on the dispute on${part} of deal ${deal}.` }
+      return { subject: `A response was filed on deal ${deal}${part}`, line: `A response was filed on the dispute on${part} of deal ${deal}. Open the room to see when the arbiter can decide.` }
     case 'dispute_withdrawn':
       return { subject: `The dispute on deal ${deal}${part} was withdrawn`, line: `The buyer withdrew the dispute on${part} of deal ${deal}.` }
     case 'dispute_decided':

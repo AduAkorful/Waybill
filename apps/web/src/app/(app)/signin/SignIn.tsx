@@ -2,9 +2,11 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { useLogin, useLoginWithEmail, usePrivy } from '@privy-io/react-auth'
+import { useLogin, useLoginWithEmail, usePrivy } from '@/auth'
 import { useAccount, useSwitchChain } from 'wagmi'
+import { DEV_WALLET_AUTH } from '@/integration/dev-wallet-flag'
 import { getBrowserNetwork } from '@/integration/network'
+import { useInjectedWallet } from '@/integration/use-injected-wallet'
 import { NetworkSnapshot } from '@/ui/NetworkSnapshot'
 import { SiteHeader } from '@/ui/SiteHeader'
 
@@ -24,6 +26,20 @@ export function SignIn() {
   const expected = getBrowserNetwork()
   const { login } = useLogin()
   const { sendCode, loginWithCode, state } = useLoginWithEmail()
+  const injected = useInjectedWallet()
+  // the wallet button says why it cannot be pressed: the sign-in service still starting, or (dev wallet mode, where
+  // only a browser wallet can sign in) no wallet in this browser
+  const [startSlow, setStartSlow] = useState(false)
+  useEffect(() => {
+    if (ready) return
+    const t = setTimeout(() => setStartSlow(true), 8000)
+    return () => clearTimeout(t)
+  }, [ready])
+  const walletBlocked = DEV_WALLET_AUTH ? injected !== 'found' : !ready
+  const walletWhy = DEV_WALLET_AUTH
+    ? injected === 'checking' ? 'Looking for a wallet in this browser…'
+      : injected === 'missing' ? 'No browser wallet found. Install Rabby or MetaMask, then reload this page.' : null
+    : !ready ? (startSlow ? 'Sign-in is taking longer than usual. Check your connection, then reload this page.' : 'Starting sign-in…') : null
 
   const [email, setEmail] = useState('')
   const [emailErr, setEmailErr] = useState('')
@@ -198,6 +214,10 @@ export function SignIn() {
             </>
           ) : (
             <>
+              {DEV_WALLET_AUTH ? (
+                <p className="mt-2 text-[14px] text-graphite">Email sign-in is off on this local test stack. Connect a browser wallet to continue.</p>
+              ) : (
+              <>
               <p className="mt-2 text-[14px] text-graphite">Use your work email. We&apos;ll send a six-digit code; there&apos;s no password.</p>
               <label className="label mt-8 block" htmlFor="email">
                 Email
@@ -231,14 +251,22 @@ export function SignIn() {
               <div className="my-6 flex items-center gap-3 text-[12px] text-graphite">
                 <span className="h-px flex-1 bg-rule" /> or <span className="h-px flex-1 bg-rule" />
               </div>
+              </>
+              )}
               <button
                 type="button"
                 onClick={() => login({ loginMethods: ['wallet'] })}
-                disabled={!ready}
+                disabled={walletBlocked}
+                aria-describedby={walletWhy ? 'wallet-why' : undefined}
                 className="w-full rounded-md border border-rule py-3 text-[14.5px] font-semibold hover:bg-sheet disabled:opacity-60"
               >
                 Connect your own wallet
               </button>
+              {walletWhy ? (
+                <p id="wallet-why" role="status" className="mt-2 text-[12.5px] text-graphite">
+                  {walletWhy}
+                </p>
+              ) : null}
               <p className="mt-6 text-[12.5px] leading-relaxed text-graphite">
                 Signing in with email creates a wallet for you. Your signature is only used when you choose to sign.
               </p>

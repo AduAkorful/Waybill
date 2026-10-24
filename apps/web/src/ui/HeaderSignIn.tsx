@@ -1,5 +1,6 @@
 'use client'
 
+import { DEV_WALLET_AUTH, DEV_WALLET_SESSION_KEY } from '@/integration/dev-wallet-flag'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -11,7 +12,7 @@ export function HeaderSignIn({ onlyWhenSignedIn = false, className }: { onlyWhen
   const [signedIn, setSignedIn] = useState(false)
   useEffect(() => {
     try {
-      setSignedIn(localStorage.getItem('privy:token') !== null)
+      setSignedIn((localStorage.getItem('privy:token') !== null || (DEV_WALLET_AUTH && localStorage.getItem(DEV_WALLET_SESSION_KEY) !== null)))
     } catch {}
   }, [])
   if (onlyWhenSignedIn && !signedIn) return null

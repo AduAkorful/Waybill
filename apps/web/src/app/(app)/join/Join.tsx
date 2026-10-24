@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { usePrivy } from '@privy-io/react-auth'
+import { usePrivy } from '@/auth'
 import { useSignOut } from '@/components/use-sign-out'
 import { useAccount } from 'wagmi'
 import { NetworkSnapshot } from '@/ui/NetworkSnapshot'

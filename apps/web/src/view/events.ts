@@ -5,6 +5,8 @@ const HASH = /^0x[0-9a-fA-F]{64}$/
 
 function bigint(value: unknown, what: string): bigint {
   if (typeof value === 'string' && /^\d+$/.test(value)) return BigInt(value)
+  // Small integer fields (uint8/uint16, e.g. supplierBps) arrive from the relayer as JSON numbers
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) return BigInt(value)
   throw new Error(`Event field ${what} is not a whole number`)
 }
 

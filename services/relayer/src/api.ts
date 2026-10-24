@@ -4,7 +4,7 @@ import type { WaybillNetwork } from '@waybill/network/networks'
 import { EvidenceError, MAX_EVIDENCE_BYTES, type EvidenceService } from './evidence-service'
 import { LabelError, type DealRange, type LabelService } from './deal-labels'
 import { TermsError, type DealTermsService } from './deal-terms'
-import type { ReadRpcProxy } from './rpc-proxy'
+import { ClientRateLimiter, type ReadRpcProxy } from './rpc-proxy'
 import { EmailError, type WalletEmailService } from './wallet-emails'
 import type { HealthResult } from './health'
 
@@ -14,6 +14,7 @@ export interface ApiRequest {
   headers?: Record<string, string | string[] | undefined>
   /** Raw request body, present only for the evidence upload route */
   body?: Uint8Array
+  socket?: { remoteAddress?: string }
 }
 
 export interface ApiResponse {
@@ -30,6 +31,10 @@ export interface WaybillApiOptions {
   indexStartBlock?: bigint
   /** Read-only chain access shared by browsers. Absent when not configured. */
   rpc?: ReadRpcProxy | null
+  /** Per-client budget for /v1/rpc; absent means unlimited (tests, scripts) */
+  rpcLimiter?: ClientRateLimiter | null
+  /** Proxies in front of this process that append to X-Forwarded-For (default 1) */
+  proxyHops?: number
   /** Exact browser origins allowed to call this API. Empty means no cross-origin access. */
   allowedOrigins?: readonly string[]
   health(): Promise<HealthResult>
@@ -147,6 +152,10 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
   const evidenceRoute = /^\/v1\/deals\/([0-9]+)\/evidence(?:\/([0-9a-fA-F-]{36}|[0-9]{1,3}))?$/.exec(url.pathname)
   const termsRoute = /^\/v1\/deals\/([0-9]+)\/terms$/.exec(url.pathname)
   if (termsRoute) return dealTerms(request, options, BigInt(termsRoute[1]!), url.searchParams.get('public') === '1')
+  if (url.pathname === '/v1/evidence/health') {
+    // lets the app check that uploads can be stored before it asks a wallet to sign
+    return options.evidence ? { status: 200, body: { ok: true } } : { status: 503, body: { error: 'evidence_unavailable' } }
+  }
   if (evidenceRoute) return evidence(request, options, BigInt(evidenceRoute[1]!), evidenceRoute[2])
   if (url.pathname === '/v1/rpc') return readRpc(request, options)
   if (url.pathname === '/v1/operator/labels') return setLabels(request, options)
@@ -240,7 +249,24 @@ async function readRpc(request: ApiRequest, options: WaybillApiOptions): Promise
   } catch {
     return { status: 400, body: { error: 'invalid_json' } }
   }
+  if (options.rpcLimiter && !options.rpcLimiter.allow(clientOf(request, options.proxyHops ?? 1), ClientRateLimiter.cost(payload))) {
+    return { status: 429, body: { error: 'rate_limited' }, headers: { 'retry-after': '30' } }
+  }
   return options.rpc.handle(payload)
+}
+
+/**
+ * Who is asking, for the rate limit. Behind proxies the last `hops` X-Forwarded-For entries were added by them, so the
+ * client is the entry just before those; anything further left was written by the client and is not trusted.
+ */
+export function clientOf(request: ApiRequest, hops: number): string {
+  const forwarded = headerValue(request, 'x-forwarded-for')
+  if (hops > 0 && forwarded) {
+    const chain = forwarded.split(',').map((s) => s.trim()).filter(Boolean)
+    const entry = chain[chain.length - hops]
+    if (entry) return entry
+  }
+  return request.socket?.remoteAddress ?? 'unknown'
 }
 
 function signedRequest(request: ApiRequest): { signer: string; signature: string; signedAt: number; files: string[] } | null {

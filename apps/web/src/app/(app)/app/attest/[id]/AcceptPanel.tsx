@@ -68,7 +68,7 @@ export function AcceptPanel({ deal, part, owner, onDone }: { deal: DealView; par
         {stage === 'ready' ? (
           <TxFlow
             confirmLabel="Accept role"
-            steps={[{ label: 'Accept this role. Moves no money.', action: encodeEscrowAction({ kind: 'acceptAttestor', dealId: deal.id, milestoneIndex: part.position }) }]}
+            steps={[{ label: 'Accept the attestor role', action: encodeEscrowAction({ kind: 'acceptAttestor', dealId: deal.id, milestoneIndex: part.position }) }]}
             onCancel={() => setStage('form')}
             onDone={() => onDone()}
           />

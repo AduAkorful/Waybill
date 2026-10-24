@@ -29,6 +29,11 @@ export interface WaybillNetworkManifest {
   /** First block at which the attestor registry has code; its event reads start here */
   attestorRegistryDeployBlock?: bigint
   arbiterListDeployBlock?: bigint
+  /**
+   * True only when this deployment's escrow lets the arbiter decide as soon as the other side responds (the 2026-10-23
+   * rule). Absent or false: decisions open only after the response window, as on the current testnet escrow.
+   */
+  earlyResolve?: boolean
 }
 
 export const ARC_TESTNET: WaybillNetworkManifest = {

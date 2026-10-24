@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { httpUpstream, ReadRpcProxy, type Upstream } from './rpc-proxy'
+import { clientOf } from './api'
+import { ClientRateLimiter, httpUpstream, ReadRpcProxy, type Upstream } from './rpc-proxy'
 import { handleApiRequest } from './api'
 
 const call = (method: string, params: unknown[] = [], id = 1) => ({ jsonrpc: '2.0', id, method, params })
@@ -35,7 +36,7 @@ describe('read-only rpc proxy', () => {
   test('only read methods are forwarded; sending a transaction is refused', async () => {
     let calls = 0
     const proxy = new ReadRpcProxy(async () => (calls++, { result: '0x' }))
-    for (const m of ['eth_sendRawTransaction', 'eth_sendTransaction', 'personal_sign', 'debug_traceCall', 'eth_getLogs']) {
+    for (const m of ['eth_sendRawTransaction', 'eth_sendTransaction', 'personal_sign', 'debug_traceCall', 'eth_newFilter', 'anvil_setBalance']) {
       const r = (await proxy.handle(call(m))).body as { error: { code: number } }
       expect(r.error.code).toBe(-32601)
     }
@@ -60,6 +61,56 @@ describe('read-only rpc proxy', () => {
     t += 30_000
     await proxy.handle(call('eth_call', [{ to: '0x1' }, '0x10']))
     expect(calls).toBe(1)
+  })
+
+  test('the reads a create preflight makes are forwarded; gas estimates and nonces are never kept', async () => {
+    let calls = 0
+    const proxy = new ReadRpcProxy(async (m) => (calls++, { result: m === 'eth_getCode' ? '0x60' : '0x5208' }))
+    const ask = async (method: string, params: unknown[]) => ((await proxy.handle({ jsonrpc: '2.0', id: 1, method, params })).body as { result?: unknown; error?: { code: number } })
+    for (const m of ['eth_estimateGas', 'eth_getTransactionCount', 'eth_gasPrice', 'eth_maxPriorityFeePerGas', 'eth_feeHistory', 'eth_getCode']) {
+      expect((await ask(m, [])).error).toBeUndefined()
+    }
+    const before = calls
+    await ask('eth_estimateGas', [{ to: '0x1' }])
+    await ask('eth_estimateGas', [{ to: '0x1' }])
+    await ask('eth_getTransactionCount', ['0x1', 'pending'])
+    await ask('eth_getTransactionCount', ['0x1', 'pending'])
+    expect(calls - before).toBe(4)
+  })
+
+  test('a call with no params field (as viem sends eth_gasPrice) is answered', async () => {
+    const proxy = new ReadRpcProxy(async () => ({ result: '0x1' }))
+    expect(((await proxy.handle({ jsonrpc: '2.0', id: 5, method: 'eth_gasPrice' })).body as { result?: unknown }).result).toBe('0x1')
+    expect(((await proxy.handle({ jsonrpc: '2.0', id: 5, method: 'eth_gasPrice', params: 'x' })).body as { error?: { code: number } }).error?.code).toBe(-32600)
+  })
+
+  test('log scans and raw storage reads are refused: the app never needs them, and they are the costly ones', async () => {
+    let calls = 0
+    const proxy = new ReadRpcProxy(async () => (calls++, { result: [] }))
+    for (const [method, params] of [['eth_getLogs', [{ fromBlock: '0x1', toBlock: '0x2' }]], ['eth_getStorageAt', ['0x1', '0x0', 'latest']]] as const) {
+      expect(((await proxy.handle({ jsonrpc: '2.0', id: 1, method, params: [...params] })).body as { error?: { code: number } }).error?.code).toBe(-32601)
+    }
+    expect(calls).toBe(0)
+  })
+
+  test('each client has its own budget per minute; heavy calls count 5 and a batch counts every call', () => {
+    let t = 0
+    const limiter = new ClientRateLimiter(10, () => t)
+    expect(ClientRateLimiter.cost([call('eth_call'), call('eth_estimateGas')])).toBe(6)
+    expect(limiter.allow('a', 6)).toBe(true)
+    expect(limiter.allow('a', 5)).toBe(false)
+    expect(limiter.allow('a', 4)).toBe(true)
+    expect(limiter.allow('b', 10)).toBe(true)
+    t += 60_000
+    expect(limiter.allow('a', 10)).toBe(true)
+  })
+
+  test('the client is read from X-Forwarded-For only as far as the trusted proxies wrote it', () => {
+    const req = (xff?: string) => ({ headers: xff ? { 'x-forwarded-for': xff } : {}, socket: { remoteAddress: '10.0.0.9' } })
+    expect(clientOf(req('6.6.6.6, 1.2.3.4'), 1)).toBe('1.2.3.4')
+    expect(clientOf(req('6.6.6.6, 1.2.3.4, 10.0.0.2'), 2)).toBe('1.2.3.4')
+    expect(clientOf(req('1.2.3.4'), 0)).toBe('10.0.0.9')
+    expect(clientOf(req(), 1)).toBe('10.0.0.9')
   })
 
   test('batches are answered in order and bounded', async () => {

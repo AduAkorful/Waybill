@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { explorerBase } from '@/integration/network'
+import { ExplorerLink } from '@/ui/ExplorerLink'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getBrowserNetwork } from '@/integration/network'
@@ -49,7 +51,7 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
   const read = await getPublicDeal(id)
   if (read.status === 'missing') notFound()
   const { deal, history } = read
-  const explorer = getBrowserNetwork().explorerUrl.replace(/\/+$/, '')
+  const explorer = explorerBase()
 
   if (!isPublic(deal)) {
     return (
@@ -119,9 +121,9 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
             <dd>{deal.panel ? deal.panel.members.map(shortAddress).join(', ') : shortAddress(deal.arbiter)}</dd>
             <dt>Escrow contract</dt>
             <dd>
-              <a className="inline-flex min-h-11 items-center underline" href={`${explorer}/address/${getBrowserNetwork().contracts.escrow}`} target="_blank" rel="noreferrer">
+              <ExplorerLink className="inline-flex min-h-11 items-center underline" href={`${explorer}/address/${getBrowserNetwork().contracts.escrow}`}>
                 {shortAddress(getBrowserNetwork().contracts.escrow)} ↗
-              </a>
+              </ExplorerLink>
             </dd>
           </dl>
           <p className="mt-4">Everything on this page is read from the escrow contract on {getBrowserNetwork().network === 'testnet' ? 'the Arc test network' : 'Arc'}. Read as of {formatDateTime(deal.chainTime)}.</p>

@@ -1,9 +1,11 @@
 'use client'
 
 import { Why } from '@/ui/Why'
+import { explorerBase } from '@/integration/network'
+import { ExplorerLink } from '@/ui/ExplorerLink'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { usePrivy } from '@privy-io/react-auth'
+import { usePrivy } from '@/auth'
 import { useSignOut } from '@/components/use-sign-out'
 import { useAccount } from 'wagmi'
 import { useReloadOnAccountChange } from '@/components/use-account-sync'
@@ -73,7 +75,7 @@ export function Operator() {
 }
 
 function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; health: Extract<Read, { kind: 'ready' }>['health']; onChanged: () => void }) {
-  const explorer = getBrowserNetwork().explorerUrl.replace(/\/+$/, '')
+  const explorer = explorerBase()
   const pct = s.chain.maxLocked === 0n ? 0 : Number((s.chain.currentLocked * 10_000n) / s.chain.maxLocked) / 100
   const states = Object.entries(s.index.dealsByState).sort(([a], [b]) => a.localeCompare(b))
   const indexed = states.reduce((n, [, v]) => n + v, 0)
@@ -180,7 +182,7 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
               <li key={`${e.block}-${e.txHash}-${e.name}`} className="flex flex-wrap justify-between gap-2 px-3 py-2.5">
                 <span>{describeChange(e.name)}</span>
                 <span className="mono text-[12px] text-graphite">
-                  {e.time === null ? `block ${String(e.block)}` : `${formatDateTime(BigInt(e.time))}`} · <a className="underline" href={`${explorer}/tx/${e.txHash}`} target="_blank" rel="noreferrer">{shortHash(e.txHash)} ↗</a>
+                  {e.time === null ? `block ${String(e.block)}` : `${formatDateTime(BigInt(e.time))}`} · <ExplorerLink className="underline" href={`${explorer}/tx/${e.txHash}`}>{shortHash(e.txHash)} ↗</ExplorerLink>
                 </span>
               </li>
             ))}

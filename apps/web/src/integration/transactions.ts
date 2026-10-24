@@ -1,7 +1,8 @@
+import { noteConfirmedBlock } from './read-client'
 import type { Hex, PublicClient, TransactionReceipt } from 'viem'
 import type { EncodedWalletAction } from './escrow'
 import { getBrowserNetwork } from './network'
-import { contractErrorName, contractErrorText, isNetworkBusy, isUserRejection, revertDataOf } from './tx-errors'
+import { contractErrorName, contractErrorText, isContractRevert, isMethodNotAllowed, isNetworkBusy, isUserRejection, revertDataOf } from './tx-errors'
 
 export type WalletErrorCode =
   | 'user_rejected'
@@ -9,6 +10,7 @@ export type WalletErrorCode =
   | 'no_account'
   | 'reverted'
   | 'rpc_error'
+  | 'config'
   | 'no_gas'
   | 'unknown'
 
@@ -41,6 +43,20 @@ function errorText(error: unknown): string {
  */
 export function classifyWalletError(error: unknown): WaybillWalletError {
   if (error instanceof WaybillWalletError) return error
+  // A refused RPC method is a setup fault on this site, not a busy network: telling people to retry would never help.
+  if (isMethodNotAllowed(error)) {
+    return new WaybillWalletError(
+      'config',
+      "This site's network connection refused a check it needs (a setup problem on our side, not a busy network), so we could not check this",
+      error,
+    )
+  }
+  // A contract revert is an answer from the chain: name it, never call it a busy network.
+  if (isContractRevert(error) && !isUserRejection(error)) {
+    const data = revertDataOf(error)
+    const name = contractErrorName(data)
+    return new WaybillWalletError('reverted', name ? contractErrorText(name) : `The contract refused it${data ? ` (error ${data.slice(0, 10)})` : ''}`, error)
+  }
   // A limit or outage comes first: some wallets relay an RPC error under a rejection code, and calling that a
   // decline would send people to retry the wrong thing.
   if (isNetworkBusy(error)) {
@@ -113,6 +129,7 @@ export async function waitForActionReceipt(
     if (receipt.status === 'reverted') {
       return { status: 'reverted', hash, receipt }
     }
+    if (typeof receipt.blockNumber === 'bigint') noteConfirmedBlock(receipt.blockNumber)
     return { status: 'success', hash, receipt }
   } catch (error) {
     return { status: 'unknown', hash, error }
@@ -131,11 +148,12 @@ export function plainError(error: unknown): string {
       return 'You declined it in your wallet. Nothing was sent. You can try again.'
     case 'rpc_error':
       return 'The network is busy or could not be reached. Nothing was sent; try again in a moment.'
+    case 'config':
     case 'reverted':
     case 'no_gas':
     case 'wrong_network':
     case 'no_account':
-      return `${classified.message}. Nothing was sent.`
+      return `${classified.message.replace(/\.+$/, '')}. Nothing was sent.`
     default:
       return error instanceof Error && error.message && !/viem@|Version:|Details:/.test(error.message) ? error.message : 'The request failed. Nothing was sent.'
   }

@@ -1,15 +1,18 @@
 'use client'
 
 import Link from 'next/link'
+import { explorerBase } from '@/integration/network'
+import { ExplorerLink } from '@/ui/ExplorerLink'
 import { useState } from 'react'
 import { useSignMessage } from 'wagmi'
 import { saveTerms } from '@/integration/terms'
 import { plainError } from '@/integration/transactions'
-import { shortAddress } from '@/view/format'
+import { shortAddress, shortHash } from '@/view/format'
+import { getBrowserNetwork } from '@/integration/network'
 import type { DealTerms } from '@/view/types'
 
 /** After creation: the supplier's link, ready to send. The link only opens the deal; accepting needs the supplier's own wallet. */
-export function ShareDeal({ dealId, supplier, buyer, terms, isPublic }: { dealId: bigint; supplier: string; buyer: string; terms: DealTerms | null; isPublic: boolean }) {
+export function ShareDeal({ dealId, txHash = null, supplier, buyer, terms, isPublic }: { dealId: bigint; txHash?: string | null; supplier: string; buyer: string; terms: DealTerms | null; isPublic: boolean }) {
   const [copied, setCopied] = useState(false)
   const { signMessageAsync } = useSignMessage()
   const [saved, setSaved] = useState<{ kind: 'todo' } | { kind: 'working' } | { kind: 'done' } | { kind: 'error'; message: string }>({ kind: 'todo' })
@@ -37,6 +40,12 @@ export function ShareDeal({ dealId, supplier, buyer, terms, isPublic }: { dealId
   return (
     <main className="max-w-xl px-4 py-12 md:px-8">
       <p className="label">Deal {String(dealId)} created</p>
+      {txHash ? (
+        <p data-created-tx className="mt-1 text-[12.5px] text-graphite">
+          Recorded on Arc in transaction{' '}
+          <ExplorerLink className="mono underline" href={`${explorerBase()}/tx/${txHash}`}>{shortHash(txHash as `0x${string}`)} ↗</ExplorerLink>
+        </p>
+      ) : null}
       <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">Send this link to your supplier</h1>
       <p className="mt-2 text-[14px] leading-relaxed text-graphite">
         They review the terms and accept with the wallet <span className="mono">{shortAddress(supplier)}</span>. Everyone you named must accept before you can fund. Nothing is locked yet.

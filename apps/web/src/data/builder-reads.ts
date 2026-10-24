@@ -126,7 +126,11 @@ export function useAttestorChoices(): { attestors: Attestor[]; note: string | nu
     try {
       createWaybillApiClient(loadBrowserApiBaseUrl())
         .getAttestors()
-        .then((raw) => !cancelled && setState({ attestors: parseAttestors(raw).filter((a) => a.status !== 'suspended'), note: null }))
+        .then((raw) => {
+          if (cancelled) return
+          const attestors = parseAttestors(raw).filter((a) => a.status !== 'suspended')
+          setState({ attestors, note: attestors.length ? null : 'No approved attestors on this network yet. Paste an attestor wallet address.' })
+        })
         .catch((e) => !cancelled && setState({ attestors: [], note: `The attestor directory is unavailable: ${e instanceof Error ? e.message : String(e)}` }))
     } catch {
       setState({ attestors: [], note: 'The attestor directory is not configured on this site.' })

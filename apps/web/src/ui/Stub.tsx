@@ -3,6 +3,7 @@ import { reviewEnds } from "@/view/derive";
 import { confirmationText, footerText, trancheName } from "@/view/labels";
 import { tornTop } from "@/view/tear";
 import type { MilestoneState, Tranche } from "@/view/types";
+import { outcomeText, outcomeWord, type PartOutcome } from "@/view/outcome";
 import { Stamp } from "./Stamp";
 
 export type Lang = "en" | "zh";
@@ -42,7 +43,10 @@ export function Stub({
   action,
   quiet = false,
   className = "",
+  outcome = null,
 }: {
+  /** The arbiter's or panel's decision on a resolved part, when its event was read */
+  outcome?: PartOutcome | null;
   t: Tranche;
   /** Torn-edge seed; the same deal and stub always tear the same way */
   seed: string;
@@ -57,7 +61,8 @@ export function Stub({
   const p: StubPose = pose ?? (t.state === "released" || t.state === "refunded" ? "torn" : "attached");
   const torn = p !== "attached";
   const zh = lang === "zh";
-  const word = stateWord[t.state];
+  const decided = t.state === "resolved" && outcome ? outcome : null;
+  const word = decided ? { en: outcomeWord(decided), zh: outcomeWord(decided, true) } : stateWord[t.state];
   const wash =
     t.state === "released"
       ? "bg-released-wash"
@@ -106,7 +111,9 @@ export function Stub({
           <span className="condensed text-[12px] font-semibold text-graphite">USDC</span>
         </p>
 
-        <p className="mt-3 text-[12.5px] leading-snug text-graphite">{confirmationText(t, lang)}</p>
+        {t.state === "resolved" || t.state === "released" || t.state === "refunded" ? null : (
+          <p className="mt-3 text-[12.5px] leading-snug text-graphite">{confirmationText(t, lang)}</p>
+        )}
 
         <footer className={`mt-auto pt-4 ${t.state === "released" || t.state === "refunded" || t.state === "disputed" ? "pr-16" : ""}`}>
           {action ??
@@ -115,7 +122,7 @@ export function Stub({
             ) : t.state === "refunded" ? (
               <p className="text-[12px] text-graphite">{footerText.refunded[lang]}</p>
             ) : t.state === "resolved" ? (
-              <p className="text-[12px] text-graphite">{footerText.resolved[lang]}</p>
+              <p data-outcome={decided?.kind} className="text-[12px] text-graphite">{decided ? outcomeText(decided, zh) : footerText.resolved[lang]}</p>
             ) : t.state === "disputed" ? (
               <p className="text-[12px] text-hold">{footerText.disputed[lang]}</p>
             ) : ends !== null ? (

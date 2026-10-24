@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { earlyResolve, explorerBase } from '@/integration/network'
+import { ExplorerLink } from '@/ui/ExplorerLink'
 import { useState } from 'react'
 import { useAccount } from 'wagmi'
 import { useDeal } from '@/data/use-deal'
@@ -16,7 +18,8 @@ import { TxFlow } from '@/ui/TxFlow'
 import { formatAmount, formatDateTime, shortAddress, shortHash } from '@/view/format'
 import { describeVote, isArbiterOf, panelAccepted, panelOutcome, panelStanding } from '@/view/panel'
 import { disputeStage } from '@/view/room'
-import { describeEvent } from '@/view/timeline'
+import { historyRows } from '@/view/timeline'
+import { outcomeText, partOutcome } from '@/view/outcome'
 import type { DealView, Tranche } from '@/view/types'
 import { DecidePanel } from './DecidePanel'
 
@@ -30,7 +33,7 @@ export function RoomScreen({ idText }: { idText: string }) {
   const read = useDeal(id, refresh)
   const { address } = useAccount()
   const [dialog, setDialog] = useState<Dialog>(null)
-  const explorer = getBrowserNetwork().explorerUrl.replace(/\/+$/, '')
+  const explorer = explorerBase()
   const done = () => {
     setDialog(null)
     setRefresh((n) => n + 1)
@@ -55,7 +58,7 @@ export function RoomScreen({ idText }: { idText: string }) {
       <Link href={who === 'buyer' ? `/app/deals/${d.id}` : who === 'supplier' ? `/d/${d.id}` : '/app/arbiter'} className="text-[12.5px] text-graphite">← Back</Link>
       <p className="label mt-4">{needsAccept ? 'Invitation' : 'Dispute room'} · deal {String(d.id)}</p>
       <h1 className="mt-1 text-[26px] leading-tight font-semibold tracking-tight md:text-[30px]">
-        {needsAccept ? (d.panel ? 'You are invited to the arbiter panel' : 'You are invited to be the arbiter') : decided.length === 0 ? 'Nothing is disputed' : `${decided.filter((t) => t.state === 'disputed').length} open, ${decided.filter((t) => t.state === 'resolved').length} decided`}
+        {needsAccept ? (d.panel ? 'You are invited to the arbiter panel' : 'You are invited to be the arbiter') : decided.length === 0 ? (who === 'arbiter' ? 'Role accepted. Nothing is disputed yet' : 'Nothing is disputed') : `${decided.filter((t) => t.state === 'disputed').length} open, ${decided.filter((t) => t.state === 'resolved').length} decided`}
       </h1>
       <p className="mt-1 text-[13.5px] text-graphite">
         You are {who === 'arbiter' && d.panel ? 'on the panel' : `the ${who}`}. Buyer <span className="mono">{shortAddress(d.buyer)}</span> · supplier <span className="mono">{shortAddress(d.supplier)}</span> · {d.panel ? 'panel' : 'arbiter'} <span className="mono">{d.panel ? d.panel.members.map(shortAddress).join(', ') : shortAddress(d.arbiter)}</span>
@@ -106,10 +109,13 @@ export function RoomScreen({ idText }: { idText: string }) {
 
 function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { deal: DealView; part: Tranche; who: Exclude<Who, null>; owner: `0x${string}`; explorer: string; setDialog: (d: Dialog) => void; onDone: () => void }) {
   const open = part.state === 'disputed'
-  const stage = disputeStage(part, deal.chainTime)
+  const early = earlyResolve()
+  const stage = disputeStage(part, deal.chainTime, early)
   const raiser = part.disputeRaiser && part.disputeRaiser.toLowerCase() === deal.buyer.toLowerCase() ? 'buyer' : 'supplier'
   const iRaised = who === raiser
-  const events = (deal.events ?? []).filter((e) => e.position === part.position && /^Dispute|^Tranche(Split|Refunded)|DefaultApplied/.test(e.name))
+  const events = (deal.events ?? []).filter((e) => e.position === part.position && /^Dispute|^Tranche(Split|Refunded|Claimed)|DefaultApplied|^Panel(VoteCast|Resolved)/.test(e.name))
+  const rows = historyRows(events)
+  const historyNote = 'The dispute history could not be read from the relayer right now. The part\'s state above is read from the escrow.'
 
   return (
     <section aria-label={`Part ${part.index}`} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -125,8 +131,8 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
 
         {open ? (
           <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-rule bg-rule text-[13px] sm:grid-cols-3">
-            <Clock label="Other side may respond until" value={part.responseDeadline} active={stage === 'response_open'} />
-            <Clock label="Arbiter decides by" value={part.arbiterDeadline} active={stage === 'decision_open'} />
+            <Clock label={part.responseSubmitted ? 'Response window (answered early)' : 'Other side may respond until'} value={part.responseDeadline} active={stage === 'response_open'} />
+            <Clock label={stage === 'decision_open' ? 'Arbiter can decide now · deadline' : 'Arbiter decides by'} value={part.arbiterDeadline} active={stage === 'decision_open'} />
             <div className="bg-sheet px-3 py-2.5">
               <dt className="label">Response</dt>
               <dd className="mt-0.5 text-[13.5px]">{part.responseSubmitted ? 'Filed' : stage === 'response_open' ? 'Not yet' : 'None was filed'}</dd>
@@ -143,14 +149,16 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
 
         <div>
           <h2 className="label mb-2">History</h2>
-          {events.length === 0 ? <p className="text-[13px] text-graphite">No dispute events indexed yet.</p> : (
+          {deal.events === undefined ? (
+            <p className="text-[13px] text-graphite">{historyNote}</p>
+          ) : rows.length === 0 ? <p className="text-[13px] text-graphite">No dispute events indexed yet.</p> : (
             <ol className="space-y-2 text-[13px]">
-              {events.map((e) => (
-                <li key={`${e.blockNumber}-${e.logIndex}`}>
-                  {describeEvent(e)}
+              {rows.map(({ key, first: e, text }) => (
+                <li key={key}>
+                  {text}
                   <span className="mono ml-2 text-[12px] text-graphite">
                     {e.time === null ? 'time unknown' : `${formatDateTime(e.time)}`} ·{' '}
-                    <a className="underline" href={`${explorer}/tx/${e.txHash}`} target="_blank" rel="noreferrer">{shortHash(e.txHash)} ↗</a>
+                    <ExplorerLink className="underline" href={`${explorer}/tx/${e.txHash}`}>{shortHash(e.txHash)} ↗</ExplorerLink>
                   </span>
                 </li>
               ))}
@@ -161,7 +169,14 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
 
       <aside className="lg:sticky lg:top-20 lg:self-start">
         {!open ? (
-          <div role="status" className="rounded-md border border-rule bg-sheet p-4 text-[14px]">This part has been decided.</div>
+          <div role="status" data-decided className="rounded-md border border-rule bg-sheet p-4 text-[14px]">
+            <p className="font-semibold">This part has been decided</p>
+            {(() => {
+              const o = partOutcome(deal, part)
+              return o ? <p className="mt-1">{deal.panel ? outcomeText(o).replace(/^Arbiter/, 'The panel') : outcomeText(o)}</p> : null
+            })()}
+            <p className="mt-2 text-[12.5px] text-graphite">The written reasoning is in Files and notes (decision-reasoning.txt), where both sides can read it.</p>
+          </div>
         ) : stage === 'deadline_passed' ? (
           <div role="status" className="rounded-md border border-hold/50 bg-hold-wash p-4">
             <p className="text-[15px] font-semibold">The arbiter&apos;s deadline has passed</p>
@@ -171,8 +186,12 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
         ) : who === 'arbiter' ? (
           stage === 'response_open' ? (
             <div role="status" className="rounded-md border border-rule bg-sheet p-4 text-[13.5px]">
-              <p className="font-semibold">The other side is still within their response window</p>
-              <p className="mt-1 text-graphite">You can decide from {formatDateTime(part.responseDeadline + 1n)}, once it closes.</p>
+              <p className="font-semibold">Waiting for the other side to respond</p>
+              <p className="mt-1 text-graphite">
+                {early
+                  ? `If no reply, you can decide after ${formatDateTime(part.responseDeadline)}. If they respond sooner, you can decide straight away.`
+                  : `You can decide after ${formatDateTime(part.responseDeadline)}, when the window to respond ends${part.responseSubmitted ? ' (they have already responded)' : ''}.`}
+              </p>
             </div>
           ) : deal.arbiterAccepted ? (
             <DecidePanel deal={deal} part={part} owner={owner} onDone={onDone} />
@@ -185,7 +204,7 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
               <button type="button" onClick={() => setDialog({ kind: 'respond', t: part })} className="w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet">Respond to the dispute</button>
             ) : null}
             <button type="button" onClick={() => setDialog({ kind: 'append', t: part })} className="w-full rounded-md border border-rule py-2.5 text-[14px] font-semibold">Add evidence</button>
-            <p className="text-[12px] text-graphite">{stage === 'response_open' ? 'The arbiter decides after the response window closes.' : 'The window to respond has closed. The arbiter is deciding.'}</p>
+            <p className="text-[12px] text-graphite">{part.responseSubmitted && stage === 'decision_open' ? 'The other side has responded, so the arbiter can decide now.' : part.responseSubmitted ? `The other side has responded. The arbiter can decide after ${formatDateTime(part.responseDeadline)}.` : stage === 'response_open' ? `If no reply, the arbiter can decide after ${formatDateTime(part.responseDeadline)}.` : 'The window to respond has closed. The arbiter is deciding.'}</p>
           </div>
         )}
       </aside>

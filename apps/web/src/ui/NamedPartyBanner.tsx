@@ -9,6 +9,18 @@ import type { DealView } from '@/view/types'
 export function NamedPartyBanner({ deal, wallet }: { deal: DealView; wallet: `0x${string}` }) {
   const asAttestor = needsFrom('attestor', deal, wallet) === 'Accept'
   const asArbiter = needsFrom('arbiter', deal, wallet) === 'Accept'
+  const toSign = needsFrom('attestor', deal, wallet) === 'Sign'
+  const attestorAnywhere = deal.tranches.some((t) => t.attestors.some((a) => a.toLowerCase() === wallet.toLowerCase()))
+  if (!asAttestor && !asArbiter && attestorAnywhere) {
+    // an attestor who has accepted still needs a way to the one page where they sign
+    return (
+      <div role="status" data-attestor-link className="mt-4 rounded-md border border-held/50 bg-sheet px-4 py-3">
+        <p className="text-[14.5px] font-semibold">You are an attestor on deal {String(deal.id)}</p>
+        <p className="mt-1 text-[13px] text-graphite">{toSign ? 'A part is waiting for your signed confirmation.' : 'Your attestor page shows what you confirmed and what is left.'}</p>
+        <Link href={`/app/attest/${deal.id}`} className="mt-2 inline-block rounded-md bg-held px-3.5 py-2 text-[13.5px] font-semibold text-sheet">{toSign ? 'Open the attestor page and sign' : 'Open the attestor page'}</Link>
+      </div>
+    )
+  }
   if (!asAttestor && !asArbiter) return null
   return (
     <div role="status" className="mt-4 rounded-md border border-held/50 bg-sheet px-4 py-3">

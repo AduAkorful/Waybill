@@ -36,7 +36,7 @@ export function evidenceMessage(input: {
     `chain: ${input.chainId}`,
     `escrow: ${input.escrow.toLowerCase()}`,
     `deal: ${input.dealId}`,
-    `part: ${input.part === null ? 'all' : input.part}`,
+    `part: ${input.part === null ? 'all' : `${input.part + 1} (index ${input.part})`}`,
     `files: ${input.files.map((f) => f.toLowerCase()).join(',')}`,
     `signed: ${input.signedAt}`,
   ].join('\n')
@@ -82,19 +82,32 @@ export async function uploadEvidence(input: {
   const base = loadBrowserApiBaseUrl()
   const fetcher = input.fetcher ?? fetch
   const digests = input.files.map((f) => f.sha256)
-  const signedAt = (input.now ?? (() => Math.floor(Date.now() / 1000)))()
-  const signature = await input.sign(
-    evidenceMessage({
-      network: network.network,
-      chainId: network.chainId,
-      escrow: network.contracts.escrow,
-      dealId: input.dealId,
-      action: 'upload',
-      signedAt,
-      part: input.part,
-      files: digests,
-    }),
-  )
+  const now = input.now ?? (() => Math.floor(Date.now() / 1000))
+  // check storage first, so nobody signs for an upload that cannot be stored
+  await assertEvidenceAvailable(base, fetcher)
+  const key = [network.network, network.chainId, input.dealId, input.part, input.signer.toLowerCase(), ...digests.map((d) => d.toLowerCase())].join(':')
+  const held = uploadSignatures.get(key)
+  let signedAt: number
+  let signature: Hex
+  if (held && now() - held.signedAt < UPLOAD_SIGNATURE_REUSE_SECONDS) {
+    // a retry of the same files: the earlier signature is still valid, so the wallet is not asked again
+    ;({ signedAt, signature } = held)
+  } else {
+    signedAt = now()
+    signature = await input.sign(
+      evidenceMessage({
+        network: network.network,
+        chainId: network.chainId,
+        escrow: network.contracts.escrow,
+        dealId: input.dealId,
+        action: 'upload',
+        signedAt,
+        part: input.part,
+        files: digests,
+      }),
+    )
+    uploadSignatures.set(key, { signedAt, signature })
+  }
   for (const file of input.files) {
     const response = await fetcher(`${base}/v1/deals/${input.dealId}/evidence/${input.part}`, {
       method: 'POST',
@@ -116,14 +129,34 @@ export async function uploadEvidence(input: {
       } catch {
         // keep the status-based code
       }
+      if (response.status === 401) uploadSignatures.delete(key)
       throw new EvidenceUploadError(code, response.status)
     }
   }
+  uploadSignatures.delete(key)
   return evidenceCommitment(digests)
 }
 
+/** The relayer accepts a signature for 10 minutes; reuse it for 9 so a slow retry never sends one about to lapse. */
+const UPLOAD_SIGNATURE_REUSE_SECONDS = 9 * 60
+const uploadSignatures = new Map<string, { signedAt: number; signature: Hex }>()
+
+/**
+ * Asks the relayer whether evidence can be stored. Only a clear "unavailable" stops the upload; if the check itself
+ * cannot be made, the upload goes ahead and the upload's own answer decides.
+ */
+export async function assertEvidenceAvailable(base = loadBrowserApiBaseUrl(), fetcher: typeof fetch = fetch): Promise<void> {
+  let response: Response
+  try {
+    response = await fetcher(`${base}/v1/evidence/health`, { method: 'GET' })
+  } catch {
+    return
+  }
+  if (response.status === 503) throw new EvidenceUploadError('evidence_unavailable', 503)
+}
+
 const MESSAGES: Record<string, string> = {
-  evidence_unavailable: "This site's evidence storage is not set up yet, so a dispute cannot be filed.",
+  evidence_unavailable: 'Evidence uploads are not available on this site right now, so a dispute cannot be filed yet. Please try again later.',
   not_a_party: 'This wallet is not named in the deal.',
   signature_expired: 'The signature took too long. Try again.',
   file_too_large: 'A file is larger than 10 MB.',

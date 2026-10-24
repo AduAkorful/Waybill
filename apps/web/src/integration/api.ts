@@ -1,5 +1,6 @@
 import type { WaybillNetwork, WaybillNetworkManifest } from '@waybill/network/networks'
 import { publicEnvironment } from './env'
+import { resolveSameOrigin } from './same-origin'
 import { getBrowserNetwork } from './network'
 
 export type BrowserApiEnvironment = Record<string, string | undefined>
@@ -7,8 +8,9 @@ export type BrowserApiEnvironment = Record<string, string | undefined>
 export function loadBrowserApiBaseUrl(
   environment: BrowserApiEnvironment = publicEnvironment(),
 ): string {
-  const value = environment.NEXT_PUBLIC_WAYBILL_API_BASE_URL?.trim()
-  if (!value) throw new Error('Missing required environment variable: NEXT_PUBLIC_WAYBILL_API_BASE_URL')
+  const raw = environment.NEXT_PUBLIC_WAYBILL_API_BASE_URL?.trim()
+  if (!raw) throw new Error('Missing required environment variable: NEXT_PUBLIC_WAYBILL_API_BASE_URL')
+  const value = resolveSameOrigin(raw, 'NEXT_PUBLIC_WAYBILL_API_BASE_URL')
 
   let url: URL
   try {

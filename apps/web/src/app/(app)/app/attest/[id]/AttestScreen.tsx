@@ -54,7 +54,7 @@ function PartSection({ deal, part, owner, onDone }: { deal: DealView; part: Tran
   const ends = reviewEnds(part)
   let action: React.ReactNode
   if (deal.state === 'proposed' && !part.attestorAccepted) action = <AcceptPanel deal={deal} part={part} owner={owner} onDone={onDone} />
-  else if (deal.state === 'proposed' || deal.state === 'accepted') action = <Info tone="released" title="You accepted this role." body="We will see the deal funded on the chain. Don't inspect before then." />
+  else if (deal.state === 'proposed' || deal.state === 'accepted') action = <Info tone="released" title="You accepted this role." body="Nothing to inspect yet. This page shows the inspection once the buyer funds the deal." />
   else if (deal.state === 'cancelled') action = <Info title="This deal was cancelled before it was funded." />
   else if (part.state === 'waiting' || part.state === 'overdue') {
     action = part.attested || hasSigned(deal.events, part.position, owner) ? <Info tone="released" title="Your confirmation is recorded." body={`${part.attestCount} of ${part.threshold} attestors have signed.`} /> : <WorkPanel deal={deal} part={part} owner={owner} onDone={onDone} />
@@ -72,7 +72,7 @@ function PartSection({ deal, part, owner, onDone }: { deal: DealView; part: Tran
           {[
             ['This part', `${formatAmount(part.amount)} USDC`],
             ['Due', `${formatDateTime(part.deadline)}`],
-            ['Buyer’s review', `${Math.round(part.reviewWindow / 3600)} h after signing`],
+            ['Buyer’s review', `${part.reviewWindow} h after signing`],
           ].map(([k, v]) => (
             <div key={k} className="bg-sheet px-3 py-2.5">
               <dt className="label">{k}</dt>

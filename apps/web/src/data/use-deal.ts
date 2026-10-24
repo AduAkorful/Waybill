@@ -11,10 +11,10 @@ import type { DealView } from '@/view/types'
 
 /** How often an open deal is read again. Changes between reads animate; it is not a business value. */
 const REREAD_MS = 30_000
-/** After a transaction the first read waits a moment so the shared read cache cannot hand back the old state. */
-const AFTER_TX_MS = 2_600
+/** After a transaction the first read goes almost at once: reads are pinned to the confirmed block (read-client), so the shared cache cannot hand back the old state. */
+const AFTER_TX_MS = 400
 /** and twice more, because the shared cache can still hold the old state on the first look */
-const AFTER_TX_AGAIN_MS = [7_000, 15_000]
+const AFTER_TX_AGAIN_MS = [4_000, 12_000]
 
 /** The last good read of each deal in this visit, shown at once while a fresh read runs. Memory only. */
 const lastRead = new Map<string, { deal: DealView; history: HistoryStatus }>()

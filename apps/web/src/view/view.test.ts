@@ -83,7 +83,12 @@ describe('arbiter splits', () => {
   test('rejects malformed rows instead of showing part of a history', () => {
     expect(() => parseDealEvents({})).toThrow()
     expect(() => parseDealEvents([{ ...rows[0], transactionHash: '0x12' }])).toThrow('transaction hash')
-    expect(() => parseDealEvents([{ ...rows[0], blockNumber: 5 }])).toThrow('blockNumber')
+    expect(() => parseDealEvents([{ ...rows[0], blockNumber: 5.5 }])).toThrow('blockNumber')
+    expect(() => parseDealEvents([{ ...rows[0], blockNumber: -1 }])).toThrow('blockNumber')
+  })
+
+  test('accepts whole numbers sent as JSON numbers, as the relayer does for supplierBps', () => {
+    expect(() => parseDealEvents([{ ...rows[0], blockNumber: 5 }])).not.toThrow()
   })
 
   test('counts a split part once its event is known, matching the contract', () => {
@@ -188,6 +193,13 @@ describe('inbox', () => {
     expect(needsFrom('arbiter', d(91n), wallet)).toBeNull()
   })
 
+  test('arbiter on testnet (no early rule): a response does not ask for a decision before the window ends', () => {
+    const d = (now: bigint) => deal({ arbiter: wallet, chainTime: now }, [tranche({ state: 'disputed', responseSubmitted: true, responseDeadline: 50n, arbiterDeadline: 90n })])
+    expect(needsFrom('arbiter', d(10n), wallet)).toBeNull()
+    expect(needsFrom('arbiter', d(51n), wallet)).toBe('Decide')
+    expect(needsFrom('arbiter', d(91n), wallet)).toBeNull()
+  })
+
   test('arbiter: accepts a proposed deal once', () => {
     const d = (accepted: boolean) => deal({ state: 'proposed', arbiter: wallet, arbiterAccepted: accepted }, [tranche({})])
     expect(needsFrom('arbiter', d(false), wallet)).toBe('Accept')
@@ -216,12 +228,26 @@ describe('arbiter list', () => {
 })
 
 describe('dispute room', () => {
-  const p = { responseDeadline: 100n, arbiterDeadline: 200n }
+  const p = { responseDeadline: 100n, arbiterDeadline: 200n, responseSubmitted: false }
   test('stages follow the escrow clocks', () => {
-    expect(disputeStage(p, 100n)).toBe('response_open')
-    expect(disputeStage(p, 101n)).toBe('decision_open')
-    expect(disputeStage(p, 200n)).toBe('decision_open')
-    expect(disputeStage(p, 201n)).toBe('deadline_passed')
+    for (const early of [false, true]) {
+      expect(disputeStage(p, 100n, early)).toBe('response_open')
+      expect(disputeStage(p, 101n, early)).toBe('decision_open')
+      expect(disputeStage(p, 200n, early)).toBe('decision_open')
+      expect(disputeStage(p, 201n, early)).toBe('deadline_passed')
+    }
+  })
+  test('with the early rule, a response opens decisions straight away, up to the reset arbiter deadline', () => {
+    const r = { responseDeadline: 100n, arbiterDeadline: 150n, responseSubmitted: true }
+    expect(disputeStage(r, 1n, true)).toBe('decision_open')
+    expect(disputeStage(r, 150n, true)).toBe('decision_open')
+    expect(disputeStage(r, 151n, true)).toBe('deadline_passed')
+  })
+  test('without the early rule (the current testnet escrow), a response does not open decisions before the window ends', () => {
+    const r = { responseDeadline: 100n, arbiterDeadline: 200n, responseSubmitted: true }
+    expect(disputeStage(r, 1n, false)).toBe('response_open')
+    expect(disputeStage(r, 100n, false)).toBe('response_open')
+    expect(disputeStage(r, 101n, false)).toBe('decision_open')
   })
   test('a split never creates or loses a unit', () => {
     expect(splitPrincipal(1_000_001n, 6_000)).toEqual({ supplier: 600_000n, buyer: 400_001n })

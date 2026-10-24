@@ -5,6 +5,7 @@ import { parseEvidenceKey } from './evidence-crypto'
 import { EvidenceService } from './evidence-service'
 import { DualEvidenceStorage } from './evidence-storage'
 import type { EvidencePointer, EvidencePointerInput } from './evidence-store'
+import { assertLocalEvidenceAllowed, LocalDirObjectStore, LocalPinner } from './evidence-local'
 import { PinataPinner } from './pinata'
 import { S3ObjectStore } from './s3'
 
@@ -31,6 +32,26 @@ export function loadEvidenceService(
   },
   fetcher: typeof fetch = fetch,
 ): EvidenceService | null {
+  const localDir = environment.WAYBILL_EVIDENCE_LOCAL_DIR?.trim()
+  if (localDir) {
+    // dev fork only: local disk in place of S3 and Pinata, still encrypted with the evidence key
+    assertLocalEvidenceAllowed(network.rpcUrl, environment as { NODE_ENV?: string })
+    const rawKey = environment.WAYBILL_EVIDENCE_KEY?.trim()
+    if (!rawKey) throw new Error('WAYBILL_EVIDENCE_LOCAL_DIR needs WAYBILL_EVIDENCE_KEY')
+    const objectStore = new LocalDirObjectStore(localDir)
+    const storage = new DualEvidenceStorage(objectStore, new LocalPinner(), {
+      sha256: async (bytes) => `0x${createHash('sha256').update(bytes).digest('hex')}`,
+    })
+    return new EvidenceService({
+      context: (dealId) => ({ network: network.network, chainId: network.chainId, escrow: network.contracts.escrow, dealId }),
+      key: parseEvidenceKey(rawKey),
+      storage,
+      objectStore,
+      pointers: deps.pointers,
+      isDealParty: deps.isDealParty,
+      network: network.network,
+    })
+  }
   const set = NAMES.filter((n) => environment[n]?.trim())
   if (set.length === 0) return null
   const missing = NAMES.filter((n) => !environment[n]?.trim())

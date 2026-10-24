@@ -1,4 +1,4 @@
-import { buyerFee, heldFor, isClosed, refundedFor, releasedFor, resolvedParts, fundingTotal } from "@/view/derive";
+import { buyerFee, heldFor, isClosed, refundedFor, releasedFor, resolvedParts, fundingTotal, unknownSplitParts } from "@/view/derive";
 import { formatAmount, toCents } from "@/view/format";
 import { trancheName } from "@/view/labels";
 import type { DealView } from "@/view/types";
@@ -26,10 +26,10 @@ export function Ledger({ deal, voice = "buyer" }: { deal: DealView; voice?: "buy
   const released = releasedFor(deal);
   const refunded = refundedFor(deal);
   const size = toCents(fundingTotal(deal));
-  const decided = resolvedParts(deal).length;
+  const decided = unknownSplitParts(deal).length;
   const open = deal.tranches.filter((t) => !isClosed(t));
   const feesHeld = open.reduce((s, t) => s + buyerFee(t, deal.feePayer), 0n);
-  const arbiterHeld = decided === 0 && deal.state === "funded";
+  const arbiterHeld = resolvedParts(deal).length === 0 && deal.state === "funded";
 
   return (
     <section aria-label="Where the money is" className="@container">
@@ -59,10 +59,11 @@ export function Ledger({ deal, voice = "buyer" }: { deal: DealView; voice?: "buy
             deal.state === "funded" ? "Nothing is held." : deal.state === "settled" ? "Nothing is held. Every part has a final fate." : "Nothing is locked."
           ) : (
             <>
-              Held includes {formatAmount(feesHeld)} in fees{arbiterHeld ? ` and the ${formatAmount(deal.arbiterFee)} arbiter fee ${you ? "you" : "the buyer"} prepaid` : ""}.
+              Held is {formatAmount(open.reduce((s, t) => s + t.amount, 0n))} USDC of open parts{feesHeld > 0n ? ` plus the ${formatAmount(feesHeld)} fee prepaid on them` : ""}{arbiterHeld ? ` and the ${formatAmount(deal.arbiterFee)} arbiter fee ${you ? "you" : "the buyer"} prepaid` : ""}.
             </>
           )}
-          {decided > 0 ? ` The split on ${decided} arbiter-decided part${decided > 1 ? "s" : ""} is not in these figures.` : ""}
+          {refunded > 0n && deal.tranches.some((t) => buyerFee(t, deal.feePayer) > 0n) ? ` Refunded includes the fee prepaid on refunded parts.` : ""}
+          {decided > 0 ? ` How the arbiter decided ${decided} part${decided > 1 ? "s" : ""} is not yet in these figures.` : ""}
         </p>
       </div>
       {[released, held, refunded].some((v) => v % 10_000n !== 0n) ? (

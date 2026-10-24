@@ -23,7 +23,7 @@ describe('evidence client', () => {
         'chain: 5042002',
         'escrow: 0xabcdef0000000000000000000000000000000001',
         'deal: 279',
-        'part: 0',
+        'part: 1 (index 0)',
         'files: 0xaa,0xbb',
         'signed: 1800000000',
       ].join('\n'),
@@ -53,6 +53,7 @@ describe('evidence client', () => {
       sign: async () => (signs++, '0x1234'),
       now: () => 1_800_000_000,
       fetcher: (async (url: string, init: RequestInit) => {
+        if (url.endsWith('/v1/evidence/health')) return new Response('{"ok":true}', { status: 200 })
         calls.push({ url, headers: init.headers as Record<string, string> })
         return new Response('{}', { status: 201 })
       }) as unknown as typeof fetch,
@@ -62,6 +63,27 @@ describe('evidence client', () => {
     expect(calls[0]!.headers['x-waybill-files']).toBe(`${a.sha256},${b.sha256}`)
     expect(calls[0]!.headers['x-waybill-file-name']).toBe('a%20b.pdf')
     expect(commitment).toBe(evidenceCommitment([a.sha256, b.sha256]))
+  })
+
+  test('checks storage before signing, and a retry reuses a still-valid signature', async () => {
+    process.env.NEXT_PUBLIC_WAYBILL_API_BASE_URL = 'http://localhost:3001'
+    process.env.NEXT_PUBLIC_WAYBILL_NETWORK = 'testnet'
+    const f = { name: 'r', mimeType: 'text/plain', bytes: new Uint8Array([9]), sha256: await sha256Hex(new Uint8Array([9])) }
+    let signs = 0
+    const base = { dealId: 6n, part: 0, signer: '0x00000000000000000000000000000000000000bb', files: [f], sign: async () => (signs++, '0x99' as const) }
+    const down = (async () => new Response('{"error":"evidence_unavailable"}', { status: 503 })) as unknown as typeof fetch
+    await expect(uploadEvidence({ ...base, fetcher: down })).rejects.toMatchObject({ code: 'evidence_unavailable' })
+    expect(signs).toBe(0)
+    let t = 1_800_000_000
+    let uploads = 0
+    const flaky = (async (url: string) => {
+      if (url.endsWith('/health')) return new Response('{}', { status: 200 })
+      return ++uploads === 1 ? new Response('{"error":"evidence_unavailable"}', { status: 503 }) : new Response('{}', { status: 201 })
+    }) as unknown as typeof fetch
+    await expect(uploadEvidence({ ...base, fetcher: flaky, now: () => t })).rejects.toMatchObject({ code: 'evidence_unavailable' })
+    t += 60
+    await uploadEvidence({ ...base, fetcher: flaky, now: () => t })
+    expect(signs).toBe(1)
   })
 
   test('a refused upload stops and reports the code', async () => {

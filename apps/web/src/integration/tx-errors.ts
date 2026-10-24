@@ -37,7 +37,7 @@ const CONTRACT_ERROR_TEXT: Record<string, string> = {
   NotDisputeResponder: 'Only the other side of the dispute can respond.',
   ResponseWindowClosed: 'The time to respond has ended.',
   ResponseAlreadySubmitted: 'A response was already filed.',
-  ResponseWindowOpen: 'The other side can still respond, so it cannot be decided yet.',
+  ResponseWindowOpen: 'The window for the other side to respond has not ended yet, so it cannot be decided yet.',
   EvidenceHashZero: 'Add at least one file or note first.',
   NotBuyerRaisedDispute: 'Only the buyer who raised the dispute can withdraw it.',
   DisputeAlreadyWithdrawn: 'The dispute is no longer open.',
@@ -49,6 +49,28 @@ const CONTRACT_ERROR_TEXT: Record<string, string> = {
   ZeroAddressProposal: 'That address is not allowed.',
   InvalidDependsOn: 'That part depends on a part that is not ready.',
   InvalidVoteEncoding: 'That vote is not valid.',
+  // createDeal validation, so a create preflight names the actual problem
+  SupplierZeroAddress: 'The supplier wallet is missing.',
+  BuyerRefundZeroAddress: 'The refund wallet is missing.',
+  ArbiterNotAllowed: 'That arbiter is not on the approved list.',
+  ArbiterIsBuyer: 'The arbiter cannot be the buyer.',
+  ArbiterIsSupplier: 'The arbiter cannot be the supplier.',
+  InvalidTotal: 'The total is not valid.',
+  InvalidFeeBps: 'The fee is outside the allowed range.',
+  InvalidAcceptanceDeadline: "The acceptance deadline is not after the chain's current time (check the device clock, or the chain's clock on a test fork).",
+  InvalidArbiterHours: "The arbiter's decision window is outside the allowed range.",
+  InvalidMilestoneCount: 'A deal needs between one and eight parts.',
+  AttestorRequired: 'A part paid on confirmation needs at least one attestor.',
+  TooManyAttestors: 'A part can have at most five attestors.',
+  DuplicateAttestor: 'The same attestor is named twice on one part.',
+  AttestorIsArbiter: 'An attestor cannot also be the arbiter.',
+  AttestorIsBuyer: 'An attestor cannot be the buyer.',
+  AttestorIsSupplier: 'An attestor cannot be the supplier.',
+  AttestorSuspended: 'One of the attestors is suspended.',
+  InvalidThreshold: 'The number of attestors who must confirm is not valid.',
+  AttestorsNotEmpty: 'Only a part paid on confirmation can name attestors.',
+  InvalidBpsSum: 'The parts must add up to 100%.',
+  DealMissing: 'That deal does not exist.',
 }
 
 const SELECTORS: Map<string, string> = new Map(
@@ -98,8 +120,33 @@ export function isUserRejection(error: unknown): boolean {
   return false
 }
 
-/** Transport trouble: the chain could not be reached or answered with a limit. */
+/** The node ran the call and the contract reverted: an answer, not transport trouble, even when viem wraps it in an RpcRequestError. */
+export function isContractRevert(error: unknown): boolean {
+  if (revertDataOf(error)) return true
+  for (const link of causes(error)) {
+    const e = link as { code?: unknown; name?: unknown; message?: unknown }
+    if (e.code === 3 || e.name === 'ExecutionRevertedError' || e.name === 'ContractFunctionRevertedError') return true
+    if (typeof e.message === 'string' && /execution reverted/i.test(e.message)) return true
+  }
+  return false
+}
+
+/** The RPC endpoint refused the method itself (-32601 or a not-found/not-supported answer): a setup fault, so retrying never helps. */
+export function isMethodNotAllowed(error: unknown): boolean {
+  for (const link of causes(error)) {
+    const e = link as { name?: unknown; code?: unknown; message?: unknown; shortMessage?: unknown; details?: unknown }
+    if (e.code === -32601 || e.code === -32004) return true
+    if (e.name === 'MethodNotFoundRpcError' || e.name === 'MethodNotSupportedRpcError') return true
+    for (const v of [e.message, e.details]) {
+      if (typeof v === 'string' && /method not (available|found|supported|allowed)|method .* (does not exist|is not available)/i.test(v)) return true
+    }
+  }
+  return false
+}
+
+/** Transport trouble: the chain could not be reached or answered with a limit. A refused method is not transport trouble. */
 export function isTransportFailure(error: unknown): boolean {
+  if (isMethodNotAllowed(error) || isContractRevert(error)) return false
   for (const link of causes(error)) {
     const e = link as { name?: unknown; status?: unknown; code?: unknown }
     if (
@@ -130,5 +177,6 @@ function fullText(error: unknown): string {
 
 /** True when a request limit or an unreachable network is the cause, even if a wallet relayed it as if it were a rejection. */
 export function isNetworkBusy(error: unknown): boolean {
+  if (isMethodNotAllowed(error) || isContractRevert(error)) return false
   return isTransportFailure(error) || LIMIT_WORDING.test(fullText(error))
 }

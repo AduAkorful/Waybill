@@ -78,7 +78,7 @@ describe('evidence message', () => {
         'chain: 5042002',
         'escrow: 0xabcdef0000000000000000000000000000000001',
         'deal: 279',
-        'part: 0',
+        'part: 1 (index 0)',
         'files: 0xaa,0xbb',
         'signed: 1800000000',
       ].join('\n'),

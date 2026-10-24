@@ -1,4 +1,5 @@
-import { fundingTotal, focusPart } from "@/view/derive";
+import { partOutcome } from "@/view/outcome";
+import { fundingTotal, focusPart, heldFor, isClosed } from "@/view/derive";
 import { formatAmount, shortAddress } from "@/view/format";
 import type { DealView, FeePayer, Tranche } from "@/view/types";
 import { footerText } from "@/view/labels";
@@ -203,8 +204,15 @@ export function Waybill({
               <p className="border-t border-rule px-3.5 py-2.5 text-[12.5px] text-graphite">
                 <span className="label mr-2">{lang === "zh" ? "条款" : "Terms"}</span>
                 {terms?.template ? `${terms.template} · ` : ""}
-                {lang === "zh" ? "费用" : "fee"} {deal.feeBps / 100}% ({formatAmount(feeTotal)}) · {lang === "zh" ? feeWordingZh[deal.feePayer] : feeWording[deal.feePayer].toLowerCase()} · {lang === "zh" ? (deal.panel ? "三人仲裁组" : "仲裁人") : deal.panel ? "panel of three" : "arbiter"}{" "}
-                <span className="mono text-[12px]">{deal.panel ? deal.panel.members.map(shortAddress).join(", ") : shortAddress(deal.arbiter)}</span>, {formatAmount(deal.arbiterFee)}
+                {lang === "zh" ? "费用" : "fee"} {deal.feeBps / 100}% ({formatAmount(feeTotal)}) · {lang === "zh" ? feeWordingZh[deal.feePayer] : feeWording[deal.feePayer].toLowerCase()}
+              </p>
+              <p data-arbiter-line className="border-t border-rule px-3.5 py-2.5 text-[12.5px] leading-relaxed text-graphite">
+                <span className="label mr-2">{lang === "zh" ? (deal.panel ? "三人仲裁组" : "仲裁人") : deal.panel ? "Arbiter panel" : "Arbiter"}</span>
+                {deal.panel
+                  ? deal.panel.members.map((m, i) => <span key={m} className="mono mr-3 inline-block text-[12px]">{i + 1}. {shortAddress(m)}</span>)
+                  : <span className="mono mr-3 inline-block text-[12px]">{shortAddress(deal.arbiter)}</span>}
+                <span className="inline-block">{lang === "zh" ? "仲裁费" : "arbiter fee"} {formatAmount(deal.arbiterFee)} USDC</span>
+                {deal.panel ? <span data-panel-rule className="mt-1 block">{lang === "zh" ? "三人中任意两人意见一致即可裁决争议部分。" : "Any two of the three who agree decide a disputed part."}</span> : null}
               </p>
             </>
           ) : (
@@ -242,16 +250,33 @@ export function Waybill({
                   <span className="block text-graphite">{feeWording[deal.feePayer]}</span>
                 </>) });
                 boxes.push({ label: deal.panel ? "Arbiter panel" : "Arbiter", body: (<>
-                  <span className="mono text-[12.5px]">{deal.panel ? deal.panel.members.map(shortAddress).join(", ") : shortAddress(deal.arbiter)}</span>
-                  <span className="mono block text-[12px] text-graphite">fee {formatAmount(deal.arbiterFee)} · prepaid by buyer</span>
+                  {deal.panel ? (
+                    <span data-panel-members className="mono block space-y-0.5 text-[12.5px] leading-snug">
+                      {deal.panel.members.map((m) => <span key={m} className="block">{shortAddress(m)}</span>)}
+                    </span>
+                  ) : (
+                    <span className="mono text-[12.5px]">{shortAddress(deal.arbiter)}</span>
+                  )}
+                  {deal.panel ? <span data-panel-rule className="mt-1 block text-[12px] text-graphite">Any two of the three who agree decide a disputed part.</span> : null}
+                  <span className="mono mt-1 block text-[12px] text-graphite">fee {formatAmount(deal.arbiterFee)} · prepaid by buyer</span>
                 </>) });
                 if (terms?.template) boxes.push({ label: "Terms", body: terms.template });
                 boxes.push({ label: "Escrow", body: deal.state === "cancelled" ? (
                   <span>Cancelled before funding</span>
                 ) : funded ? (
                   <>
-                    <span className="mono font-medium text-held">{formatAmount(fundingTotal(deal))} USDC</span>
-                    <span className="block text-graphite">{deal.state === "settled" ? "locked, now settled" : "locked in escrow"}</span>
+                    {deal.state === "funded" && deal.tranches.some(isClosed) ? (
+                      // part of the money has already left: say what is still held, not what was locked at funding
+                      <>
+                        <span className="mono font-medium text-held">{formatAmount(heldFor(deal))} USDC</span>
+                        <span className="block text-graphite">still held · {formatAmount(fundingTotal(deal))} locked at funding</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="mono font-medium text-held">{formatAmount(fundingTotal(deal))} USDC</span>
+                        <span className="block text-graphite">{deal.state === "settled" ? "locked, now settled" : "locked in escrow"}</span>
+                      </>
+                    )}
                   </>
                 ) : (
                   <span>Not funded yet</span>
@@ -274,7 +299,7 @@ export function Waybill({
           {showLockStamp && deal.state === "funded" ? (
             <div data-lock-stamp className="pointer-events-none absolute top-[12px] right-[150px] hidden @2xl:block">
               <Stamp tone="held" rotate={-9}>
-                {lang === "zh" ? "资金已锁定" : "Funds locked"}
+                {deal.tranches.some(isClosed) ? (lang === "zh" ? "部分已放款" : "Partly released") : lang === "zh" ? "资金已锁定" : "Funds locked"}
               </Stamp>
             </div>
           ) : null}
@@ -293,7 +318,7 @@ export function Waybill({
           // Many parts do not fit side by side: they wrap into rows, separated by hairlines instead of perforations.
           <div className="grid grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-px overflow-hidden rounded-b-md border border-t-0 border-rule bg-rule">
             {ts.map((t) => (
-              <Stub key={t.index} t={t} seed={`${id}-${t.index}`} lang={lang} pose={poses[t.index]} action={actions[t.index]} className="bg-sheet" />
+              <Stub key={t.index} t={t} seed={`${id}-${t.index}`} lang={lang} pose={poses[t.index]} action={actions[t.index]} outcome={partOutcome(deal, t)} className="bg-sheet" />
             ))}
           </div>
         ) : (
@@ -312,6 +337,7 @@ export function Waybill({
                   lang={lang}
                   pose={poses[t.index]}
                   action={actions[t.index]}
+                  outcome={partOutcome(deal, t)}
                   quiet={focus !== undefined && focus !== t.index && t.state === "waiting"}
                 />
               </div>

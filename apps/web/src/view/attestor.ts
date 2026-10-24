@@ -106,7 +106,10 @@ export interface HistoryGroup {
 /** Runs of the same kind of event, oldest first, collapsed to one row with a count. The registry events carry no deal number, so they cannot be grouped by deal. */
 export function groupHistory(events: readonly DealEvent[], describe: (e: DealEvent) => string = describeAttestorEvent): HistoryGroup[] {
   const groups: HistoryGroup[] = []
+  // a panel decision already says who won; the escrow's DisputeResolved from the same transaction would say it again
+  const panelTx = new Set(events.filter((e) => e.name === 'PanelResolved').map((e) => e.txHash))
   for (const e of events) {
+    if (e.name === 'DisputeResolved' && panelTx.has(e.txHash)) continue
     const text = describe(e)
     const last = groups[groups.length - 1]
     if (last && last.text === text) {

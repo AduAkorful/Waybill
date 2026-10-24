@@ -1,3 +1,4 @@
+import { daysToContractHours } from './derive'
 import { isAddress, zeroAddress, type Address } from 'viem'
 import type { FeePayer, MilestoneInput, ReleaseCondition } from '@/integration/current-actions'
 import type { DealTerms } from './types'
@@ -7,7 +8,6 @@ export const INDEPENDENT = 65_535
 /** Product rule: a deal must total at least 1 USDC. Below this the rounded-up fee can exceed the money being protected. */
 export const MIN_TOTAL = 1_000_000n
 const DAY = 86_400
-const HOUR = 3_600
 
 export interface PartForm {
   /** What this part is for, shown to the parties (optional; kept off-chain) */
@@ -216,7 +216,10 @@ export function buildDeal(
     if (members.every((m): m is Address => m !== null) && members.length === 3) {
       panel = members
       arb = members[0]!
-      if (new Set(members.map((m) => m.toLowerCase())).size !== 3) errors.push('The three panel arbiters must be different wallets.')
+      members.forEach((m, i) => {
+        const j = members.findIndex((o, k) => k > i && same(o, m))
+        if (j > i) errors.push(`Panel arbiter ${i + 1} and panel arbiter ${j + 1} are the same wallet. The three panel arbiters must be different wallets.`)
+      })
       members.forEach((m, i) => {
         if (same(m, buyer)) errors.push(`Panel arbiter ${i + 1} is your own wallet.`)
         if (supplier && same(m, supplier)) errors.push(`Panel arbiter ${i + 1} is the supplier.`)
@@ -285,8 +288,9 @@ export function buildDeal(
         attestors,
         threshold: p.condition === 1 ? Math.max(1, attestors.length === 0 ? 1 : attestors.length) : 0,
         deadline: BigInt(nowSeconds + due * DAY),
-        gracePeriod: grace * DAY,
-        reviewWindow: review * HOUR,
+        // the contract counts both in hours (`* 1 hours`), not seconds
+        gracePeriod: daysToContractHours(grace),
+        reviewWindow: review,
         dependsOn: INDEPENDENT,
       })
     }
@@ -394,4 +398,25 @@ export function buildTerms(details: DetailsForm, parts: readonly Pick<PartForm, 
   // the template name alone is not a detail worth storing
   const meaningful = Object.keys(terms).filter((k) => k !== 'template')
   return { ok: true, terms: meaningful.length === 0 ? null : terms }
+}
+
+/**
+ * What is wrong with one arbiter field right now, said beside the field as soon as it is a full address: the same
+ * wallet in two roles. `index` is the panel seat, or null for the single arbiter.
+ */
+export function arbiterFieldClash(form: BuilderForm, buyer: string, index: number | null): string | null {
+  const full = (v: string) => /^0x[0-9a-fA-F]{40}$/.test(v.trim())
+  const eq = (a: string, b: string) => full(a) && full(b) && a.trim().toLowerCase() === b.trim().toLowerCase()
+  const value = index === null ? form.arbiter : (form.panel[index] ?? '')
+  if (!full(value)) return null
+  const who = index === null ? 'The arbiter' : `Panel arbiter ${index + 1}`
+  if (eq(value, buyer)) return `${who} is your own wallet (the buyer). Pick someone outside the deal.`
+  if (eq(value, form.supplier)) return `${who} is the supplier's wallet. Pick someone outside the deal.`
+  if (index !== null) {
+    const other = form.panel.findIndex((m, k) => k !== index && eq(m, value))
+    if (other >= 0) return `${who} is the same wallet as panel arbiter ${other + 1}. Each seat needs a different arbiter.`
+  }
+  const part = form.parts.findIndex((p) => p.attestors.some((a) => eq(a, value)))
+  if (part >= 0) return `${who} is also an attestor on part ${part + 1}. One wallet cannot hold both roles.`
+  return null
 }

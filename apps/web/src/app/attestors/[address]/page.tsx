@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { explorerBase } from '@/integration/network'
+import { ExplorerLink } from '@/ui/ExplorerLink'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getBrowserNetwork } from '@/integration/network'
@@ -29,7 +31,7 @@ export default async function AttestorProfile({ params }: { params: Promise<{ ad
   if (!valid(address)) notFound()
   const read = await getAttestor(address)
   if (read.status === 'missing') notFound()
-  const explorer = getBrowserNetwork().explorerUrl.replace(/\/+$/, '')
+  const explorer = explorerBase()
 
   return (
     <PublicShell>
@@ -42,10 +44,10 @@ export default async function AttestorProfile({ params }: { params: Promise<{ ad
             <h1 className="text-[30px] font-semibold tracking-tight">{attestorName(read.value) ?? shortAddress(read.value.address)}</h1>
             <p className="mono mt-1 text-[12.5px] break-words text-graphite">
               {read.value.profile?.city ? `${read.value.profile.city} · ` : ''}
-              <a className="inline-flex min-h-11 items-center underline sm:inline sm:min-h-0" href={`${explorer}/address/${read.value.address}`} target="_blank" rel="noreferrer">
+              <ExplorerLink className="inline-flex min-h-11 items-center underline sm:inline sm:min-h-0" href={`${explorer}/address/${read.value.address}`}>
                 <span className="sm:hidden">{shortAddress(read.value.address)}</span>
                 <span className="hidden break-all sm:inline">{read.value.address}</span> ↗
-              </a>
+              </ExplorerLink>
             </p>
             <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule md:grid-cols-4">
               {[

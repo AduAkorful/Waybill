@@ -3,9 +3,17 @@ import type { Tranche } from './types'
 /** Where a disputed part stands in its clock: the other side may respond, then the arbiter may decide, then the default applies. */
 export type DisputeStage = 'response_open' | 'decision_open' | 'deadline_passed'
 
-/** Mirrors the escrow: responses until `responseDeadline` inclusive, decisions after it and until `arbiterDeadline` inclusive. */
-export function disputeStage(part: Pick<Tranche, 'responseDeadline' | 'arbiterDeadline'>, chainTime: bigint): DisputeStage {
-  if (chainTime <= part.responseDeadline) return 'response_open'
+/**
+ * Mirrors the escrow: decisions open after `responseDeadline` and stay open until `arbiterDeadline` inclusive.
+ * With `early` (a deployment whose escrow has the decide-after-response rule) they also open as soon as the other side
+ * has responded; that escrow resets `arbiterDeadline` from the response time.
+ */
+export function disputeStage(
+  part: Pick<Tranche, 'responseDeadline' | 'arbiterDeadline' | 'responseSubmitted'>,
+  chainTime: bigint,
+  early: boolean,
+): DisputeStage {
+  if (!(early && part.responseSubmitted) && chainTime <= part.responseDeadline) return 'response_open'
   if (chainTime <= part.arbiterDeadline) return 'decision_open'
   return 'deadline_passed'
 }

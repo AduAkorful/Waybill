@@ -32,7 +32,9 @@ export function Odometer({
   let seen = 0;
 
   return (
-    <span data-odo data-to={to} role="img" className={`mono inline-flex leading-none select-none ${className}`} aria-label={label ?? `${formatCents(to)} USDC`}>
+    <span data-odo data-to={to} className={`mono relative inline-flex leading-none ${className}`}>
+      {/* The real figure: read by screen readers and copied with the page. The rolling columns below are drawing only. */}
+      <span className="sr-only">{label ?? `${formatCents(to)} USDC`}</span>
       {text.split("").map((ch, i) => {
         if (!/\d/.test(ch)) {
           // A comma belongs to the digit on its left
@@ -42,11 +44,10 @@ export function Odometer({
               key={i}
               aria-hidden
               data-sep={ch === "," ? k : undefined}
-              className="inline-block overflow-hidden"
+              data-ch={ch}
+              className="inline-block overflow-hidden select-none before:content-[attr(data-ch)]"
               style={ch === "," && !placeShown(v, k) ? { width: 0 } : undefined}
-            >
-              {ch}
-            </span>
+            />
           );
         }
         const k = digitsTotal - 1 - seen++;
@@ -56,7 +57,7 @@ export function Odometer({
             key={i}
             aria-hidden
             data-col={k}
-            className="relative inline-block h-[1em] overflow-hidden"
+            className="relative inline-block h-[1em] overflow-hidden select-none"
             style={{ width: placeShown(v, k) ? "0.6em" : 0 }}
           >
             <span
@@ -65,9 +66,8 @@ export function Odometer({
               style={{ transform: `translateY(${-digitPos(v, k)}em)`, filter: blur ? `blur(${blur}px)` : undefined }}
             >
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((d, j) => (
-                <span key={j} className="block h-[1em] text-center">
-                  {d}
-                </span>
+                // Digits are drawn with CSS content so the reel is not page text (no stacked 0-9 in copy or reader mode)
+                <span key={j} data-d={d} className="block h-[1em] text-center before:content-[attr(data-d)]" />
               ))}
             </span>
           </span>

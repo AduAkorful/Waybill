@@ -24,6 +24,13 @@ const LATEST_TTL_MS: Record<string, number> = {
   eth_chainId: 3_600_000,
   eth_getTransactionReceipt: 60_000,
   eth_getTransactionByHash: 60_000,
+  // what a wallet-free preflight needs before it asks the wallet to sign: never kept, only joined while in flight
+  eth_estimateGas: 0,
+  eth_getTransactionCount: 0,
+  eth_gasPrice: 2_000,
+  eth_maxPriorityFeePerGas: 2_000,
+  eth_feeHistory: 2_000,
+  eth_getCode: 30_000,
 }
 const PINNED_TTL_MS = 60_000
 const MAX_BATCH = 32
@@ -35,6 +42,7 @@ const isHexBlock = (v: unknown) => typeof v === 'string' && /^0x[0-9a-fA-F]+$/.t
 function targetsPinnedBlock(method: string, params: unknown[]): boolean {
   if (method === 'eth_call' || method === 'eth_getBalance') return isHexBlock(params[1])
   if (method === 'eth_getBlockByNumber') return isHexBlock(params[0])
+  if (method === 'eth_getCode' || method === 'eth_getTransactionCount') return isHexBlock(params[1])
   return false
 }
 
@@ -59,12 +67,13 @@ export class ReadRpcProxy {
   private async one(raw: unknown): Promise<RpcAnswer> {
     const r = raw as Partial<RpcRequest> | null
     const id = r && (typeof r.id === 'string' || typeof r.id === 'number') ? r.id : null
-    if (!r || r.jsonrpc !== '2.0' || typeof r.method !== 'string' || !Array.isArray(r.params)) {
+    if (!r || r.jsonrpc !== '2.0' || typeof r.method !== 'string' || (r.params !== undefined && !Array.isArray(r.params))) {
       return { jsonrpc: '2.0', id, error: { code: -32600, message: 'Invalid request' } }
     }
     const method = r.method
     if (!(method in LATEST_TTL_MS)) return { jsonrpc: '2.0', id, error: { code: -32601, message: 'Method not available on this endpoint' } }
-    const params = r.params
+    // viem leaves params out for a no-argument call such as eth_gasPrice or eth_blockNumber
+    const params = r.params ?? []
     const key = `${method}:${JSON.stringify(params)}`
 
     const hit = this.cache.get(key)
@@ -78,7 +87,10 @@ export class ReadRpcProxy {
     const answer = await pending
     if ('error' in answer) return { jsonrpc: '2.0', id, error: answer.error }
     // an empty answer (for example a receipt not mined yet) is never kept: the next ask must reach the chain
-    if (answer.result !== null && answer.result !== undefined) this.remember(key, answer.result, targetsPinnedBlock(method, params) ? PINNED_TTL_MS : LATEST_TTL_MS[method]!)
+    if (answer.result !== null && answer.result !== undefined) {
+      const ttl = targetsPinnedBlock(method, params) && method !== 'eth_estimateGas' ? PINNED_TTL_MS : LATEST_TTL_MS[method]!
+      if (ttl > 0) this.remember(key, answer.result, ttl)
+    }
     return { jsonrpc: '2.0', id, result: answer.result }
   }
 
@@ -126,5 +138,45 @@ export function httpUpstream(rpcUrl: string, fetcher: typeof fetch = fetch, slee
       }
     }
     return { error: { code: -32005, message: `Request limit or network trouble upstream: ${lastMessage}` } }
+  }
+}
+
+/** Calls that cost the upstream more than a cached read: counted heavier against a client's budget. */
+const HEAVY = new Set(['eth_estimateGas', 'eth_getTransactionCount'])
+const MAX_CLIENTS = 10_000
+
+/**
+ * A per-client budget for the read front, so one visitor cannot spend the free upstream quota that every other
+ * visitor's reads depend on. A fixed one-minute window per client; each call in a batch counts, heavy calls count 5.
+ */
+export class ClientRateLimiter {
+  private readonly windows = new Map<string, { start: number; used: number }>()
+
+  constructor(
+    private readonly perMinute: number,
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  /** The cost of one request body: the number of calls in it, with heavy calls weighted. */
+  static cost(payload: unknown): number {
+    const calls = Array.isArray(payload) ? payload : [payload]
+    return calls.reduce<number>((n, c) => n + (HEAVY.has((c as { method?: unknown } | null)?.method as string) ? 5 : 1), 0)
+  }
+
+  /** True when the client may spend `cost` now; the spend is recorded only when allowed. */
+  allow(client: string, cost: number): boolean {
+    const now = this.now()
+    let w = this.windows.get(client)
+    if (!w || now - w.start >= 60_000) {
+      if (!w && this.windows.size >= MAX_CLIENTS) {
+        for (const [k, v] of this.windows) if (now - v.start >= 60_000) this.windows.delete(k)
+        if (this.windows.size >= MAX_CLIENTS) this.windows.delete(this.windows.keys().next().value as string)
+      }
+      w = { start: now, used: 0 }
+      this.windows.set(client, w)
+    }
+    if (w.used + cost > this.perMinute) return false
+    w.used += cost
+    return true
   }
 }
