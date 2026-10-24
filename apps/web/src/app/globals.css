@@ -90,7 +90,7 @@
   --color-hold-wash: var(--hold-wash);
   --color-mark: var(--mark);
   --color-mark-ink: var(--mark-ink);
-  --font-sans: var(--font-archivo), var(--font-noto-sc), system-ui, sans-serif;
+  --font-sans: var(--font-archivo), var(--font-noto-sc, system-ui), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
 
@@ -101,12 +101,12 @@ body {
 }
 
 body {
-  font-family: var(--font-archivo), var(--font-noto-sc), system-ui, sans-serif;
+  font-family: var(--font-archivo), var(--font-noto-sc, system-ui), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 :lang(zh) {
-  font-family: var(--font-noto-sc), var(--font-archivo), sans-serif;
+  font-family: var(--font-noto-sc, system-ui), var(--font-archivo), sans-serif;
 }
 
 /* Printed box label on the waybill form: condensed, tracked small caps. */
