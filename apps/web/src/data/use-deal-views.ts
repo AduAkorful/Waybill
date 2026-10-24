@@ -1,7 +1,7 @@
 'use client'
 
+import { getReadClient } from '@/integration/read-client'
 import { useEffect, useMemo, useState } from 'react'
-import { createPublicClient, http, type PublicClient } from 'viem'
 import { getBrowserChain, getBrowserNetwork } from '@/integration/network'
 import { loadDealView } from '@/view/from-chain'
 import type { DealView } from '@/view/types'
@@ -15,7 +15,7 @@ export type DealViewRead = { status: 'ready'; deal: DealView } | { status: 'erro
 export function useDealViews(ids: readonly bigint[]): { done: boolean; reads: Map<string, DealViewRead> } {
   const network = useMemo(() => getBrowserNetwork(), [])
   const client = useMemo(
-    () => createPublicClient({ chain: getBrowserChain(), transport: http(network.rpcUrl), batch: { multicall: true } }) as PublicClient,
+    () => getReadClient(),
     [network],
   )
   const key = ids.map(String).join(',')

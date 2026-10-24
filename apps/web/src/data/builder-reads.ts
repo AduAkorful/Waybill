@@ -1,7 +1,8 @@
 'use client'
 
+import { getReadClient } from '@/integration/read-client'
 import { useEffect, useMemo, useState } from 'react'
-import { createPublicClient, http, isAddress, parseAbi, type PublicClient } from 'viem'
+import { isAddress, parseAbi, type PublicClient } from 'viem'
 import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api'
 import { getBrowserChain, getBrowserNetwork } from '@/integration/network'
 import { parseArbiters, type Arbiter } from '@/view/arbiter'
@@ -21,7 +22,7 @@ const ARBITER_LIST = parseAbi(['function isAllowed(address) view returns (bool)'
 
 function useClient(): PublicClient {
   const network = useMemo(() => getBrowserNetwork(), [])
-  return useMemo(() => createPublicClient({ chain: getBrowserChain(), transport: http(network.rpcUrl), batch: { multicall: true } }) as PublicClient, [network])
+  return useMemo(() => getReadClient(), [network])
 }
 
 export type Read<T> = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; value: T }

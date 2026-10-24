@@ -25,6 +25,7 @@ import type { RelayerConfig } from './config'
 import { loadRelayerConfig } from './config'
 import { PostgresAttemptStore } from './attempt-store'
 import { RelayerCandidateProcessor, createCandidateStateReader } from './candidate-processor'
+import { httpUpstream, ReadRpcProxy } from './rpc-proxy'
 import { PostgresCursorStore } from './cursor-store'
 import { RelayerEventWorker, createRelayerLogReader } from './event-worker'
 import { ChainEventIndexer, createIndexerLogReader } from './indexer'
@@ -186,6 +187,7 @@ export function createBackendApplication(
         emails,
         network: config.network.network,
         indexStartBlock: config.startBlock,
+        rpc: new ReadRpcProxy(httpUpstream(config.network.rpcUrl)),
         allowedOrigins: apiConfig.allowedOrigins,
         health: () =>
           checkHealth([

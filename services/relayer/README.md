@@ -105,3 +105,13 @@ id, secret) and `WAYBILL_EVIDENCE_PINATA_JWT`, or none. A partial set stops the 
 - On-chain, a dispute records `keccak256` of the file digests in upload order (`evidenceCommitment` in the web app).
 - Limits: 10 MiB per file, 10 files per signature. Any S3-compatible service works, including Supabase Storage (endpoint `https://<project-ref>.supabase.co/storage/v1/s3`; the endpoint may carry a fixed path, which is signed and sent ahead of the bucket). Pinata is called through its pinFileToIPFS endpoint, so its API key needs only that one permission. Not live-tested against a real bucket or Pinata yet: the S3
   signing is checked against AWS's published test vector and both providers against fakes.
+
+## Shared read-only chain access (`POST /v1/rpc`)
+
+Browsers read the chain through this endpoint first (falling back to the public RPC), so many people share one set of
+upstream reads instead of each spending the free RPC's rate limit. Only `eth_call`, `eth_blockNumber`,
+`eth_getBlockByNumber`, `eth_getBalance`, `eth_chainId`, `eth_getTransactionReceipt` and `eth_getTransactionByHash`
+are forwarded; everything else, including every way of sending a transaction, is refused with `-32601`. Identical reads
+within 2 to 3 seconds share one upstream call (a read pinned to a block number is kept for a minute); a rate-limited
+upstream answer is retried twice. Empty answers (a receipt not mined yet) and errors are never kept. Request bodies
+are limited to 64 KB and 32 calls per batch. It sits behind the same allowed-origin check as the rest of the API.

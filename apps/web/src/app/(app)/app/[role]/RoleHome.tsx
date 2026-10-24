@@ -53,7 +53,7 @@ function Row({ d, need, shell }: { d: DealView; need: string | null; shell: Shel
     <li>
       <Link
         href={shell === 'attestor' ? `/app/attest/${d.id}` : shell === 'supplier' ? `/d/${d.id}` : shell === 'arbiter' ? `/app/room/${d.id}` : `/app/deals/${d.id}`}
-        className="group grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-2 px-4 py-4 hover:bg-sheet md:grid-cols-[7rem_minmax(0,1fr)_10rem_9rem_7rem] md:px-5"
+        className="group grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-2 px-4 py-4 hover:bg-sheet md:grid-cols-[6rem_minmax(0,2fr)_minmax(8rem,1fr)_7rem_6rem] md:px-5"
       >
         <span className="mono text-[13px] font-medium">Deal {String(d.id)}</span>
         <span className="col-span-2 row-start-2 min-w-0 md:col-span-1 md:row-start-auto">

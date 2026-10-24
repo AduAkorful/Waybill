@@ -1,7 +1,7 @@
 'use client'
 
+import { getReadClient } from '@/integration/read-client'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPublicClient, http, type PublicClient } from 'viem'
 import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api'
 import { getBrowserChain, getBrowserNetwork } from '@/integration/network'
 import { readPublicTerms } from '@/integration/terms'
@@ -10,7 +10,12 @@ import { loadDealView } from '@/view/from-chain'
 import type { DealView } from '@/view/types'
 
 /** How often an open deal is read again. Changes between reads animate; it is not a business value. */
-const REREAD_MS = 15_000
+const REREAD_MS = 30_000
+/** After a transaction the first read waits a moment so the shared read cache cannot hand back the old state. */
+const AFTER_TX_MS = 2_600
+
+/** The last good read of each deal in this visit, shown at once while a fresh read runs. Memory only. */
+const lastRead = new Map<string, { deal: DealView; history: HistoryStatus }>()
 
 /** Why the history is missing, so a screen can say so instead of showing an empty timeline. */
 export type HistoryStatus =
@@ -21,7 +26,8 @@ export type HistoryStatus =
 export type DealRead =
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'ready'; deal: DealView; history: HistoryStatus }
+  /** `fresh` is false while a remembered read is shown and a new one is on its way */
+  | { status: 'ready'; deal: DealView; history: HistoryStatus; fresh?: boolean }
 
 /**
  * One deal, read from the escrow, with its indexed history from the relayer when the API is configured.
@@ -29,16 +35,12 @@ export type DealRead =
  */
 export function useDeal(id: bigint | null, refreshKey = 0, initial?: DealView | null): DealRead {
   const network = useMemo(() => getBrowserNetwork(), [])
-  const client = useMemo(
-    () =>
-      createPublicClient({
-        chain: getBrowserChain(),
-        transport: http(network.rpcUrl),
-        batch: { multicall: true },
-      }) as PublicClient,
-    [network],
-  )
-  const [read, setRead] = useState<DealRead>(() => (initial ? { status: 'ready', deal: initial, history: { status: 'unconfigured' } } : { status: 'loading' }))
+  const client = useMemo(() => getReadClient(), [])
+  const [read, setRead] = useState<DealRead>(() => {
+    if (initial) return { status: 'ready', deal: initial, history: { status: 'unconfigured' } }
+    const remembered = id === null ? undefined : lastRead.get(String(id))
+    return remembered ? { status: 'ready', ...remembered, fresh: false } : { status: 'loading' }
+  })
   // the server-rendered deal counts as already shown, so the first client read replaces it without a loading flash
   const shownId = useRef<bigint | null>(initial ? initial.id : null)
 
@@ -46,7 +48,10 @@ export function useDeal(id: bigint | null, refreshKey = 0, initial?: DealView | 
     if (id === null) return
     let cancelled = false
     // a refresh keeps the deal on screen; only a different deal resets to loading
-    if (shownId.current !== id) setRead({ status: 'loading' })
+    if (shownId.current !== id) {
+      const remembered = lastRead.get(String(id))
+      setRead(remembered ? { status: 'ready', ...remembered, fresh: false } : { status: 'loading' })
+    }
     shownId.current = id
 
     const api = (() => {
@@ -59,20 +64,24 @@ export function useDeal(id: bigint | null, refreshKey = 0, initial?: DealView | 
 
     const run = async () => {
       try {
-        // details the buyer chose to make public; private ones are read on request with a signature
-        const publicTerms = api ? await readPublicTerms(id).catch(() => null) : null
-        const view = await loadDealView(client, network, id, publicTerms?.terms)
+        // The chain read, the public details and the history all start together; none waits for another.
+        // Details the buyer chose to make public; private ones are read on request with a signature.
+        const termsRead = api ? readPublicTerms(id).then((t) => t?.terms).catch(() => undefined) : Promise.resolve(undefined)
+        const eventsRead = api ? api.getDealEvents(id).then((raw) => parseDealEvents(raw)) : null
+        eventsRead?.catch(() => undefined)
+        const view = await loadDealView(client, network, id, termsRead)
         let deal = view
         let history: HistoryStatus = { status: 'unconfigured' }
-        if (api) {
+        if (eventsRead) {
           try {
-            deal = withEvents(view, parseDealEvents(await api.getDealEvents(id)))
+            deal = withEvents(view, await eventsRead)
             history = { status: 'ready' }
           } catch (e) {
             history = { status: 'error', message: e instanceof Error ? e.message : String(e) }
           }
         }
-        if (!cancelled) setRead({ status: 'ready', deal, history })
+        lastRead.set(String(id), { deal, history })
+        if (!cancelled) setRead({ status: 'ready', deal, history, fresh: true })
       } catch (e) {
         if (!cancelled) {
           // keep showing the last good read on a later failure; only a first read fails the screen
@@ -83,10 +92,15 @@ export function useDeal(id: bigint | null, refreshKey = 0, initial?: DealView | 
       }
     }
 
-    void run()
-    const timer = setInterval(run, REREAD_MS)
+    // the first read after a transaction (refreshKey above zero) waits a moment; later reads, and the first one, go at once
+    const first = setTimeout(() => void run(), refreshKey > 0 ? AFTER_TX_MS : 0)
+    // a hidden tab does not poll: nobody is looking, and the free RPC's limit is shared
+    const timer = setInterval(() => {
+      if (!document.hidden) void run()
+    }, REREAD_MS)
     return () => {
       cancelled = true
+      clearTimeout(first)
       clearInterval(timer)
     }
   }, [client, network, id, refreshKey])

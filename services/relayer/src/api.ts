@@ -4,6 +4,7 @@ import type { WaybillNetwork } from '@waybill/network/networks'
 import { EvidenceError, MAX_EVIDENCE_BYTES, type EvidenceService } from './evidence-service'
 import { LabelError, type DealRange, type LabelService } from './deal-labels'
 import { TermsError, type DealTermsService } from './deal-terms'
+import type { ReadRpcProxy } from './rpc-proxy'
 import { EmailError, type WalletEmailService } from './wallet-emails'
 import type { HealthResult } from './health'
 
@@ -27,6 +28,8 @@ export interface WaybillApiOptions {
   network: WaybillNetwork
   /** First block the deal indexer reads from; deals created before it have no indexed history. */
   indexStartBlock?: bigint
+  /** Read-only chain access shared by browsers. Absent when not configured. */
+  rpc?: ReadRpcProxy | null
   /** Exact browser origins allowed to call this API. Empty means no cross-origin access. */
   allowedOrigins?: readonly string[]
   health(): Promise<HealthResult>
@@ -145,6 +148,7 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
   const termsRoute = /^\/v1\/deals\/([0-9]+)\/terms$/.exec(url.pathname)
   if (termsRoute) return dealTerms(request, options, BigInt(termsRoute[1]!), url.searchParams.get('public') === '1')
   if (evidenceRoute) return evidence(request, options, BigInt(evidenceRoute[1]!), evidenceRoute[2])
+  if (url.pathname === '/v1/rpc') return readRpc(request, options)
   if (url.pathname === '/v1/operator/labels') return setLabels(request, options)
   if (url.pathname === '/v1/contacts' || url.pathname === '/v1/contacts/verify') return contacts(request, options, url.pathname)
   if (request.method !== 'GET') return { status: 405, body: { error: 'method_not_allowed' } }
@@ -221,6 +225,22 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
     }
   }
   return { status: 404, body: { error: 'not_found' } }
+}
+
+const MAX_RPC_BODY = 64 * 1024
+
+async function readRpc(request: ApiRequest, options: WaybillApiOptions): Promise<ApiResponse> {
+  if (request.method !== 'POST') return { status: 405, body: { error: 'method_not_allowed' } }
+  if (!options.rpc) return { status: 503, body: { error: 'rpc_unavailable' } }
+  const raw = request.body ?? new Uint8Array()
+  if (raw.length === 0 || raw.length > MAX_RPC_BODY) return { status: 400, body: { error: 'invalid_body' } }
+  let payload: unknown
+  try {
+    payload = JSON.parse(new TextDecoder().decode(raw))
+  } catch {
+    return { status: 400, body: { error: 'invalid_json' } }
+  }
+  return options.rpc.handle(payload)
 }
 
 function signedRequest(request: ApiRequest): { signer: string; signature: string; signedAt: number; files: string[] } | null {

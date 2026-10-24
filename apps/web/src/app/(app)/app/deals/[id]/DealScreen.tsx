@@ -135,6 +135,7 @@ export function DealScreen({ idText }: { idText: string }) {
           ) : null}
         </div>
 
+        {read.fresh === false ? <p role="status" className="mt-3 text-[12px] text-graphite">Showing what was read a moment ago. Updating from the chain…</p> : null}
         {address && !isBuyer ? <NamedPartyBanner deal={d} wallet={address} /> : null}
 
         {read.history.status === 'error' ? (

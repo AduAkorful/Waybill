@@ -125,7 +125,8 @@ export async function loadDealView(
   client: PublicClient,
   network: WaybillNetworkManifest,
   id: bigint,
-  terms?: DealTerms,
+  /** Off-chain details, or a read of them already under way so it does not delay the chain read */
+  terms?: DealTerms | Promise<DealTerms | undefined>,
 ): Promise<DealView> {
   const [deal, block] = await Promise.all([readDeal(client, id, network), client.getBlock()])
   const positions = Array.from({ length: deal.milestoneCount }, (_, i) => i)
@@ -139,7 +140,7 @@ export async function loadDealView(
   ])
   const panel = members ? await loadPanel(client, network, id, members, milestones) : null
   const waiting = (c: { proposed: `0x${string}`; eta: bigint }): PendingChange | null => (c.proposed.toLowerCase() === ZERO ? null : c)
-  return toDealView(id, deal, milestones, fees, block.timestamp, terms, { payout: waiting(payout), refund: waiting(refund) }, listed, panel)
+  return toDealView(id, deal, milestones, fees, block.timestamp, await terms, { payout: waiting(payout), refund: waiting(refund) }, listed, panel)
 }
 
 /** Votes are read only for parts that are, or were, in dispute: nobody can vote on any other part. */

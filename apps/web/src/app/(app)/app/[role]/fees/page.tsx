@@ -1,9 +1,9 @@
 'use client'
 
+import { getReadClient } from '@/integration/read-client'
 import Link from 'next/link'
 import { notFound, useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import { createPublicClient, http, type PublicClient } from 'viem'
 import { useAccount } from 'wagmi'
 import { encodeCurrentEscrowAction } from '@/integration/current-actions'
 import { readArbiterFeeBalance, readFeeBalance } from '@/integration/escrow'
@@ -24,7 +24,7 @@ export default function FeesPage() {
 function Fees({ arbiter }: { arbiter: boolean }) {
   const { address } = useAccount()
   const network = useMemo(() => getBrowserNetwork(), [])
-  const client = useMemo(() => createPublicClient({ chain: getBrowserChain(), transport: http(network.rpcUrl) }) as PublicClient, [network])
+  const client = useMemo(() => getReadClient(), [network])
   const [refresh, setRefresh] = useState(0)
   const [read, setRead] = useState<{ kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; balance: bigint }>({ kind: 'loading' })
   const [open, setOpen] = useState(false)

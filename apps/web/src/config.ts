@@ -4,8 +4,8 @@
  */
 
 import { createConfig } from '@privy-io/wagmi'
-import { http } from 'wagmi'
 import { getBrowserChain, getBrowserNetwork } from './integration/network'
+import { readTransport } from './integration/read-client'
 
 let cached: ReturnType<typeof build> | undefined
 
@@ -14,7 +14,7 @@ function build() {
   const chain = getBrowserChain()
   return createConfig({
     chains: [chain],
-    transports: { [chain.id]: http(network.rpcUrl) },
+    transports: { [chain.id]: readTransport() },
   })
 }
 

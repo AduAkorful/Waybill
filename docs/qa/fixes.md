@@ -5,6 +5,39 @@ After each batch the web app on port 3000 is rebuilt and restarted; retest again
 "Fixed" means changed in code, covered by a unit test where the logic is pure, and the page answers as described below.
 It does not mean a signed transaction was re-run in a browser — that is what QA is for.
 
+## Batch 7 — 2026-10-20 (slow reads, list layout, attestor page, language)
+
+Web app and relayer restarted. axe: 0 violations on the public pages and `/operator` at 375 and 1440 px, light and dark.
+
+### Slow reads (RT-05) — why it was slow, what changed
+- **Why:** each page read the chain from the browser straight to the free public RPC (about 0.7 to 1.6 seconds per call from the test machine), in two or three steps one after the other, and every component created its own client, so a handful of open pages shared one rate limit and hit 429s. The off-chain details were also fetched before the chain read started.
+- **Shared read front on the relayer (`POST /v1/rpc`):** the browser now reads the chain through the relayer first and only falls back to the public RPC if the relayer is unreachable. The relayer forwards only read methods, shares identical reads for 2 to 3 seconds, joins reads already in flight, and retries a rate-limited answer twice. Sending transactions is refused there; transactions are still signed and sent by the wallet. In a test the second identical read came back in 1 ms (the first took 0.42 s).
+- **One read client per page and parallel reads:** the chain read, the public details and the history are fetched together (they used to run one after the other). One client is shared by all components so their reads merge into the same requests.
+- **Less polling:** open deals refresh every 30 seconds (was 15) and not at all while the tab is hidden. After a transaction the first refresh waits about 2.6 seconds so the shared cache cannot hand back the old state.
+- **Instant paint from the last read:** a deal you have already opened in this visit shows at once with *"Showing what was read a moment ago. Updating from the chain…"* and is replaced by the fresh read. Money actions are still checked against the chain before the wallet opens. The remembered read lives in memory only (gone on reload).
+- **What to expect:** a first deal page should now be limited mostly by the relayer and the chain, not by the browser's own rate-limited connection. The public RPC is still the upstream, so a very slow or limited public RPC will still slow the first read of anything new. If QA still sees waits above about 10 seconds on a signed-in page, note which step (wallet start-up, list, deal) so it can be measured.
+
+### List rows (RT-10)
+- The deal lists use the empty space for the progress bar (the text column and bar column share the width), so there is no wide gap between the text and the bar.
+
+### Attestor profile (RT-12)
+- Runs of identical records collapse into one row with a count ("A statement they signed was recorded × 38", with the date range and the latest transaction), newest first. The left column also shows first activity, latest activity and the number of registry records. The registry records outcomes, not deal numbers, so a row still cannot be tied to one deal; a note says so.
+- Not changed: the public header on this page shows "Sign in" even if a wallet is connected elsewhere (public pages carry no wallet code by design).
+
+### Language (RT-17)
+- The supplier page's language control is larger and labelled "文 / A". A browser set to Chinese with no saved choice sees a banner *"查看中文版本 · View this page in Chinese"*; the page is never switched without asking.
+
+### RT-11 (first click on a deal row)
+- Not reproduced. The list is now stable across refreshes (rows stay mounted and the remembered read shows at once), which was my best guess at the cause. If it still happens, please send the browser console output and the exact page.
+
+### Retest checklist for batch 7
+1. Open a deal page, go back to the list, and open it again: the second open is instant with the "Showing what was read a moment ago" line for a moment.
+2. `curl -X POST <api>/v1/rpc -d '{"jsonrpc":"2.0","id":1,"method":"eth_sendRawTransaction","params":["0x00"]}'` is refused (`-32601`). `eth_chainId` answers.
+3. In the browser network tab, deal pages call `<api>/v1/rpc`, not `rpc.testnet.arc.io`.
+4. Stop the relayer: deal pages still load (public RPC fallback), only history/terms are missing.
+5. `/app/attestor` rows at 1440 px: no wide gap before the bar. `/attestors/<address>`: grouped history.
+6. A browser with Chinese as its language, fresh profile, `/d/284`: the Chinese banner.
+
 ## Batch 6 — 2026-10-20 (retest findings)
 
 Fixes for QA's retest of batches 1 to 5 (report §8). Web app and relayer restarted. `WAYBILL_SITE_URL` is now set to the ngrok address, so `og:image` is absolute. axe: 0 violations on the public pages and `/operator` at 375 and 1440 px, light and dark.

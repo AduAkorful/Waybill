@@ -23,22 +23,27 @@ function hasWalletSession(): boolean {
   }
 }
 
-function useLang(): [Lang, (l: Lang) => void] {
+function useLang(): [Lang, (l: Lang) => void, boolean] {
   const [lang, setLang] = useState<Lang>('en')
+  // a browser set to Chinese, with no choice made yet, is offered the Chinese page; it is never switched without asking
+  const [suggestZh, setSuggestZh] = useState(false)
   useEffect(() => {
     try {
       const saved = localStorage.getItem('wb-lang')
       if (saved === 'en' || saved === 'zh') setLang(saved)
+      else if (navigator.language.toLowerCase().startsWith('zh')) setSuggestZh(true)
     } catch {}
   }, [])
   return [
     lang,
     (l) => {
       setLang(l)
+      setSuggestZh(false)
       try {
         localStorage.setItem('wb-lang', l)
       } catch {}
     },
+    suggestZh,
   ]
 }
 
@@ -47,7 +52,7 @@ function useLang(): [Lang, (l: Lang) => void] {
  * the supplier signs in, or at once if this browser already holds a session.
  */
 export function SupplierLink({ idText, initial }: { idText: string; initial: DealView | null }) {
-  const [lang, setLang] = useLang()
+  const [lang, setLang, suggestZh] = useLang()
   const t = COPY[lang]
   const id = /^\d+$/.test(idText) ? BigInt(idText) : null
   const [refresh, setRefresh] = useState(0)
@@ -65,15 +70,23 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 md:px-8">
         <Link href="/" aria-label="Waybill home"><Wordmark /></Link>
         <div className="flex items-center gap-2">
-          <div role="group" aria-label={t.language} className="inline-flex rounded-full border border-rule p-0.5 text-[12px]">
+          <div role="group" aria-label={t.language} className="inline-flex items-center rounded-full border border-rule p-0.5 text-[13px]">
+            <span aria-hidden className="px-2 text-graphite">文 / A</span>
             {(['en', 'zh'] as const).map((l) => (
-              <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} className={`rounded-full px-2.5 py-1 ${lang === l ? 'bg-ink text-paper' : 'text-graphite'}`}>{l === 'en' ? 'English' : '中文'}</button>
+              <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} className={`rounded-full px-3 py-1.5 ${lang === l ? 'bg-ink text-paper' : 'text-graphite'}`}>{l === 'en' ? 'English' : '中文'}</button>
             ))}
           </div>
           <ThemeToggle />
         </div>
       </header>
 
+      {suggestZh && lang === 'en' ? (
+        <div role="status" className="mx-auto max-w-3xl px-4 md:px-8">
+          <button type="button" onClick={() => setLang('zh')} className="w-full rounded-md border border-held/50 bg-sheet px-4 py-2.5 text-left text-[14px]">
+            <span className="font-semibold">查看中文版本</span> · View this page in Chinese
+          </button>
+        </div>
+      ) : null}
       <main className="mx-auto max-w-3xl px-4 pb-20 md:px-8">
         {id === null ? <p role="alert" className="text-hold">{t.notFound}</p> : null}
         {id !== null && read.status === 'loading' ? <p role="status" className="text-graphite">{t.loading}</p> : null}

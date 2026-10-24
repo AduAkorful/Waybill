@@ -92,3 +92,28 @@ export function describeAttestorEvent(e: DealEvent): string {
       return e.name
   }
 }
+
+export interface HistoryGroup {
+  text: string
+  count: number
+  /** Unix seconds of the first and last event in the run; null when the block time was not recorded */
+  first: bigint | null
+  last: bigint | null
+  /** Transaction of the latest event in the run */
+  lastTx: string
+}
+
+/** Runs of the same kind of event, oldest first, collapsed to one row with a count. The registry events carry no deal number, so they cannot be grouped by deal. */
+export function groupHistory(events: readonly DealEvent[]): HistoryGroup[] {
+  const groups: HistoryGroup[] = []
+  for (const e of events) {
+    const text = describeAttestorEvent(e)
+    const last = groups[groups.length - 1]
+    if (last && last.text === text) {
+      last.count += 1
+      last.last = e.time
+      last.lastTx = e.txHash
+    } else groups.push({ text, count: 1, first: e.time, last: e.time, lastTx: e.txHash })
+  }
+  return groups
+}
