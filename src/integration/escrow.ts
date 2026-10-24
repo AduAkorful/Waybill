@@ -317,8 +317,11 @@ export async function sendWalletAction(
   })
 }
 
-export function readDeal(publicClient: PublicClient, dealId: bigint) {
-  const network = getBrowserNetwork()
+export function readDeal(
+  publicClient: PublicClient,
+  dealId: bigint,
+  network: WaybillNetworkManifest = getBrowserNetwork(),
+) {
   return publicClient.readContract({
     address: network.contracts.escrow,
     abi: WAYBILL_ESCROW_ABI,
@@ -331,9 +334,9 @@ export function readMilestone(
   publicClient: PublicClient,
   dealId: bigint,
   milestoneIndex: number,
+  network: WaybillNetworkManifest = getBrowserNetwork(),
 ) {
   assertMilestoneIndex(milestoneIndex)
-  const network = getBrowserNetwork()
   return publicClient.readContract({
     address: network.contracts.escrow,
     abi: WAYBILL_ESCROW_ABI,
@@ -342,8 +345,11 @@ export function readMilestone(
   })
 }
 
-export function readUsdcBalance(publicClient: PublicClient, account: `0x${string}`) {
-  const network = getBrowserNetwork()
+export function readUsdcBalance(
+  publicClient: PublicClient,
+  account: `0x${string}`,
+  network: WaybillNetworkManifest = getBrowserNetwork(),
+) {
   return publicClient.readContract({
     address: network.usdc.address,
     abi: USDC_ABI,
@@ -355,8 +361,8 @@ export function readUsdcBalance(publicClient: PublicClient, account: `0x${string
 export function readUsdcAllowance(
   publicClient: PublicClient,
   owner: `0x${string}`,
+  network: WaybillNetworkManifest = getBrowserNetwork(),
 ) {
-  const network = getBrowserNetwork()
   return publicClient.readContract({
     address: network.usdc.address,
     abi: USDC_ABI,

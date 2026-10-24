@@ -1,6 +1,30 @@
 import type { WaybillNetwork, WaybillNetworkManifest } from '../../config/networks'
 import { getBrowserNetwork } from './network'
 
+export type BrowserApiEnvironment = Record<string, string | undefined>
+
+function viteEnvironment(): BrowserApiEnvironment {
+  return import.meta.env as BrowserApiEnvironment
+}
+
+export function loadBrowserApiBaseUrl(
+  environment: BrowserApiEnvironment = viteEnvironment(),
+): string {
+  const value = environment.VITE_WAYBILL_API_BASE_URL?.trim()
+  if (!value) throw new Error('Missing required environment variable: VITE_WAYBILL_API_BASE_URL')
+
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new Error('VITE_WAYBILL_API_BASE_URL must be a valid URL')
+  }
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    throw new Error('VITE_WAYBILL_API_BASE_URL must use http or https')
+  }
+  return url.toString().replace(/\/+$/, '')
+}
+
 export class WaybillApiError extends Error {
   readonly status: number
   readonly code: string
@@ -23,7 +47,7 @@ export function createWaybillApiClient(
   fetcher: typeof fetch = fetch,
   network: WaybillNetworkManifest = getBrowserNetwork(),
 ): WaybillApiClient {
-  const root = baseUrl.replace(/\/+$/, '')
+  const root = loadBrowserApiBaseUrl({ VITE_WAYBILL_API_BASE_URL: baseUrl })
 
   async function getJson<T>(path: string): Promise<T> {
     const response = await fetcher(`${root}${path}`, {

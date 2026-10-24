@@ -1,8 +1,24 @@
 import { describe, expect, test } from 'bun:test'
 import { ARC_TESTNET } from '../../config/networks'
-import { createWaybillApiClient, WaybillApiError } from './api'
+import {
+  createWaybillApiClient,
+  loadBrowserApiBaseUrl,
+  WaybillApiError,
+} from './api'
 
 describe('read-only frontend API boundary', () => {
+  test('requires an HTTP(S) API base URL', () => {
+    expect(() => loadBrowserApiBaseUrl({})).toThrow(
+      'VITE_WAYBILL_API_BASE_URL',
+    )
+    expect(() =>
+      loadBrowserApiBaseUrl({ VITE_WAYBILL_API_BASE_URL: 'file:///tmp/api' }),
+    ).toThrow('http or https')
+    expect(
+      loadBrowserApiBaseUrl({ VITE_WAYBILL_API_BASE_URL: 'https://api.example///' }),
+    ).toBe('https://api.example')
+  })
+
   test('reads the selected network and serializes deal ids in the URL', async () => {
     const requests: string[] = []
     const client = createWaybillApiClient(
