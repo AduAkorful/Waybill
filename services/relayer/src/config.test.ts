@@ -7,6 +7,7 @@ import {
 
 const VALID_ENV = {
   WAYBILL_NETWORK: 'testnet',
+  WAYBILL_RELAYER_START_BLOCK: '123',
   WAYBILL_RELAYER_PRIVATE_KEY: `0x${'11'.repeat(32)}`,
 }
 
@@ -15,6 +16,8 @@ describe('loadRelayerConfig', () => {
     const config = loadRelayerConfig(VALID_ENV)
 
     expect(config.network.network).toBe('testnet')
+    expect(config.startBlock).toBe(123n)
+    expect(config.maxBlockRange).toBe(2_000n)
     expect(config.pollIntervalMs).toBe(15_000)
     expect(config.confirmations).toBe(1)
     expect(config.operations).toEqual(RELAYER_OPERATIONS)
@@ -60,5 +63,26 @@ describe('loadRelayerConfig', () => {
         WAYBILL_RELAYER_CONFIRMATIONS: '2',
       }),
     ).toThrow('must be 1')
+  })
+
+  test('rejects unsafe block scan configuration', () => {
+    expect(() =>
+      loadRelayerConfig({
+        ...VALID_ENV,
+        WAYBILL_RELAYER_START_BLOCK: 'nope',
+      }),
+    ).toThrow('WAYBILL_RELAYER_START_BLOCK must be a non-negative integer')
+    expect(() =>
+      loadRelayerConfig({
+        ...VALID_ENV,
+        WAYBILL_RELAYER_MAX_BLOCK_RANGE: '0',
+      }),
+    ).toThrow('WAYBILL_RELAYER_MAX_BLOCK_RANGE must be between')
+    expect(() =>
+      loadRelayerConfig({
+        ...VALID_ENV,
+        WAYBILL_RELAYER_MAX_BLOCK_RANGE: '10001',
+      }),
+    ).toThrow('WAYBILL_RELAYER_MAX_BLOCK_RANGE must be between')
   })
 })

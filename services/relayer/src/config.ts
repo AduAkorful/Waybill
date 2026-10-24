@@ -11,6 +11,8 @@ export type RelayerPrivateKey = `0x${string}`
 export interface RelayerConfig {
   network: WaybillNetworkManifest
   privateKey: RelayerPrivateKey
+  startBlock: bigint
+  maxBlockRange: bigint
   pollIntervalMs: number
   confirmations: 1
   operations: readonly RelayerOperation[]
@@ -19,6 +21,8 @@ export interface RelayerConfig {
 const DEFAULT_POLL_INTERVAL_MS = 15_000
 const MIN_POLL_INTERVAL_MS = 1_000
 const MAX_POLL_INTERVAL_MS = 5 * 60_000
+const MIN_BLOCK_RANGE = 1n
+const MAX_BLOCK_RANGE = 10_000n
 
 function required(environment: RuntimeEnvironment, name: string): string {
   const value = environment[name]?.trim()
@@ -31,6 +35,11 @@ function parseInteger(value: string, name: string): number {
   return Number(value)
 }
 
+function parseBlock(value: string, name: string): bigint {
+  if (!/^\d+$/.test(value)) throw new Error(`${name} must be a non-negative integer`)
+  return BigInt(value)
+}
+
 function parsePrivateKey(value: string): RelayerPrivateKey {
   if (!/^0x[0-9a-fA-F]{64}$/.test(value)) {
     throw new Error('WAYBILL_RELAYER_PRIVATE_KEY must be a 32-byte hex key')
@@ -39,6 +48,18 @@ function parsePrivateKey(value: string): RelayerPrivateKey {
 }
 
 export function loadRelayerConfig(environment: RuntimeEnvironment): RelayerConfig {
+  const startBlock = parseBlock(
+    required(environment, 'WAYBILL_RELAYER_START_BLOCK'),
+    'WAYBILL_RELAYER_START_BLOCK',
+  )
+  const maxBlockRange = environment.WAYBILL_RELAYER_MAX_BLOCK_RANGE
+    ? parseBlock(environment.WAYBILL_RELAYER_MAX_BLOCK_RANGE, 'WAYBILL_RELAYER_MAX_BLOCK_RANGE')
+    : 2_000n
+  if (maxBlockRange < MIN_BLOCK_RANGE || maxBlockRange > MAX_BLOCK_RANGE) {
+    throw new Error(
+      `WAYBILL_RELAYER_MAX_BLOCK_RANGE must be between ${MIN_BLOCK_RANGE} and ${MAX_BLOCK_RANGE}`,
+    )
+  }
   const pollIntervalMs = environment.WAYBILL_RELAYER_POLL_INTERVAL_MS
     ? parseInteger(environment.WAYBILL_RELAYER_POLL_INTERVAL_MS, 'WAYBILL_RELAYER_POLL_INTERVAL_MS')
     : DEFAULT_POLL_INTERVAL_MS
@@ -58,6 +79,8 @@ export function loadRelayerConfig(environment: RuntimeEnvironment): RelayerConfi
   return {
     network: loadRuntimeNetwork(environment),
     privateKey: parsePrivateKey(required(environment, 'WAYBILL_RELAYER_PRIVATE_KEY')),
+    startBlock,
+    maxBlockRange,
     pollIntervalMs,
     confirmations: 1,
     operations: RELAYER_OPERATIONS,
