@@ -9,6 +9,8 @@ import { parseAbi } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { createWaybillApi } from './api'
 import { ARBITER_EVENT_ABI, ARBITER_EVENT_NAMES, readArbiter } from './arbiters'
+import { loadAlertConfig } from './alert-config'
+import { AlertMonitor } from './alerts'
 import { loadApiConfig } from './api-config'
 import { LabelService } from './deal-labels'
 import { DealTermsService, PostgresTermsStore } from './deal-terms'
@@ -54,6 +56,7 @@ export interface BackendApplication {
   readonly indexer: RelayerRuntime
   readonly registryIndexer: RelayerRuntime
   readonly arbiterIndexer: RelayerRuntime
+  readonly alerts: RelayerRuntime
   /** The HTTP read API, or null when WAYBILL_API_PORT is not set */
   readonly api: Server | null
   start(): Promise<void>
@@ -69,6 +72,9 @@ export interface BootstrapDependencies {
   ): ReturnType<typeof createRelayerSubmissionClient>
   loadMigrations(): Promise<Migration[]>
 }
+
+/** Every loop that keeps a cursor; the operator console and the lag alert both watch these. */
+const STREAMS = ['escrow-relayer', 'escrow-indexer', 'registry-indexer', 'arbiter-indexer'] as const
 
 const defaultDependencies: BootstrapDependencies = {
   createPool: (environment) => createPostgresPool(environment) as unknown as BackendPool,
@@ -110,6 +116,33 @@ export function createBackendApplication(
       reportError: (error) => console.error('[waybill-relayer]', error),
     },
   )
+  const alertConfig = loadAlertConfig(environment, config.network.network)
+  const relayerAddress = privateKeyToAccount(config.privateKey).address
+  const monitor = new AlertMonitor({
+    network: config.network.network,
+    sinks: alertConfig.sinks,
+    thresholds: {
+      minRelayerGas: alertConfig.minRelayerGas,
+      maxLagBlocks: alertConfig.maxLagBlocks,
+      lockedPercent: alertConfig.lockedPercent,
+      streams: STREAMS,
+    },
+    read: async () => {
+      const [live, cursors] = await Promise.all([
+        readOperatorChain(chain.client, config.network, relayerAddress),
+        new PostgresOperatorStore(pool).cursors(STREAMS),
+      ])
+      return { relayerGas: live.relayer.gasBalance, currentLocked: live.currentLocked, maxLocked: live.maxLocked, head: live.head, cursors }
+    },
+  })
+  const alerts = new RelayerRuntime(
+    { pollOnce: () => monitor.pollOnce() },
+    { pollIntervalMs: alertConfig.pollIntervalMs, reportError: (error) => console.error('[waybill-alerts]', error) },
+  )
+  const alertOnEvent = {
+    onEvent: (event: Parameters<AlertMonitor['handleEvent']>[0], isNew: boolean) => monitor.handleEvent(event, isNew),
+    onEventError: (error: unknown) => console.error('[waybill-alerts]', error),
+  }
   const emailSetup = loadEmailSetup(environment)
   const outbox = new PostgresNotificationOutbox(pool)
   const walletEmails = new PostgresWalletEmailStore(pool)
@@ -131,7 +164,11 @@ export function createBackendApplication(
         startBlock: config.startBlock,
         maxBlockRange: config.maxBlockRange,
         confirmations: config.confirmations,
-        ...(notifier ? { onEvent: (event, isNew) => notifier.handle(event, isNew).then(() => undefined), onEventError: (error) => console.error('[waybill-notifier]', error) } : {}),
+        onEvent: async (event, isNew) => {
+          await monitor.handleEvent(event, isNew)
+          if (notifier) await notifier.handle(event, isNew)
+        },
+        onEventError: (error) => console.error('[waybill-notifier]', error),
       },
     ),
     {
@@ -200,10 +237,9 @@ export function createBackendApplication(
         readDealEvents: (dealId) => readModel.getDealEvents(config.network.network, dealId),
         listWalletDeals: (address) => readModel.getWalletDeals(config.network.network, address),
         operatorSummary: async () => {
-          const streams = ['escrow-relayer', 'escrow-indexer', 'registry-indexer', 'arbiter-indexer']
           const [chainState, index] = await Promise.all([
-            readOperatorChain(chain.client, config.network, privateKeyToAccount(config.privateKey).address),
-            new PostgresOperatorStore(pool).summary(config.network.network, streams),
+            readOperatorChain(chain.client, config.network, relayerAddress),
+            new PostgresOperatorStore(pool).summary(config.network.network, STREAMS),
           ])
           return { network: config.network.network, chainId: config.network.chainId, escrow: config.network.contracts.escrow, chain: chainState, index }
         },
@@ -234,6 +270,7 @@ export function createBackendApplication(
         maxBlockRange: config.maxBlockRange,
         confirmations: config.confirmations,
         target: { address: config.network.contracts.attestorRegistry, events: REGISTRY_EVENT_ABI },
+        ...alertOnEvent,
       },
     ),
     {
@@ -253,6 +290,7 @@ export function createBackendApplication(
         maxBlockRange: config.maxBlockRange,
         confirmations: config.confirmations,
         target: { address: config.network.contracts.arbiterList, events: ARBITER_EVENT_ABI },
+        ...alertOnEvent,
       },
     ),
     {
@@ -272,9 +310,15 @@ export function createBackendApplication(
     indexer,
     registryIndexer,
     arbiterIndexer,
+    alerts,
     api,
     async start() {
       if (loopPromise) return loopPromise
+      // the RPC URL may come from the environment (a dedicated RPC); it must serve the chain the manifest names
+      const servedChainId = await chain.client.getChainId()
+      if (servedChainId !== config.network.chainId) {
+        throw new Error(`The RPC serves chain ${servedChainId}, but the ${config.network.network} manifest names chain ${config.network.chainId}`)
+      }
       await applyMigrations(pool, await dependencies.loadMigrations())
       await secureTables(pool)
       stopped = false
@@ -287,7 +331,7 @@ export function createBackendApplication(
           })
         })
       }
-      loopPromise = Promise.all([relayer.run(), indexer.run(), registryIndexer.run(), arbiterIndexer.run(), ...(notifications ? [notifications.run()] : [])]).then(() => undefined)
+      loopPromise = Promise.all([relayer.run(), indexer.run(), registryIndexer.run(), arbiterIndexer.run(), alerts.run(), ...(notifications ? [notifications.run()] : [])]).then(() => undefined)
       return loopPromise
     },
     async stop() {
@@ -297,6 +341,7 @@ export function createBackendApplication(
       indexer.stop()
       registryIndexer.stop()
       arbiterIndexer.stop()
+      alerts.stop()
       notifications?.stop()
       if (api?.listening) await new Promise<void>((resolve) => api.close(() => resolve()))
       await loopPromise

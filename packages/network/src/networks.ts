@@ -67,6 +67,13 @@ export const ARC_TESTNET: WaybillNetworkManifest = {
   earlyResolve: true,
 }
 
+/**
+ * Arc mainnet. Undefined until the mainnet deploy (plans/51-mainnet-launch.md): every value is copied from the deploy
+ * record and checked with `cast` before it is committed, with a comment saying how, as for ARC_TESTNET above. While it
+ * is undefined, mainnet refuses to start (except a flagged local fork, see resolveMainnet).
+ */
+export const ARC_MAINNET: WaybillNetworkManifest | undefined = undefined
+
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/
 
 function assertAddress(value: string, field: string): asserts value is Address {
@@ -132,4 +139,116 @@ export function resolveWaybillNetwork(
 
 export const TESTNET_NETWORKS: Partial<Record<WaybillNetwork, WaybillNetworkManifest>> = {
   testnet: ARC_TESTNET,
+}
+
+/** Mainnet values a process may also receive from its environment. Each one present is only allowed to repeat the checked-in value. */
+export interface MainnetEnvironmentValues {
+  chainId?: string
+  rpcUrl?: string
+  explorerUrl?: string
+  usdc?: string
+  escrow?: string
+  arbiterList?: string
+  attestorRegistry?: string
+  bondVault?: string
+  financingVault?: string
+  multicall3?: string
+  earlyResolve?: boolean
+}
+
+export interface ResolveMainnetOptions {
+  /** The manifest committed in this file (ARC_MAINNET); a parameter so tests can pass one */
+  checkedIn: WaybillNetworkManifest | undefined
+  environment: MainnetEnvironmentValues
+  /**
+   * True only for the local anvil fork stack. With no checked-in manifest, the environment may then supply the whole
+   * mainnet manifest, as before. A real deployment never sets it.
+   */
+  localFork: boolean
+  /** Resolves a same-origin path such as `/rpc` (browser only) */
+  resolveRpcUrl?: (value: string) => string
+}
+
+/** Fields of a mainnet manifest that a real deployment must carry, beyond what assertManifest checks. */
+function assertMainnetComplete(manifest: WaybillNetworkManifest): void {
+  const missing = [
+    manifest.network === 'mainnet' ? null : 'network',
+    manifest.multicall3 ? null : 'multicall3',
+    manifest.escrowDeployBlock !== undefined ? null : 'escrowDeployBlock',
+    manifest.attestorRegistryDeployBlock !== undefined ? null : 'attestorRegistryDeployBlock',
+    manifest.arbiterListDeployBlock !== undefined ? null : 'arbiterListDeployBlock',
+    manifest.earlyResolve !== undefined ? null : 'earlyResolve',
+  ].filter((field): field is string => field !== null)
+  if (missing.length > 0) throw new Error(`The checked-in mainnet manifest is incomplete: ${missing.join(', ')}`)
+}
+
+const same = (a: string, b: string, isAddress: boolean) => (isAddress ? a.toLowerCase() === b.toLowerCase() : a === b)
+
+/**
+ * The mainnet manifest. With one checked in, it is used as is; the environment may repeat its values but any that
+ * differ stop the process, so an address typed into a hosting dashboard can never replace a reviewed one. Only the RPC
+ * URL may be replaced (a dedicated RPC with a key, or the browser's same-origin proxy); the relayer checks the chain id
+ * it answers before starting. With none checked in, mainnet refuses to start unless this is the flagged local fork.
+ */
+export function resolveMainnet(options: ResolveMainnetOptions): WaybillNetworkManifest {
+  const { checkedIn, environment: env, localFork } = options
+  const rpc = (value: string) => (options.resolveRpcUrl ? options.resolveRpcUrl(value) : value)
+
+  if (!checkedIn) {
+    if (!localFork) {
+      throw new Error(
+        'No mainnet manifest is checked in (ARC_MAINNET in packages/network/src/networks.ts); refusing to start on mainnet',
+      )
+    }
+    const required = (value: string | undefined, field: string): string => {
+      if (!value?.trim()) throw new Error(`Local fork: missing mainnet ${field}`)
+      return value.trim()
+    }
+    const chainIdText = required(env.chainId, 'chainId')
+    if (!/^\d+$/.test(chainIdText)) throw new Error('Local fork: mainnet chainId must be an integer')
+    return resolveWaybillNetwork('mainnet', {
+      mainnet: {
+        network: 'mainnet',
+        chainId: Number(chainIdText),
+        rpcUrl: rpc(required(env.rpcUrl, 'rpcUrl')),
+        explorerUrl: required(env.explorerUrl, 'explorerUrl'),
+        usdc: { address: required(env.usdc, 'usdc') as Address, decimals: 6 },
+        nativeGasDecimals: 18,
+        ...(env.multicall3?.trim() ? { multicall3: env.multicall3.trim() as Address } : {}),
+        ...(env.earlyResolve ? { earlyResolve: true } : {}),
+        contracts: {
+          escrow: required(env.escrow, 'escrow') as Address,
+          arbiterList: required(env.arbiterList, 'arbiterList') as Address,
+          attestorRegistry: required(env.attestorRegistry, 'attestorRegistry') as Address,
+          bondVault: required(env.bondVault, 'bondVault') as Address,
+          financingVault: required(env.financingVault, 'financingVault') as Address,
+        },
+      },
+    })
+  }
+
+  if (localFork) throw new Error('The local-fork flag is set but a mainnet manifest is checked in; refusing to mix them')
+  assertMainnetComplete(checkedIn)
+  const checks: [string, string | undefined, string, boolean][] = [
+    ['chainId', env.chainId, String(checkedIn.chainId), false],
+    ['explorerUrl', env.explorerUrl, checkedIn.explorerUrl, false],
+    ['usdc', env.usdc, checkedIn.usdc.address, true],
+    ['escrow', env.escrow, checkedIn.contracts.escrow, true],
+    ['arbiterList', env.arbiterList, checkedIn.contracts.arbiterList, true],
+    ['attestorRegistry', env.attestorRegistry, checkedIn.contracts.attestorRegistry, true],
+    ['bondVault', env.bondVault, checkedIn.contracts.bondVault, true],
+    ['financingVault', env.financingVault, checkedIn.contracts.financingVault, true],
+    ['multicall3', env.multicall3, checkedIn.multicall3 ?? '', true],
+  ]
+  for (const [field, given, expected, isAddress] of checks) {
+    if (given?.trim() && !same(given.trim(), expected, isAddress)) {
+      throw new Error(`Mainnet ${field} in the environment (${given.trim()}) does not match the checked-in manifest (${expected})`)
+    }
+  }
+  if (env.earlyResolve !== undefined && env.earlyResolve !== checkedIn.earlyResolve) {
+    throw new Error('Mainnet earlyResolve in the environment does not match the checked-in manifest')
+  }
+  return resolveWaybillNetwork('mainnet', {
+    mainnet: { ...checkedIn, ...(env.rpcUrl?.trim() ? { rpcUrl: rpc(env.rpcUrl.trim()) } : {}) },
+  })
 }

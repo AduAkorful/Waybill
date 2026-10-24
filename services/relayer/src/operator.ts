@@ -97,6 +97,12 @@ export class PostgresOperatorStore {
     return result.rows.length
   }
 
+  /** Each loop's last processed block, for the lag alert. */
+  async cursors(streams: readonly string[]): Promise<{ stream: string; block: bigint }[]> {
+    const result = await this.database.query<{ stream: string; block_number: string }>(CURSORS_SQL, [streams])
+    return result.rows.map((r) => ({ stream: r.stream, block: BigInt(r.block_number) }))
+  }
+
   async summary(network: WaybillNetwork, streams: readonly string[], logLimit = 20): Promise<OperatorIndexSummary> {
     const [states, volume, disputes, cursors, log] = await Promise.all([
       this.database.query<{ state: string; deals: number }>(STATE_SQL, [network]),

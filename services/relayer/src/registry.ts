@@ -3,6 +3,8 @@ import { parseAbi, type PublicClient } from 'viem'
 import type { WaybillNetworkManifest } from '@waybill/network/networks'
 
 export const REGISTRY_EVENT_ABI = parseAbi([
+  'event WriterAdded(address indexed writer)',
+  'event WriterRemoved(address indexed writer)',
   'event OutcomeRecorded(address indexed attestor, uint8 kind, uint32 attested, uint32 upheld, uint32 slashed)',
   'event StatusScheduled(address indexed attestor, uint8 status, uint64 eta)',
   'event StatusExecuted(address indexed attestor, uint8 status)',

@@ -1,6 +1,8 @@
 import { defineChain, type Chain } from 'viem'
 import {
+  ARC_MAINNET,
   ARC_TESTNET,
+  resolveMainnet,
   resolveWaybillNetwork,
   type WaybillNetwork,
   type WaybillNetworkManifest,
@@ -23,53 +25,41 @@ const MAINNET_VARIABLES = {
   financingVaultAddress: 'NEXT_PUBLIC_WAYBILL_MAINNET_FINANCING_VAULT_ADDRESS',
 } as const
 
-/** Optional: set only after checking Multicall3 on the mainnet chain. */
+/** Local fork: Multicall3 on the fork. Real mainnet: optional, must repeat the checked-in value. */
 const MAINNET_MULTICALL3 = 'NEXT_PUBLIC_WAYBILL_MAINNET_MULTICALL3_ADDRESS'
-/** Optional: "1" only when the mainnet escrow was deployed with the decide-after-response rule. */
+/** Local fork: "1" when the fork escrow has the decide-after-response rule. Real mainnet: optional, must match the checked-in value. */
 const MAINNET_EARLY_RESOLVE = 'NEXT_PUBLIC_WAYBILL_MAINNET_EARLY_RESOLVE'
 
-function required(environment: BrowserEnvironment, name: string): string {
-  const value = environment[name]?.trim()
-  if (!value) throw new Error(`Missing required environment variable: ${name}`)
-  return value
+/** "1" only on the local anvil fork stack, where the environment supplies the whole mainnet manifest. */
+const LOCAL_FORK = 'NEXT_PUBLIC_WAYBILL_LOCAL_FORK'
+
+function mainnetManifest(environment: BrowserEnvironment, checkedIn: WaybillNetworkManifest | undefined): WaybillNetworkManifest {
+  const value = (name: string) => environment[name]?.trim() || undefined
+  const early = value(MAINNET_EARLY_RESOLVE)
+  return resolveMainnet({
+    checkedIn,
+    localFork: value(LOCAL_FORK) === '1',
+    resolveRpcUrl: (url) => resolveSameOrigin(url, MAINNET_VARIABLES.rpcUrl),
+    environment: {
+      chainId: value(MAINNET_VARIABLES.chainId),
+      rpcUrl: value(MAINNET_VARIABLES.rpcUrl),
+      explorerUrl: value(MAINNET_VARIABLES.explorerUrl),
+      usdc: value(MAINNET_VARIABLES.usdcAddress),
+      escrow: value(MAINNET_VARIABLES.escrowAddress),
+      arbiterList: value(MAINNET_VARIABLES.arbiterListAddress),
+      attestorRegistry: value(MAINNET_VARIABLES.attestorRegistryAddress),
+      bondVault: value(MAINNET_VARIABLES.bondVaultAddress),
+      financingVault: value(MAINNET_VARIABLES.financingVaultAddress),
+      multicall3: value(MAINNET_MULTICALL3),
+      ...(early === '1' ? { earlyResolve: true } : early === '0' ? { earlyResolve: false } : {}),
+    },
+  })
 }
 
-function mainnetManifest(environment: BrowserEnvironment): WaybillNetworkManifest {
-  const chainIdText = required(environment, MAINNET_VARIABLES.chainId)
-  if (!/^\d+$/.test(chainIdText)) {
-    throw new Error(`Invalid ${MAINNET_VARIABLES.chainId}: expected an integer`)
-  }
-
-  return {
-    network: 'mainnet',
-    chainId: Number(chainIdText),
-    rpcUrl: resolveSameOrigin(required(environment, MAINNET_VARIABLES.rpcUrl), MAINNET_VARIABLES.rpcUrl),
-    explorerUrl: required(environment, MAINNET_VARIABLES.explorerUrl),
-    usdc: {
-      address: required(environment, MAINNET_VARIABLES.usdcAddress) as `0x${string}`,
-      decimals: 6,
-    },
-    nativeGasDecimals: 18,
-    ...(environment[MAINNET_MULTICALL3]?.trim() ? { multicall3: environment[MAINNET_MULTICALL3]!.trim() as `0x${string}` } : {}),
-    ...(environment[MAINNET_EARLY_RESOLVE]?.trim() === '1' ? { earlyResolve: true } : {}),
-    contracts: {
-      escrow: required(environment, MAINNET_VARIABLES.escrowAddress) as `0x${string}`,
-      arbiterList: required(environment, MAINNET_VARIABLES.arbiterListAddress) as `0x${string}`,
-      attestorRegistry: required(
-        environment,
-        MAINNET_VARIABLES.attestorRegistryAddress,
-      ) as `0x${string}`,
-      bondVault: required(environment, MAINNET_VARIABLES.bondVaultAddress) as `0x${string}`,
-      financingVault: required(
-        environment,
-        MAINNET_VARIABLES.financingVaultAddress,
-      ) as `0x${string}`,
-    },
-  }
-}
-
+/** `checkedInMainnet` is ARC_MAINNET; tests pass their own. */
 export function loadBrowserNetwork(
   environment: BrowserEnvironment = publicEnvironment(),
+  checkedInMainnet: WaybillNetworkManifest | undefined = ARC_MAINNET,
 ): WaybillNetworkManifest {
   const network = environment.NEXT_PUBLIC_WAYBILL_NETWORK?.trim() as WaybillNetwork | undefined
 
@@ -77,9 +67,7 @@ export function loadBrowserNetwork(
     return resolveWaybillNetwork('testnet', { testnet: ARC_TESTNET })
   }
   if (network === 'mainnet') {
-    return resolveWaybillNetwork('mainnet', {
-      mainnet: mainnetManifest(environment),
-    })
+    return mainnetManifest(environment, checkedInMainnet)
   }
   throw new Error('NEXT_PUBLIC_WAYBILL_NETWORK must be explicitly set to testnet or mainnet')
 }

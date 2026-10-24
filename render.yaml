@@ -62,3 +62,8 @@ services:
         sync: false
       - key: WAYBILL_EMAIL_FROM
         sync: false
+      # Operator alerts. Required on mainnet (one or both); testnet only logs without them.
+      - key: WAYBILL_ALERT_WEBHOOK_URL
+        sync: false
+      - key: WAYBILL_ALERT_EMAIL
+        sync: false

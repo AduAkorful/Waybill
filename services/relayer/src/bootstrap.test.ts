@@ -27,11 +27,13 @@ class FakePool implements BackendPool {
   }
 }
 
-function fakeChain(): RelayerChain {
+function fakeChain(chainId = ARC_TESTNET.chainId): RelayerChain {
   return {
     escrow: ARC_TESTNET.contracts.escrow,
     client: {
+      getChainId: async () => chainId,
       getBlockNumber: async () => 0n,
+      getBalance: async () => 10n ** 19n,
       getLogs: async () => [],
       readContract: async () => 0n,
       getBlock: async () => ({ timestamp: 0n }),
@@ -125,6 +127,18 @@ describe('backend process bootstrap', () => {
         }),
       ).toThrow()
     }
+  })
+
+  test('refuses to start when the RPC serves another chain', async () => {
+    const pool = new FakePool()
+    const app = createBackendApplication(environment, {
+      createPool: () => pool,
+      createChain: () => fakeChain(1),
+      createSubmissionClient: () => fakeSubmission(),
+      loadMigrations: async () => [],
+    })
+    await expect(app.start()).rejects.toThrow('The RPC serves chain 1')
+    await app.stop()
   })
 
   test('does not start loops when migrations fail', async () => {

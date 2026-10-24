@@ -72,6 +72,24 @@ Mainnet is a separate deployment and key set. Before switching the environment:
 The application must refuse an incomplete mainnet manifest and must never
 fall back to the checked-in testnet manifest.
 
+Mainnet addresses come only from `ARC_MAINNET` in `packages/network/src/networks.ts`, committed after the deploy
+with each value checked by `cast`; it must carry Multicall3, the three deploy blocks and `earlyResolve`. Any
+`WAYBILL_MAINNET_*` value in the environment must repeat the checked-in one or the relayer refuses to start;
+only `WAYBILL_MAINNET_RPC_URL` may differ (a dedicated RPC), and the relayer checks that it serves the manifest's
+chain id before starting. `WAYBILL_LOCAL_FORK=1` (local anvil fork, RPC on localhost) lets the environment supply
+the whole manifest while none is checked in, and is refused next to a checked-in one.
+
+## Operator alerts
+
+`src/alerts.ts` raises an alert for every on-chain pauser action (pause and unpause, cap changes, treasury and fee
+range changes, arbiter-list changes, registry writer changes), every `PayoutFailed` and `RefundFailed`, and every
+minute checks the relayer's gas, each loop's lag behind the chain head and money held against `maxLocked`. A watch
+condition alerts when it starts, every 6 hours while it lasts and once when it clears; an event older than 48 hours
+(a backfill) raises nothing. Alerts go to `WAYBILL_ALERT_WEBHOOK_URL` (JSON with `text` and `content`, so Slack- and
+Discord-style hooks both work) and/or `WAYBILL_ALERT_EMAIL` (sent directly through Resend, not the user outbox), and
+are always written to the log. Mainnet refuses to start with neither set. A failed delivery is logged and never
+stops the relayer.
+
 ## Read API
 
 Set `WAYBILL_API_PORT` to serve the read-only HTTP API from the same process as the relayer and indexer; leave it empty to run the loops only. Routes: `GET /health`, `/v1/network`, `/v1/deals/:id` (live chain read with projection), `/v1/deals/:id/events` (indexed events, oldest first, with block time when known), `/v1/wallets/:address/deals`, `/v1/attestors[/:address]`, `/v1/operator` (live escrow limits, pause state, pauser, relayer gas balance, plus index aggregates: deals by state, volume by deal label, open disputes, stream cursors, recent setting changes), `/v1/arbiters` (everyone with an event on the arbiter list, with live `isAllowed`, advertised fee and any scheduled addition or removal). Browsers are served only for origins listed in `WAYBILL_API_ALLOWED_ORIGINS`. Start with `npm run start --workspace @waybill/relayer`.

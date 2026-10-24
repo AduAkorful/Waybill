@@ -15,6 +15,10 @@ const devWallet = process.env.NEXT_PUBLIC_WAYBILL_DEV_WALLET_AUTH === '1'
 if (devWallet && (process.env.VERCEL || process.env.RENDER)) {
   throw new Error('NEXT_PUBLIC_WAYBILL_DEV_WALLET_AUTH=1 is for the local fork only and is refused on a hosted build')
 }
+// The local-fork flag lets the environment supply mainnet addresses; a hosted build must use the checked-in manifest.
+if (process.env.NEXT_PUBLIC_WAYBILL_LOCAL_FORK === '1' && (process.env.VERCEL || process.env.RENDER)) {
+  throw new Error('NEXT_PUBLIC_WAYBILL_LOCAL_FORK=1 is for the local fork only and is refused on a hosted build')
+}
 const providers = devWallet
   ? []
   : [

@@ -31,6 +31,8 @@ describe('attestor registry reads', () => {
       'ProfileUpdated',
       'StatusExecuted',
       'StatusScheduled',
+      'WriterAdded',
+      'WriterRemoved',
     ])
   })
 

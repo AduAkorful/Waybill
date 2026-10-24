@@ -1,6 +1,7 @@
 import {
+  ARC_MAINNET,
   ARC_TESTNET,
-  type Address,
+  resolveMainnet,
   type WaybillNetwork,
   type WaybillNetworkManifest,
   resolveWaybillNetwork,
@@ -22,49 +23,53 @@ const MAINNET_VARIABLES = {
   financingVaultAddress: 'WAYBILL_MAINNET_FINANCING_VAULT_ADDRESS',
 } as const
 
-function required(environment: RuntimeEnvironment, name: string): string {
-  const value = environment[name]?.trim()
-  if (!value) throw new Error(`Missing required environment variable: ${name}`)
-  return value
-}
+const LOCAL_FORK = 'WAYBILL_LOCAL_FORK'
 
-function requiredAddress(environment: RuntimeEnvironment, name: string): Address {
-  return required(environment, name) as Address
-}
-
-function mainnetManifest(environment: RuntimeEnvironment): WaybillNetworkManifest {
-  const chainIdText = required(environment, MAINNET_VARIABLES.chainId)
-  if (!/^\d+$/.test(chainIdText)) {
-    throw new Error(`Invalid ${MAINNET_VARIABLES.chainId}: expected an integer`)
-  }
-
-  return {
-    network: 'mainnet',
-    chainId: Number(chainIdText),
-    rpcUrl: required(environment, MAINNET_VARIABLES.rpcUrl),
-    explorerUrl: required(environment, MAINNET_VARIABLES.explorerUrl),
-    usdc: {
-      address: requiredAddress(environment, MAINNET_VARIABLES.usdcAddress),
-      decimals: 6,
-    },
-    nativeGasDecimals: 18,
-    contracts: {
-      escrow: requiredAddress(environment, MAINNET_VARIABLES.escrowAddress),
-      arbiterList: requiredAddress(environment, MAINNET_VARIABLES.arbiterListAddress),
-      attestorRegistry: requiredAddress(environment, MAINNET_VARIABLES.attestorRegistryAddress),
-      bondVault: requiredAddress(environment, MAINNET_VARIABLES.bondVaultAddress),
-      financingVault: requiredAddress(environment, MAINNET_VARIABLES.financingVaultAddress),
-    },
+/** The local fork's relayer must read a chain on this machine, never a remote one. */
+function isLocalRpc(url: string): boolean {
+  try {
+    const host = new URL(url).hostname
+    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host.endsWith('.localhost')
+  } catch {
+    return false
   }
 }
 
-export function loadRuntimeNetwork(environment: RuntimeEnvironment): WaybillNetworkManifest {
+function mainnetManifest(environment: RuntimeEnvironment, checkedIn: WaybillNetworkManifest | undefined): WaybillNetworkManifest {
+  const value = (name: string) => environment[name]?.trim() || undefined
+  const localFork = value(LOCAL_FORK) === '1'
+  const rpcUrl = value(MAINNET_VARIABLES.rpcUrl)
+  if (localFork && !checkedIn && (!rpcUrl || !isLocalRpc(rpcUrl))) {
+    throw new Error(`${LOCAL_FORK}=1 needs ${MAINNET_VARIABLES.rpcUrl} on localhost`)
+  }
+  return resolveMainnet({
+    checkedIn,
+    localFork,
+    environment: {
+      chainId: value(MAINNET_VARIABLES.chainId),
+      rpcUrl,
+      explorerUrl: value(MAINNET_VARIABLES.explorerUrl),
+      usdc: value(MAINNET_VARIABLES.usdcAddress),
+      escrow: value(MAINNET_VARIABLES.escrowAddress),
+      arbiterList: value(MAINNET_VARIABLES.arbiterListAddress),
+      attestorRegistry: value(MAINNET_VARIABLES.attestorRegistryAddress),
+      bondVault: value(MAINNET_VARIABLES.bondVaultAddress),
+      financingVault: value(MAINNET_VARIABLES.financingVaultAddress),
+    },
+  })
+}
+
+/** `checkedInMainnet` is ARC_MAINNET; tests pass their own. */
+export function loadRuntimeNetwork(
+  environment: RuntimeEnvironment,
+  checkedInMainnet: WaybillNetworkManifest | undefined = ARC_MAINNET,
+): WaybillNetworkManifest {
   const network = environment.WAYBILL_NETWORK?.trim() as WaybillNetwork | undefined
   if (network === 'testnet') {
     return resolveWaybillNetwork('testnet', { testnet: ARC_TESTNET })
   }
   if (network === 'mainnet') {
-    return resolveWaybillNetwork('mainnet', { mainnet: mainnetManifest(environment) })
+    return mainnetManifest(environment, checkedInMainnet)
   }
   throw new Error('WAYBILL_NETWORK must be explicitly set to testnet or mainnet')
 }

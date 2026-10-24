@@ -16,11 +16,9 @@ export interface RuntimePoller {
   pollOnce(): Promise<unknown | null>
 }
 
-const defaultSleep = (milliseconds: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
-
 export class RelayerRuntime {
   private stopped = false
+  private wake: (() => void) | null = null
 
   constructor(
     private readonly worker: RuntimePoller | RelayerEventWorker,
@@ -37,11 +35,22 @@ export class RelayerRuntime {
 
   stop(): void {
     this.stopped = true
+    // end a long wait at once, so shutdown never waits out a slow loop's interval
+    this.wake?.()
   }
 
   async run(): Promise<void> {
     this.stopped = false
-    const sleep = this.options.sleep ?? defaultSleep
+    const sleep =
+      this.options.sleep ??
+      ((milliseconds: number) =>
+        new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, milliseconds)
+          this.wake = () => {
+            clearTimeout(timer)
+            resolve()
+          }
+        }))
     while (!this.stopped) {
       try {
         await this.worker.pollOnce()

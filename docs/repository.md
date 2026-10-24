@@ -43,7 +43,7 @@ Both builds need the repository root as the install context, because they use `p
 
 ## Production checklist (web)
 
-- `NEXT_PUBLIC_WAYBILL_NETWORK` set explicitly; mainnet needs the full `NEXT_PUBLIC_WAYBILL_MAINNET_*` set and fails closed otherwise.
+- `NEXT_PUBLIC_WAYBILL_NETWORK` set explicitly. Mainnet loads only the manifest checked in as `ARC_MAINNET` (`packages/network/src/networks.ts`); `NEXT_PUBLIC_WAYBILL_MAINNET_*` values may only repeat it (the RPC URL may differ), and any mismatch fails closed. `NEXT_PUBLIC_WAYBILL_LOCAL_FORK=1` is for the local anvil fork only.
 - `NEXT_PUBLIC_WAYBILL_API_BASE_URL` points at the relayer, and that origin's web address is in the relayer's `WAYBILL_API_ALLOWED_ORIGINS`.
 - The Privy app lists the production web origin as an allowed origin.
 - Security headers are set in `apps/web/next.config.ts` (framing refused, no sniffing, HSTS, strict referrer). A script-source CSP needs per-request nonces and has not been added.

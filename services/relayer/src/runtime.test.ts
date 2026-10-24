@@ -55,6 +55,16 @@ describe('RelayerRuntime', () => {
     expect(poller.calls).toBe(1)
   })
 
+  test('stop ends a long wait at once', async () => {
+    const runtime = new RelayerRuntime({ pollOnce: async () => null }, { pollIntervalMs: 3_600_000 })
+    const running = runtime.run()
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    const started = Date.now()
+    runtime.stop()
+    await running
+    expect(Date.now() - started).toBeLessThan(1_000)
+  })
+
   test('rejects an unsafe runtime interval', () => {
     expect(() => new RelayerRuntime(new FakePoller(), { pollIntervalMs: 0 })).toThrow(
       'positive safe integer',
