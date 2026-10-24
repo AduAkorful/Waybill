@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { WaybillNetwork } from '@waybill/network/networks'
 import { EvidenceError, MAX_EVIDENCE_BYTES, type EvidenceService } from './evidence-service'
 import { LabelError, type DealRange, type LabelService } from './deal-labels'
+import { EmailError, type WalletEmailService } from './wallet-emails'
 import type { HealthResult } from './health'
 
 export interface ApiRequest {
@@ -43,6 +44,8 @@ export interface WaybillApiOptions {
   evidence?: EvidenceService | null
   /** Pauser-only deal labelling. Absent when the process cannot read the chain. */
   labels?: LabelService | null
+  /** Email settings and verification for wallets. Absent when no email provider is configured. */
+  emails?: WalletEmailService | null
 }
 
 function jsonValue(value: unknown): unknown {
@@ -136,6 +139,7 @@ async function route(request: ApiRequest, options: WaybillApiOptions): Promise<A
   const evidenceRoute = /^\/v1\/deals\/([0-9]+)\/evidence(?:\/([0-9a-fA-F-]{36}|[0-9]{1,3}))?$/.exec(url.pathname)
   if (evidenceRoute) return evidence(request, options, BigInt(evidenceRoute[1]!), evidenceRoute[2])
   if (url.pathname === '/v1/operator/labels') return setLabels(request, options)
+  if (url.pathname === '/v1/contacts' || url.pathname === '/v1/contacts/verify') return contacts(request, options, url.pathname)
   if (request.method !== 'GET') return { status: 405, body: { error: 'method_not_allowed' } }
   if (url.pathname === '/health') {
     return { status: 200, body: await options.health() }
@@ -243,6 +247,37 @@ async function setLabels(request: ApiRequest, options: WaybillApiOptions): Promi
   } catch (e) {
     if (e instanceof LabelError) return { status: e.status, body: { error: e.code } }
     return { status: 503, body: { error: 'labels_unavailable' } }
+  }
+}
+
+/** A wallet's own email settings. Reading and writing both need that wallet's signature; verification needs the mailed token. */
+async function contacts(request: ApiRequest, options: WaybillApiOptions, path: string): Promise<ApiResponse> {
+  const service = options.emails
+  if (!service) return { status: 503, body: { error: 'email_unavailable' } }
+  try {
+    if (path === '/v1/contacts/verify') {
+      if (request.method !== 'POST') return { status: 405, body: { error: 'method_not_allowed' } }
+      const body = JSON.parse(new TextDecoder().decode(request.body ?? new Uint8Array())) as { token?: unknown }
+      const ok = await service.verify(typeof body.token === 'string' ? body.token : '')
+      return ok ? { status: 200, body: { verified: true } } : { status: 404, body: { error: 'link_expired_or_used' } }
+    }
+    const signed = signedRequest(request)
+    if (!signed) return { status: 401, body: { error: 'missing_signature' } }
+    const auth = { wallet: signed.signer, signature: signed.signature, signedAt: signed.signedAt }
+    if (request.method === 'GET') {
+      const found = await service.read(auth)
+      return found ? { status: 200, body: found } : { status: 404, body: { error: 'no_email_set' } }
+    }
+    if (request.method === 'POST') {
+      const body = JSON.parse(new TextDecoder().decode(request.body ?? new Uint8Array())) as { email?: unknown; notify?: unknown }
+      if (typeof body.email !== 'string' || typeof body.notify !== 'boolean') return { status: 400, body: { error: 'invalid_body' } }
+      return { status: 200, body: await service.set(auth, body.email, body.notify) }
+    }
+    return { status: 405, body: { error: 'method_not_allowed' } }
+  } catch (e) {
+    if (e instanceof EmailError) return { status: e.status, body: { error: e.code } }
+    if (e instanceof SyntaxError) return { status: 400, body: { error: 'invalid_body' } }
+    return { status: 503, body: { error: 'email_unavailable' } }
   }
 }
 

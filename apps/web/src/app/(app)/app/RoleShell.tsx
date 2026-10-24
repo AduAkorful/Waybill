@@ -24,6 +24,7 @@ export function RoleShell({ address, children }: { address: string; children: Re
       : []),
     ...(shells.includes('arbiter') ? [{ href: '/app/arbiter/fees', label: 'Fees', active: path.startsWith('/app/arbiter/fees') }] : []),
     { href: '/app/new', label: 'New deal', active: path.startsWith('/app/new') },
+    { href: '/app/settings', label: 'Settings', active: path.startsWith('/app/settings') },
     { href: '/attestors', label: 'Attestors', active: false },
   ]
   const current = shells.find((s) => path.startsWith(`/app/${s}`))

@@ -190,6 +190,9 @@ export class ChainEventIndexer {
     > & {
       /** Index another contract's events instead of the escrow's (for example the attestor registry) */
       target?: { address: `0x${string}`; events: Abi }
+      /** Called for each event after it is stored (and its deal's parties are known). A failure is reported, never stops indexing. */
+      onEvent?: (event: ChainEventRecord, isNew: boolean) => Promise<void>
+      onEventError?: (error: unknown) => void
     },
   ) {}
 
@@ -229,7 +232,7 @@ export class ChainEventIndexer {
           (log.blockNumber === previous.blockNumber && log.logIndex <= previous.logIndex))
       ) continue
       const payload = (serialize(log.args ?? {}) ?? {}) as Record<string, unknown>
-      await this.writer.recordEvent({
+      const record: ChainEventRecord = {
         network: this.config.network,
         blockNumber: log.blockNumber,
         logIndex: log.logIndex,
@@ -242,7 +245,8 @@ export class ChainEventIndexer {
             : Number(asBigInt(log.args.milestoneIndex, 'milestoneIndex')),
         blockTimestamp: timestamps.get(log.blockNumber),
         payload,
-      })
+      }
+      const isNew = await this.writer.recordEvent(record)
       if (log.eventName === 'DealCreated' && this.reader.getDealParties && this.writer.recordParties) {
         // A failure here stops the poll before the cursor moves, so the deal is retried, never skipped.
         const dealId = asBigInt(log.args?.dealId, 'dealId')
@@ -251,6 +255,14 @@ export class ChainEventIndexer {
           dealId,
           await this.reader.getDealParties(dealId, log.blockNumber),
         )
+      }
+      if (this.config.onEvent) {
+        // notifications are secondary: a failure is reported and the cursor still moves
+        try {
+          await this.config.onEvent(record, isNew)
+        } catch (error) {
+          this.config.onEventError?.(error)
+        }
       }
       const projection = projectionFor(this.config.network, log)
       if (projection) {

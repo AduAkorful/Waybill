@@ -100,6 +100,10 @@ const WALLET_DEALS_SQL = `
   ORDER BY p.deal_id DESC, p.role ASC, p.milestone_index ASC
 `
 
+const DEAL_PARTIES_SQL = `
+  SELECT address, role, milestone_index FROM waybill_deal_parties WHERE network = $1 AND deal_id = $2
+`
+
 const IS_PARTY_SQL = `
   SELECT 1 FROM waybill_deal_parties WHERE network = $1 AND deal_id = $2 AND address = lower($3) LIMIT 1
 `
@@ -347,6 +351,12 @@ export class PostgresReadModelStore {
       deals.set(key, deal)
     }
     return [...deals.values()]
+  }
+
+  /** Everyone the escrow names in a deal, as indexed when it was created. */
+  async listDealParties(network: WaybillNetwork, dealId: bigint): Promise<{ address: string; role: 'buyer' | 'supplier' | 'arbiter' | 'panel' | 'attestor'; milestoneIndex: number | null }[]> {
+    const result = await this.database.query<{ address: string; role: 'buyer' | 'supplier' | 'arbiter' | 'panel' | 'attestor'; milestone_index: number }>(DEAL_PARTIES_SQL, [network, dealId.toString()])
+    return result.rows.map((r) => ({ address: r.address, role: r.role, milestoneIndex: r.milestone_index < 0 ? null : r.milestone_index }))
   }
 
   /** Whether the escrow names this wallet in the deal in any role, as indexed from the contract. */

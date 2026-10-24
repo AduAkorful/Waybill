@@ -11,6 +11,11 @@ import { createWaybillApi } from './api'
 import { ARBITER_EVENT_ABI, ARBITER_EVENT_NAMES, readArbiter } from './arbiters'
 import { loadApiConfig } from './api-config'
 import { LabelService } from './deal-labels'
+import { loadEmailSetup } from './email-config'
+import { EventNotifier } from './event-notifier'
+import { NotificationDispatcher } from './notification-dispatcher'
+import { PostgresNotificationOutbox } from './notification-outbox'
+import { PostgresWalletEmailStore, WalletEmailService } from './wallet-emails'
 import { PostgresOperatorStore, readOperatorChain } from './operator'
 import { loadEvidenceService } from './evidence-config'
 import { PostgresEvidenceStore } from './evidence-store'
@@ -102,6 +107,17 @@ export function createBackendApplication(
       reportError: (error) => console.error('[waybill-relayer]', error),
     },
   )
+  const emailSetup = loadEmailSetup(environment)
+  const outbox = new PostgresNotificationOutbox(pool)
+  const walletEmails = new PostgresWalletEmailStore(pool)
+  const notifier = emailSetup
+    ? new EventNotifier({
+        network: config.network.network,
+        parties: (dealId) => readModel.listDealParties(config.network.network, dealId),
+        recipient: (wallet) => walletEmails.recipient(config.network.network, wallet),
+        enqueue: (input) => outbox.enqueue(input),
+      })
+    : null
   const indexer = new RelayerRuntime(
     new ChainEventIndexer(
       createIndexerLogReader(chain),
@@ -112,6 +128,7 @@ export function createBackendApplication(
         startBlock: config.startBlock,
         maxBlockRange: config.maxBlockRange,
         confirmations: config.confirmations,
+        ...(notifier ? { onEvent: (event, isNew) => notifier.handle(event, isNew).then(() => undefined), onEventError: (error) => console.error('[waybill-notifier]', error) } : {}),
       },
     ),
     {
@@ -138,10 +155,24 @@ export function createBackendApplication(
     readPauser: () => chain.client.readContract({ address: config.network.contracts.escrow, abi: escrowReads, functionName: 'pauser' }),
     readTotalDeals: () => chain.client.readContract({ address: config.network.contracts.escrow, abi: escrowReads, functionName: 'nextDealId' }),
   })
+  const emails = emailSetup
+    ? new WalletEmailService({
+        context: { network: config.network.network, chainId: config.network.chainId },
+        network: config.network.network,
+        store: walletEmails,
+        // sent straight away and never queued, so the one-time token is not kept anywhere but the mail itself
+        sendVerification: (to, token) => emailSetup.provider.send({ to, template: 'verify_email', payload: { token } }),
+      })
+    : null
+  const dispatcher = emailSetup ? new NotificationDispatcher(outbox, emailSetup.provider) : null
+  const notifications = dispatcher
+    ? new RelayerRuntime({ pollOnce: () => dispatcher.dispatchBatch() }, { pollIntervalMs: 10_000, reportError: (error) => console.error('[waybill-notifications]', error) })
+    : null
   const api = apiConfig
     ? createWaybillApi({
         evidence,
         labels,
+        emails,
         network: config.network.network,
         allowedOrigins: apiConfig.allowedOrigins,
         health: () =>
@@ -239,7 +270,7 @@ export function createBackendApplication(
           })
         })
       }
-      loopPromise = Promise.all([relayer.run(), indexer.run(), registryIndexer.run(), arbiterIndexer.run()]).then(() => undefined)
+      loopPromise = Promise.all([relayer.run(), indexer.run(), registryIndexer.run(), arbiterIndexer.run(), ...(notifications ? [notifications.run()] : [])]).then(() => undefined)
       return loopPromise
     },
     async stop() {
@@ -249,6 +280,7 @@ export function createBackendApplication(
       indexer.stop()
       registryIndexer.stop()
       arbiterIndexer.stop()
+      notifications?.stop()
       if (api?.listening) await new Promise<void>((resolve) => api.close(() => resolve()))
       await loopPromise
       loopPromise = null
