@@ -48,11 +48,11 @@ const DEAL_UPSERT_SQL = `
   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
   ON CONFLICT (network, deal_id) DO UPDATE
     SET state = EXCLUDED.state,
-        buyer = EXCLUDED.buyer,
-        supplier = EXCLUDED.supplier,
-        supplier_payout = EXCLUDED.supplier_payout,
-        total_amount = EXCLUDED.total_amount,
-        prepaid_fee = EXCLUDED.prepaid_fee,
+        buyer = COALESCE(EXCLUDED.buyer, waybill_deal_projections.buyer),
+        supplier = COALESCE(EXCLUDED.supplier, waybill_deal_projections.supplier),
+        supplier_payout = COALESCE(EXCLUDED.supplier_payout, waybill_deal_projections.supplier_payout),
+        total_amount = COALESCE(EXCLUDED.total_amount, waybill_deal_projections.total_amount),
+        prepaid_fee = COALESCE(EXCLUDED.prepaid_fee, waybill_deal_projections.prepaid_fee),
         last_block_number = EXCLUDED.last_block_number,
         last_log_index = EXCLUDED.last_log_index,
         updated_at = NOW()
