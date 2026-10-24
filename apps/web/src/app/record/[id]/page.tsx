@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const id = parseId((await params).id)
   if (id === null) return { title: 'Deal not found' }
   const read = await getPublicDeal(id)
-  if (read.status === 'missing' || !isPublic(read.deal)) return { title: `Deal ${id}` }
+  if (read.status === 'missing' || !isPublic(read.deal)) return { title: `Deal ${id}`, description: 'This deal record is not public yet.' }
   const d = read.deal
   const description = `${d.tranches.length} ${d.tranches.length === 1 ? 'part' : 'parts'} · ${formatAmount(d.totalAmount)} USDC · ${statusText[d.state]}`
   return {

@@ -14,7 +14,7 @@ function Box({ n, label, children, className = "" }: { n: string; label: string;
   return (
     <div data-box className={`border-r border-b border-rule bg-sheet px-3.5 py-2.5 ${className}`}>
       <div className="label flex items-baseline gap-1.5">
-        <span className="mono text-[10px] font-normal tracking-normal opacity-70">{n}</span>
+        <span className="mono text-[10px] font-normal tracking-normal text-graphite">{n}</span>
         <span>{label}</span>
       </div>
       <div className="mt-1 text-[13.5px] leading-snug">{children}</div>

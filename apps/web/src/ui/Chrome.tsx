@@ -32,9 +32,9 @@ export function ThemeToggle() {
       type="button"
       onClick={() => setTheme(next[label])}
       className="mono rounded-full border border-rule px-2.5 py-1 text-[10.5px] text-graphite uppercase hover:text-ink"
-      aria-label={`Theme: ${label}. Switch theme`}
+      aria-label={`${label === "dark" ? "Night" : label === "light" ? "Day" : "Auto"}, theme. Switch theme`}
     >
-      {label === "dark" ? "◐ Night" : label === "light" ? "○ Day" : "◑ Auto"}
+      <span aria-hidden>{label === "dark" ? "◐" : label === "light" ? "○" : "◑"}</span> {label === "dark" ? "Night" : label === "light" ? "Day" : "Auto"}
     </button>
   );
 }
