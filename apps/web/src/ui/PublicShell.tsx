@@ -21,6 +21,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto max-w-6xl px-4 py-8 text-[12.5px] leading-relaxed text-graphite md:px-8">
           <Wordmark className="text-[13px] text-ink" />
           <p className="mt-2 max-w-md">Business use only · Early access · Not a bank, custodian or lender. Nobody at Waybill can move escrowed money.</p>
+          <p className="mt-2"><Link href="/legal" className="underline">Terms, privacy and security</Link></p>
         </div>
       </footer>
     </div>
