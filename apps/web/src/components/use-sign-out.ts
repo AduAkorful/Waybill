@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 
 /**
@@ -7,9 +8,12 @@ import { usePrivy } from '@privy-io/react-auth'
  * session); when it does, this still clears what the browser holds and reloads, so the person is not left signed in
  * with a button that did nothing.
  */
-export function useSignOut(to: string | null = '/'): () => Promise<void> {
+export function useSignOut(to: string | null = '/'): { signOut: () => Promise<void>; signingOut: boolean } {
   const { logout } = usePrivy()
-  return async () => {
+  const [signingOut, setSigningOut] = useState(false)
+  const signOut = async () => {
+    if (signingOut) return
+    setSigningOut(true)
     try {
       await logout()
     } catch {
@@ -22,4 +26,5 @@ export function useSignOut(to: string | null = '/'): () => Promise<void> {
     if (to === null) window.location.reload()
     else window.location.assign(to)
   }
+  return { signOut, signingOut }
 }

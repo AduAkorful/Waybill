@@ -38,7 +38,7 @@ export default function SupplierWallet(props: { deal: DealView; lang: Lang; auto
 function Inner({ deal: d, lang, autoLogin, onMounted, onChanged }: { deal: DealView; lang: Lang; autoLogin: boolean; onMounted: () => void; onChanged: () => void }) {
   const t = COPY[lang]
   const { ready, authenticated, login } = usePrivy()
-  const signOut = useSignOut(null)
+  const { signOut, signingOut } = useSignOut(null)
   const { address } = useAccount()
   useReloadOnAccountChange(address)
   const [payout, setPayout] = useState('')
@@ -102,7 +102,7 @@ function Inner({ deal: d, lang, autoLogin, onMounted, onChanged }: { deal: DealV
         <div role="alert" className="mt-6 rounded-md border border-hold/50 bg-hold-wash px-4 py-3">
           <p className="font-semibold">{t.wrongWallet}</p>
           <p className="mt-1 text-[13px]">{t.wrongWalletBody(shortAddress(d.supplier), shortAddress(address))}</p>
-          <button type="button" onClick={() => void signOut()} className="mt-2 text-[13px] underline">{t.signOut}</button>
+          <button type="button" onClick={() => void signOut()} disabled={signingOut} className="mt-2 text-[13px] underline">{signingOut ? '…' : t.signOut}</button>
         </div>
       ) : null}
       <div className="mt-6">

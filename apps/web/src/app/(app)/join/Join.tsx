@@ -9,7 +9,7 @@ import { PublicShell } from '@/ui/PublicShell'
 /** For a supplier with no wallet: sign in, get one, copy its address to send to the buyer. */
 export function Join() {
   const { ready, authenticated, login } = usePrivy()
-  const signOut = useSignOut('/join')
+  const { signOut, signingOut } = useSignOut('/join')
   const { address } = useAccount()
   const [copied, setCopied] = useState(false)
   const copy = async () => {
@@ -28,7 +28,7 @@ export function Join() {
       <div>
       <h1 className="text-[26px] leading-tight font-semibold tracking-tight">Get a wallet to be paid</h1>
       <p className="mt-2 text-[14px] leading-relaxed text-graphite">
-        Sign in with your email and we create a wallet for you, or connect a wallet you already have. Send its address to your buyer so they can name you in the deal. The address is not secret; it only receives money.
+        Get a wallet to be paid in, then give its address to your buyer.
       </p>
       {!authenticated ? (
         <button type="button" disabled={!ready} onClick={() => login({ loginMethods: ['email', 'wallet'] })} className="mt-6 rounded-md bg-ink px-4 py-3 text-[14px] font-semibold text-paper disabled:opacity-60">
@@ -40,7 +40,7 @@ export function Join() {
           <p className="mono mt-1 break-all text-[14px]">{address}</p>
           <div className="mt-3 flex gap-2 text-[13px]">
             <button type="button" onClick={() => void copy()} className="rounded-md bg-ink px-3.5 py-2 font-semibold text-paper">{copied ? 'Copied ✓' : 'Copy address'}</button>
-            <button type="button" onClick={() => void signOut()} className="px-2 py-2 text-graphite underline">Sign out</button>
+            <button type="button" onClick={() => void signOut()} disabled={signingOut} className="px-2 py-2 text-graphite underline">{signingOut ? 'Signing out…' : 'Sign out'}</button>
           </div>
         </div>
       ) : (
@@ -50,7 +50,7 @@ export function Join() {
       <ol className="space-y-4 text-[14px] leading-relaxed md:pt-12">
         {[
           ['Get a wallet', 'Sign in with your email. Waybill creates a wallet for you, or you connect one you already have.'],
-          ['Send the address to your buyer', 'They name that wallet as the supplier when they create the deal. The address is not secret.'],
+          ['Send the address to your buyer', 'They name that wallet as the supplier when they create the deal.'],
           ['Open the deal link', 'You see the terms, accept them, and are paid part by part as each one is confirmed. Nothing moves until you accept.'],
         ].map(([t, b], i) => (
           <li key={t} className="flex gap-3">
@@ -61,7 +61,7 @@ export function Join() {
       </ol>
       <dl className="space-y-3 border-t border-rule pt-6 text-[13.5px] leading-relaxed md:col-span-2">
         <div><dt className="font-semibold">Is it safe to share my wallet address?</dt><dd className="text-graphite">Yes. An address only receives money; it cannot be used to take anything from the wallet.</dd></div>
-        <div><dt className="font-semibold">What does it cost me?</dt><dd className="text-graphite">Getting a wallet is free. Accepting a deal is a transaction on Arc, which takes a small network fee paid from the wallet. The deal's own fee is set by the buyer and shown to you in the terms before you accept.</dd></div>
+        <div><dt className="font-semibold">What does it cost me?</dt><dd className="text-graphite">Getting a wallet is free, but a new wallet starts empty. Accepting a deal is a transaction on Arc, and its network fee is paid in USDC from that wallet, so ask your buyer to send a small amount of USDC to your address along with the deal link. The deal's own fee is set by the buyer and shown to you in the terms before you accept.</dd></div>
       </dl>
     </main>
     </PublicShell>

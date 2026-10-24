@@ -79,7 +79,7 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
   return (
     <div translate="no" lang={lang === 'zh' ? 'zh-Hans' : 'en'} className="min-h-dvh">
       <SiteHeader
-        max="max-w-5xl"
+        max="max-w-6xl"
         signIn="signed-in"
         extra={
           <div role="group" aria-label={t.language} className="inline-flex items-center rounded-full border border-rule p-0.5 text-[13px]">
@@ -112,8 +112,8 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
               <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">{d.state === 'proposed' ? t.title : t.titleOngoing}</h1>
               <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-graphite">{d.state === 'proposed' ? t.intro : t.introOngoing}</p>
 
-              <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-3 rounded-md border border-rule bg-sheet px-4 py-3.5 sm:grid-cols-3">
-                <div><p className="label">{t.total}</p><p className="mono text-[26px]">{formatAmount(d.totalAmount)} <span className="text-[14px] text-graphite">USDC</span></p></div>
+              <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 rounded-md border border-rule bg-sheet px-4 py-3.5 sm:grid-cols-3">
+                <div className="col-span-2 sm:col-span-1"><p className="label">{t.total}</p><p className="mono text-[26px]">{formatAmount(d.totalAmount)} <span className="text-[14px] text-graphite">USDC</span></p></div>
                 <div><p className="label">{t.releasedTile}</p><p className="mono text-[26px] text-released">{formatAmount(releasedFor(d))} <span className="text-[14px] text-graphite">USDC</span></p></div>
                 <div><p className="label">{t.heldTile}</p><p className="mono text-[26px] text-held">{formatAmount(heldFor(d))} <span className="text-[14px] text-graphite">USDC</span></p><p className="text-[12px] text-graphite">{t.inclFees}</p></div>
               </div>

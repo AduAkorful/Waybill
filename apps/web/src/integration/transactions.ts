@@ -9,6 +9,7 @@ export type WalletErrorCode =
   | 'no_account'
   | 'reverted'
   | 'rpc_error'
+  | 'no_gas'
   | 'unknown'
 
 export class WaybillWalletError extends Error {
@@ -56,6 +57,9 @@ export function classifyWalletError(error: unknown): WaybillWalletError {
     return new WaybillWalletError('reverted', contractErrorText(revertName), error)
   }
   const text = errorText(error)
+  if (text.includes('insufficient funds') || text.includes('exceeds the balance') || text.includes('insufficient balance for')) {
+    return new WaybillWalletError('no_gas', 'This wallet has no USDC to pay the network fee. Send it a small amount of USDC on Arc first', error)
+  }
   if (text.includes('wrong network') || text.includes('chain mismatch') || text.includes('expected 5042')) {
     return new WaybillWalletError('wrong_network', 'Wallet is connected to the wrong network', error)
   }
@@ -120,6 +124,7 @@ export function plainError(error: unknown): string {
     case 'rpc_error':
       return 'The network is busy or could not be reached. Nothing was sent; try again in a moment.'
     case 'reverted':
+    case 'no_gas':
     case 'wrong_network':
     case 'no_account':
       return `${classified.message}. Nothing was sent.`

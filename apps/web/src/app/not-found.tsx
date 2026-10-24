@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { DealLookup } from '@/ui/DealLookup'
 import { PublicShell } from '@/ui/PublicShell'
 
 export default function NotFound() {
@@ -12,6 +13,7 @@ export default function NotFound() {
           <Link href="/attestors" className="inline-flex min-h-11 items-center rounded-md border border-rule px-4 text-[14px]">Attestors</Link>
           <Link href="/signin" className="inline-flex min-h-11 items-center rounded-md border border-rule px-4 text-[14px]">Sign in to see your deals</Link>
         </div>
+        <DealLookup />
       </main>
     </PublicShell>
   )

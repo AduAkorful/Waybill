@@ -25,12 +25,13 @@ export function SiteHeader({
       <Link href="/" aria-label="Waybill home" className="inline-flex min-h-11 items-center">
         <Wordmark className="text-[17px]" />
       </Link>
-      {extra && extraOnOwnRow ? <div className="order-last flex w-full justify-end pb-1 sm:order-none sm:w-auto sm:pb-0">{extra}</div> : null}
+      {extra && extraOnOwnRow ? <div className="order-last flex w-full justify-end pb-1 sm:hidden">{extra}</div> : null}
       <div className="flex items-center justify-end gap-x-2 md:gap-x-5">
         <Link href="/attestors" className={`${extra ? 'hidden sm:inline-flex' : 'inline-flex'} min-h-11 items-center px-1 text-[13.5px] text-graphite hover:text-ink`}>
           Attestors
         </Link>
         {extra && !extraOnOwnRow ? extra : null}
+        {extra && extraOnOwnRow ? <div className="hidden items-center gap-2 sm:flex">{extra}</div> : null}
         <HeaderSignIn onlyWhenSignedIn={signIn === 'signed-in'} />
         <ThemeToggle />
       </div>

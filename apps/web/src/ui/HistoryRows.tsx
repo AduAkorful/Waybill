@@ -22,7 +22,7 @@ function Row({ g, explorer }: { g: HistoryGroup; explorer: string }) {
       <span className="mono text-[12px] text-graphite">
         <span className="block sm:inline">{when(g)}</span>
         <span className="hidden sm:inline"> · </span>
-        <a className="inline-flex min-h-11 items-center whitespace-nowrap underline sm:min-h-0" href={`${explorer}/tx/${g.lastTx}`} target="_blank" rel="noreferrer">
+        <a className="inline-flex min-h-11 items-center whitespace-nowrap underline" href={`${explorer}/tx/${g.lastTx}`} target="_blank" rel="noreferrer">
           {shortHash(g.lastTx)} ↗
         </a>
       </span>

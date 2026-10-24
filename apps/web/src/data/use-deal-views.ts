@@ -22,7 +22,7 @@ export function useDealViews(ids: readonly bigint[]): { done: boolean; reads: Ma
     [network],
   )
   const key = ids.map(String).join(',')
-  const [state, setState] = useState<{ done: boolean; reads: Map<string, DealViewRead> }>({ done: false, reads: new Map() })
+  const [state, setState] = useState<{ key: string; done: boolean; reads: Map<string, DealViewRead> }>({ key: '', done: false, reads: new Map() })
 
   useEffect(() => {
     let cancelled = false
@@ -31,7 +31,7 @@ export function useDealViews(ids: readonly bigint[]): { done: boolean; reads: Ma
       const r = lastViews.get(String(id))
       if (r) remembered.set(String(id), r)
     }
-    setState({ done: false, reads: remembered })
+    setState({ key, done: false, reads: remembered })
     const run = async () => {
       const reads = new Map<string, DealViewRead>()
       for (let i = 0; i < ids.length; i += GROUP) {
@@ -45,13 +45,13 @@ export function useDealViews(ids: readonly bigint[]): { done: boolean; reads: Ma
               reads.set(String(id), { status: 'error', message: e instanceof Error ? e.message : String(e) })
             }
             // each deal shows as soon as it is read, so the count moves one at a time
-            if (!cancelled) setState({ done: false, reads: new Map([...remembered, ...reads]) })
+            if (!cancelled) setState({ key, done: false, reads: new Map([...remembered, ...reads]) })
           }),
         )
         if (cancelled) return
-        setState({ done: false, reads: new Map([...remembered, ...reads]) })
+        setState({ key, done: false, reads: new Map([...remembered, ...reads]) })
       }
-      if (!cancelled) setState({ done: true, reads })
+      if (!cancelled) setState({ key, done: true, reads })
     }
     void run()
     return () => {
@@ -61,5 +61,6 @@ export function useDealViews(ids: readonly bigint[]): { done: boolean; reads: Ma
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, client, network])
 
-  return state
+  // a result for an earlier list is never reported as this list's: until this list's read has started, nothing is done
+  return state.key === key ? { done: state.done, reads: state.reads } : { done: false, reads: new Map() }
 }

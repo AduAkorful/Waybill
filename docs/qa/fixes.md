@@ -5,6 +5,65 @@ After each batch the web app on port 3000 is rebuilt and restarted; retest again
 "Fixed" means changed in code, covered by a unit test where the logic is pure, and the page answers as described below.
 It does not mean a signed transaction was re-run in a browser — that is what QA is for.
 
+## Known, by design, or not code — please do not re-report
+
+These come up in retests. Each has a reason. If one of them is wrong *for a different reason than given here*, say so; otherwise list it as "known" and move on.
+
+### Product decisions (working as intended)
+| What you see | Why |
+|---|---|
+| No language toggle on the front page, record, directory, legal or sign-in pages (MW-05) | Only the supplier page `/d/*` has Chinese copy, and that copy is still a draft pending a native review. A toggle on pages with no Chinese text would switch nothing. It needs the Chinese for those pages written and reviewed first. |
+| 中文 is not preselected for a Chinese browser (NF-24) | Deliberate: the page is never switched without asking. A Chinese browser with no saved choice sees the banner "查看中文版本 · View this page in Chinese" on `/d/*` (batch 7). It only shows on a browser whose language is Chinese, and QA's browsers are not. |
+| "Accept as attestor", "Accept as arbiter", "Connect wallet" and the "Your deals" button are links, not `<button>` elements (SF-04, SF-05) | Each one opens another page; a link is the correct element and is announced as a link. Only the look is button-like. |
+| `/signin`, `/join` and the 404 still have empty space at 1440 px (NF-04, NF-23) | Short pages with one task. `/join` and the 404 now carry extra content; `/signin` is a centred form beside a steps panel. More filler was judged worse than space. Blank space on a short page is not a finding on its own. |
+| In 中文 the part names, goods and city names stay as the buyer typed them (NF-18) | They are the buyer's own words, never translated. Labelling them is optional and not planned. |
+| There is no fees, pricing, how-it-works or help page; `/fees` is a 404 | None has been written. The fee is per deal and shown in the deal's terms. |
+| Every attestor row reads "Waybill test" | That is the profile name those test wallets published to the registry. It is data on the chain, not text in the app. |
+| Deal 280 appears in the arbiter's "needs you" list | It is a real proposed deal that names that wallet as arbiter, so it does need an accept. |
+| The history on a record cannot be tied to a deal number on an attestor profile | The registry records outcomes, not deal numbers. |
+
+### Not a code issue (environment, free tiers, or waiting on someone)
+| What you see | Why | Who acts |
+|---|---|---|
+| Pages and tab switches take 5 to 20 seconds; the first open of a deal takes 5 to 8 seconds (SF-12, RT-05) | The test box is reached through a free ngrok tunnel and the chain is read through the free public Arc RPC. Both are slow and rate-limited. The app already caches and shares reads; a second open is instant. Re-time on the local address (`http://localhost:3000`) to separate the app from the tunnel. | Nobody; a dedicated RPC and a real host would be the fix, and the owner chose free tiers. |
+| 503 or 404 from the tunnel when several pages load in parallel | ngrok free-tier rate limiting. Load one page at a time. | – |
+| Sign out takes 5 to 8 seconds | It waits for the wallet library's server to end the session, across the tunnel. The button now says "Signing out…" at once and the browser is cleared either way. | – |
+| Console messages "preloaded but not used" | The framework's font preload hints. Harmless. | – |
+| Emails (8.1 to 8.8) cannot be tested | No Resend key is configured on the relayer, so email is off; Settings says so. | Owner: add a Resend key and sender. |
+| Panel (three-arbiter) deals cannot be created | Two of the three arbiters (`0xd173…1EB3`, `0xD77c…8BC1`) are scheduled but not yet executed on the list. | Owner: execute the two additions from the pauser wallet. |
+| Deal 284 decisions, deal 285 part 3, the 285 address change, the relayer claiming 287 | They wait for real on-chain deadlines (arbiter decisions 2026-10-23 about 14:30 UTC, 285 address change after 2026-10-22 15:08 UTC). Time is not forged. | Wait. |
+| The wallet-relayed "request limit" wording (WB-QA-001) | It can only be seen when the public RPC actually rate-limits a wallet. The wording is in place and unit-tested. | QA: note it if it happens. |
+| Reduced-motion behaviour | It cannot be checked in headless emulation. | QA: check by eye with the OS "reduce motion" setting on. |
+| A new email wallet cannot accept a deal (first accept fails) | A wallet created by sign-in starts with no USDC, and accepting is an Arc transaction that pays its network fee in USDC. Waybill does not sponsor accepts (it only sponsors claims and refunds). The app now says so in plain words (`/join` and when the wallet has no USDC), and the buyer sends a small amount with the deal link. | Buyer / operator, during testing. |
+
+## Batch 12 — 2026-10-21 (findings from the batch 11 retest, report §17)
+
+Web app rebuilt and restarted; no relayer or contract changes. The list of things that are *not* code issues is the section above.
+
+### Fixed
+- **"Nothing needs you today" flash (SF-07, RT-24):** the list now reports "done" only for the list it actually read. While a wallet's deals load, or between two lists, it says "Reading your deals…".
+- **Signed-in `/d/*` header at 320 px (SF-08):** the link reads "Deals" under 400 px and "Your deals" above.
+- **"Connect wallet" flash on `/operator` (SF-09):** the chip is blank until the sign-in state is known.
+- **Sign out feedback (SF-10):** the button changes to "Signing out…" at once and is disabled; it still clears the browser's sign-in even if the server call is slow or fails.
+- **`/signin` (SF-11, MW-20):** the phone view uses the shared header. The email form works before the sign-in service has started: pressing "Send code" early says "Starting sign-in…" and sends as soon as the service is ready.
+- **Coinbase Smart Wallet message (SF-12):** the wallet list now asks Coinbase's wallet for a plain (non-smart) connection, since its smart wallet does not support Arc. Console: the unsupported-chain message should be gone; retest with Coinbase Wallet if QA has it.
+- **A new wallet with no USDC (NF-19):** a failed send for lack of funds now says *"This wallet has no USDC to pay the network fee. Send it a small amount of USDC on Arc first. Nothing was sent."* `/join` says plainly that a new wallet starts empty and that the buyer should send a small amount of USDC with the deal link. (Waybill does not sponsor accepts; see the "not code" table.)
+- **`/join` repeated itself (NF-20):** the address is called "not secret" once (in the answer), the intro is one line.
+- **Status card on phones (NF-21):** Total on top, Paid to you and Held side by side. Units are attached to each figure.
+- **Operator slot order (NF-22):** at tablet and desktop widths the wallet chip comes after Attestors, like the supplier page's control. On phones it keeps its own row.
+- **Supplier page container (NF-03):** the header uses the same width as the public pages, so the logo no longer jumps.
+- **404 (NF-23):** a "Look up a deal number" field opens that deal's public record (digits only).
+- **Small targets (NF-17):** the record's transaction links and Print button are 44 px tall at every width.
+
+### Retest checklist for batch 12
+1. `/app/arbiter` right after signing in: "Reading your deals…" from the first paint, never "Nothing needs you today" until the count finishes.
+2. 320 px signed in, `/d/284`: header on one row ("Deals").
+3. `/operator` signed in, direct load: no "Connect wallet" flash. Press Sign out: the button says "Signing out…".
+4. `/signin` on a phone: shared header; press Send code before the page finishes loading, then it sends.
+5. Send a transaction from a wallet with 0 USDC: the "no USDC to pay the network fee" message.
+6. Desktop `/operator`: logo, Attestors, wallet chip, theme.
+7. `/d/abc`: type 284, press Open: the record opens.
+
 ## Batch 11 — 2026-10-21 (findings from the batches 8–10 retest, report §15)
 
 Web app rebuilt and restarted; no relayer or contract changes.

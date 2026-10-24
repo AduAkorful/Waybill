@@ -3,6 +3,7 @@
 import { Why } from '@/ui/Why'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import { usePrivy } from '@privy-io/react-auth'
 import { useSignOut } from '@/components/use-sign-out'
 import { useAccount } from 'wagmi'
 import { useReloadOnAccountChange } from '@/components/use-account-sync'
@@ -194,7 +195,9 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
 function WalletChip({ pauser }: { pauser: string | null }) {
   const { address } = useAccount()
   useReloadOnAccountChange(address)
-  const signOut = useSignOut()
+  const { ready } = usePrivy()
+  const { signOut, signingOut } = useSignOut()
+  if (!ready) return <span aria-hidden className="inline-block h-11 w-32" />
   if (!address) return <Link href="/signin" className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] font-semibold whitespace-nowrap hover:bg-sheet">Connect wallet</Link>
   const isPauser = pauser !== null && address.toLowerCase() === pauser.toLowerCase()
   return (
@@ -202,7 +205,7 @@ function WalletChip({ pauser }: { pauser: string | null }) {
       <span className="rounded-full border border-rule px-2.5 py-1 text-[12px] whitespace-nowrap">
         <span className="mono">{shortAddress(address)}</span> · {pauser === null ? 'checking' : isPauser ? 'pauser' : 'read only'}
       </span>
-      <button type="button" onClick={() => void signOut()} className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] whitespace-nowrap text-graphite uppercase hover:text-ink md:min-h-0 md:py-1">Sign out</button>
+      <button type="button" onClick={() => void signOut()} disabled={signingOut} className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] whitespace-nowrap text-graphite uppercase hover:text-ink md:min-h-0 md:py-1">{signingOut ? "Signing out…" : "Sign out"}</button>
     </>
   )
 }

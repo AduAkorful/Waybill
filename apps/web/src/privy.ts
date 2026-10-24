@@ -19,6 +19,8 @@ export function getPrivyProviderProps(environment: BrowserEnvironment = publicEn
     ...(clientId ? { clientId } : {}),
     config: {
       loginMethods: ['email' as const, 'wallet' as const],
+      // Coinbase's smart wallet does not support Arc, so only plain wallet connections are offered through it
+      externalWallets: { coinbaseWallet: { config: { preference: { options: 'eoaOnly' as const } } } },
       embeddedWallets: {
         ethereum: {
           createOnLogin: 'users-without-wallets' as const,

@@ -11,7 +11,7 @@ import { heldShells, shellLabel } from '@/view/wallet'
 /** One frame for every role: header nav on desktop, a bottom tab bar on phones. Only roles the wallet really holds are offered. */
 export function RoleShell({ address, children }: { address: string; children: React.ReactNode }) {
   const path = usePathname()
-  const signOut = useSignOut()
+  const { signOut, signingOut } = useSignOut()
   const read = useWalletDeals()
   const shells = read.status === 'ready' ? heldShells(read.deals) : []
   const nav = [
@@ -59,9 +59,10 @@ export function RoleShell({ address, children }: { address: string; children: Re
             <button
               type="button"
               onClick={() => void signOut()}
+              disabled={signingOut}
               className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] text-graphite uppercase hover:text-ink md:min-h-0 md:py-1"
             >
-              Sign out
+              {signingOut ? 'Signing out…' : 'Sign out'}
             </button>
           </div>
         </div>

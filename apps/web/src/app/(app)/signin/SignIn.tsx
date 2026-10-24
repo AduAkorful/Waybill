@@ -7,6 +7,7 @@ import { useLogin, useLoginWithEmail, usePrivy } from '@privy-io/react-auth'
 import { useAccount, useSwitchChain } from 'wagmi'
 import { getBrowserNetwork } from '@/integration/network'
 import { ThemeToggle, Wordmark } from '@/ui/Chrome'
+import { SiteHeader } from '@/ui/SiteHeader'
 
 const CODE_LENGTH = 6
 const RESEND_SECONDS = 30
@@ -45,9 +46,21 @@ export function SignIn() {
     return () => clearTimeout(h)
   }, [wait])
 
+  // the form is usable before the sign-in service has started; a send asked for early goes out as soon as it is ready
+  const [queued, setQueued] = useState(false)
+  useEffect(() => {
+    if (ready && queued) {
+      setQueued(false)
+      void send()
+    }
+    // send reads the current form state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, queued])
+
   const send = async () => {
     if (!EMAIL_PATTERN.test(email.trim())) return setEmailErr("That doesn't look like an email address.")
     setEmailErr('')
+    if (!ready) return setQueued(true)
     setDigits(Array(CODE_LENGTH).fill(''))
     try {
       await sendCode({ email: email.trim() })
@@ -115,10 +128,10 @@ export function SignIn() {
       </aside>
 
       <main className="flex flex-col">
-        <div className="flex items-center justify-between px-4 py-4 md:px-8">
-          <Link href="/" className="inline-flex min-h-11 items-center lg:invisible">
-            <Wordmark />
-          </Link>
+        <div className="lg:hidden">
+          <SiteHeader signIn="signed-in" />
+        </div>
+        <div className="hidden items-center justify-end px-8 py-4 lg:flex">
           <ThemeToggle />
         </div>
 
@@ -219,10 +232,10 @@ export function SignIn() {
               <button
                 type="button"
                 onClick={() => void send()}
-                disabled={!ready || state.status === 'sending-code'}
+                disabled={queued || state.status === 'sending-code'}
                 className="mt-4 w-full rounded-md bg-ink py-3 text-[15px] font-semibold text-paper disabled:opacity-60"
               >
-                {!ready ? 'Loading…' : state.status === 'sending-code' ? 'Sending…' : 'Send code'}
+                {queued ? 'Starting sign-in…' : state.status === 'sending-code' ? 'Sending…' : 'Send code'}
               </button>
               <div className="my-6 flex items-center gap-3 text-[12px] text-graphite">
                 <span className="h-px flex-1 bg-rule" /> or <span className="h-px flex-1 bg-rule" />
