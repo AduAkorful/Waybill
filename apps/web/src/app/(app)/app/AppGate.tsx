@@ -7,15 +7,19 @@ import { useAccount, useReconnect } from 'wagmi'
 import { WalletDealsProvider } from '@/data/wallet-deals'
 import { ChainGate } from '@/ui/NetworkGuard'
 import { useReloadOnAccountChange } from '@/components/use-account-sync'
+import { SiteHeader } from '@/ui/SiteHeader'
 import { RoleShell } from './RoleShell'
 
 function Notice({ children }: { children: React.ReactNode }) {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md items-center px-4">
-      <p role="status" className="text-[14px] text-graphite">
-        {children}
-      </p>
-    </main>
+    <div className="min-h-dvh">
+      <SiteHeader signIn="signed-in" />
+      <main className="mx-auto w-full max-w-6xl px-4 pt-10 md:px-8">
+        <p role="status" className="text-[14px] text-graphite">
+          {children}
+        </p>
+      </main>
+    </div>
   )
 }
 
@@ -27,7 +31,9 @@ function PreparingWallet({ onConnect }: { onConnect: () => void }) {
     return () => clearTimeout(t)
   }, [])
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-3 px-4">
+    <div className="min-h-dvh">
+    <SiteHeader signIn="signed-in" />
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 pt-10 md:px-8">
       <p role="status" className="text-[14px] text-graphite">
         {slow ? 'Preparing your wallet. If this does not finish, connect or create one.' : 'Loading…'}
       </p>
@@ -37,6 +43,7 @@ function PreparingWallet({ onConnect }: { onConnect: () => void }) {
         </button>
       ) : null}
     </main>
+    </div>
   )
 }
 

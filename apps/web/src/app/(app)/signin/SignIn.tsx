@@ -105,7 +105,7 @@ export function SignIn() {
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader signIn="signed-in" />
-      <div className="mx-auto grid w-full max-w-6xl flex-1 gap-x-16 px-4 pb-10 md:px-8 lg:grid-cols-[1fr_26rem] lg:items-center">
+      <div className="mx-auto grid w-full max-w-6xl gap-x-16 px-4 pb-10 md:px-8 lg:grid-cols-[1fr_26rem] lg:items-center">
       <aside className="relative hidden rounded-md border border-rule bg-sheet lg:block">
         <div className="flex h-full flex-col gap-10 p-10">
           <div>
@@ -248,7 +248,7 @@ export function SignIn() {
         </div>
       </main>
       </div>
-      <div className="mx-auto w-full max-w-6xl px-4 pb-12 md:px-8"><NetworkSnapshot heading="What is happening on Waybill" /></div>
+      <div className="mx-auto w-full max-w-6xl px-4 pb-12 md:px-8"><NetworkSnapshot compact /></div>
     </div>
   )
 }

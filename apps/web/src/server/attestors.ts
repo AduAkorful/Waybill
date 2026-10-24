@@ -20,10 +20,14 @@ function api() {
 export async function getAttestors(): Promise<AttestorRead<Attestor[]>> {
   const client = api()
   if (!client) return { status: 'unconfigured' }
-  try {
-    return { status: 'ready', value: parseAttestors(await client.getAttestors()) }
-  } catch (e) {
-    return { status: 'error', message: e instanceof Error ? e.message : String(e) }
+  // one quiet retry: a proxy in front of the relayer can answer a request with a page that is not JSON
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return { status: 'ready', value: parseAttestors(await client.getAttestors()) }
+    } catch (e) {
+      if (attempt === 0) continue
+      return { status: 'error', message: 'The attestor service did not answer properly. Reload in a moment.' }
+    }
   }
 }
 

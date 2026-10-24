@@ -280,7 +280,7 @@ export function Waybill({
           ) : null}
         </div>
 
-        <div className="perf border-x border-rule bg-sheet" aria-hidden>
+        <div className="perf overflow-hidden border-x border-rule bg-sheet" aria-hidden>
           <span className="notch -left-[8px]" />
           <span className="notch -right-[8px]" />
         </div>

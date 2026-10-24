@@ -130,7 +130,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
             <label className="label block" htmlFor="total">Total, USDC</label>
             <input id="total" name="total" aria-invalid={bad('Enter the total')} className={`${input} mono`} inputMode="decimal" value={form.total} onChange={(e) => set({ total: e.target.value })} />
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <label className="label block" htmlFor="refund">Refunds go to</label>
             <input id="refund" name="refund" aria-invalid={bad('The refund')} className={`${input} mono`} value={form.refund} onChange={(e) => set({ refund: e.target.value })} spellCheck={false} />
             {form.refund.trim().length > 12 ? <p className="mono mt-1 text-[12px] text-graphite" aria-hidden>{shortAddress(form.refund.trim())}</p> : null}

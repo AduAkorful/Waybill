@@ -67,7 +67,7 @@ export function Directory({ attestors }: { attestors: DirectoryRow[] }) {
       </div>
       <section className="mt-8 max-w-2xl text-[13.5px] leading-relaxed text-graphite">
         <h2 className="text-[15px] font-semibold text-ink">Who attests</h2>
-        <p className="mt-1">A buyer names the people who confirm each part of a deal, such as an inspector or a forwarder. Anyone with a wallet can be named. This list shows the ones the registry contract has a record for; a profile name is whatever that wallet chose to publish, not a check by Waybill.</p>
+        <p className="mt-1">A buyer names the people who confirm each part of a deal, such as an inspector or a forwarder. Anyone with a wallet can be named. This list shows the ones the registry contract has a record for; a profile name is whatever that wallet chose to publish, not a check by Waybill. Rows are ordered by statements signed. “Not registered” means the registry holds their signed counts but the pauser has not registered them; it does not stop a buyer naming them.</p>
       </section>
     </>
   )

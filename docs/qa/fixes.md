@@ -38,6 +38,38 @@ These come up in retests. Each has a reason. If one of them is wrong *for a diff
 | Console lines `Privy logout 400` and `sessions 401` after Sign out (SF-15) | The browser reports a failed network call to the wallet library's own server (the session had already ended there). A page cannot hide a failed request from the console, and the person is signed out either way. | – |
 | NF-19 message seen with Rabby (SF-17) | See batch 13: the app now checks the balance first, so the wallet is not opened. | – |
 
+## Batch 19 — 2026-10-22 (findings from the retest of batches 16–18, report §29)
+
+Web app rebuilt and restarted; no relayer or contract changes. axe 0 violations on 8 pages at 320 and 1440; 133 tests pass.
+
+### Fixed
+- **Disputes visible in the block (NF-43):** a deal with disputed parts reads "Funded, 3 in dispute", as the record says.
+- **Newest deals scan (NF-44):** it keeps reading back, eight deals at a time, until four public funded or settled deals are found (up to 48 deals).
+- **Stale figures (NF-45, SF-35):** the last reading of this visit is shown at once and marked "updating…" until the fresh one arrives, and a line says so. No cached number looks live.
+- **Slow or failed reads (NF-46, NF-47):** after 10 s, or on a failure, the block says so and shows **Try again**.
+- **Attestor rows (NF-48):** name plus short address, so identical names can be told apart.
+- **Screen readers (NF-49):** parts of a row are separated ("Deal 289, 2 parts, 40.00 USDC, Funded").
+- **One number format (NF-52):** the escrow figures are written with the same number of decimals.
+- **Tap target (NF-53):** "See every attestor" is 44 px tall.
+- **`/attestors` order and wording (NF-51):** sorted by statements signed; the page explains that "Not registered" means the pauser has not registered them, not that they cannot be named.
+- **Card edge on `/`, `/record`, `/d` (NF-54):** the tear-line notches are clipped to the card, so nothing sticks out of the content column.
+- **Block on `/signin` and `/join` (NF-55, NF-56):** one heading everywhere; two tiles (deal count, held with the cap and largest deal in its note) instead of three; on phones only the tiles show on `/signin` and `/join`, so the task stays on top; the large gap above the block on `/signin` is gone.
+- **"Refunds go to" (SF-33):** the field spans the full width, so the whole address shows.
+- **Full-screen "Loading…" (SF-34):** the header shows at once and the loading line sits under it.
+- **Intermittent `invalid_json` on `/attestors` (SF-31):** one quiet retry; if it still fails the page says "The attestor service did not answer properly. Reload in a moment." The cause is a proxy answering with a page that is not JSON (the tunnel); not seen in 10 loads.
+
+### Not changed, and why
+- **"Deals created" 292 (NF-50):** deal numbers start at 0, so 292 deals exist (0 to 291). The figure is correct.
+- **Gap above the footer on short signed-in pages (SF-32):** the footer sits at the bottom of the window by convention. Pinning it to the content end would leave the same empty space below the footer. Pages with little content now show the network block, which fills most of it.
+- **Block still shows static limits (NF-56):** the cap and largest deal are the escrow's real limits and are useful to someone about to create a deal; they are now one note instead of a tile.
+
+### Retest checklist for batch 19
+1. `/d/abc` with deal 284 in the list: it reads "Funded, 3 in dispute".
+2. Set a wrong `currentLocked` in session storage (`wb-builder-limits`) and load: "updating…" until the real value arrives.
+3. Block the RPC: after about 10 s "Try again" appears and works.
+4. `/signin`, `/join` on a phone: only the two tiles, no lists.
+5. `/attestors`: first row is the one with most signed.
+
 ## Batch 18 — 2026-10-22 (short pages get real information, not only more width)
 
 Short pages used to be a few lines on a full desktop screen. They now carry a live block, **"On this network right now"**, read from the escrow and the registry when the page opens (nothing typed in, nothing invented):

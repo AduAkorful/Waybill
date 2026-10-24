@@ -23,7 +23,7 @@ export default async function Attestors() {
         {read.status === 'unconfigured' ? <p className="mt-6 text-graphite">This site has no attestor source configured, so no directory is shown.</p> : null}
         {read.status === 'error' ? <p role="alert" className="mt-6 text-hold">The directory is unavailable right now: {read.message}</p> : null}
         {read.status === 'ready' && read.value.length === 0 ? <p className="mt-6 text-graphite">No attestors have a registry record yet.</p> : null}
-        {read.status === 'ready' && read.value.length > 0 ? <Directory attestors={read.value.map(plain)} /> : null}
+        {read.status === 'ready' && read.value.length > 0 ? <Directory attestors={[...read.value].sort((a, b) => b.attested - a.attested).map(plain)} /> : null}
       </main>
     </PublicShell>
   )

@@ -57,7 +57,7 @@ function rememberLimits(l: BuilderLimits) {
   } catch {}
 }
 
-export type Read<T> = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; value: T }
+export type Read<T> = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; value: T; /** false while a remembered value is shown and a fresh read is on its way */ fresh?: boolean }
 
 /** The escrow's own limits, read live. Nothing about fees or caps is written into the page. */
 export function useBuilderLimits(): Read<BuilderLimits> {
@@ -65,7 +65,7 @@ export function useBuilderLimits(): Read<BuilderLimits> {
   const network = getBrowserNetwork()
   const [read, setRead] = useState<Read<BuilderLimits>>(() => {
     const known = rememberedLimits()
-    return known ? { status: 'ready', value: known } : { status: 'loading' }
+    return known ? { status: 'ready', value: known, fresh: false } : { status: 'loading' }
   })
   useEffect(() => {
     let cancelled = false
@@ -83,7 +83,7 @@ export function useBuilderLimits(): Read<BuilderLimits> {
               newDealsPaused: newDealsPaused as boolean,
           }
           rememberLimits(fresh)
-          setRead({ status: 'ready', value: fresh })
+          setRead({ status: 'ready', value: fresh, fresh: true })
         }
       })
       .catch((e) => !cancelled && setRead({ status: 'error', message: e instanceof Error ? e.message : String(e) }))
