@@ -163,6 +163,41 @@
     .toast { position: fixed; z-index: 8; right: 24px; bottom: 24px; max-width: 360px; padding: 13px 16px; color: #fff; background: var(--nav); border-radius: 10px; opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
     .toast.show { opacity: 1; transform: translateY(0); }
     .empty-note { padding: 26px; text-align: center; color: var(--muted); background: var(--surface-2); border-radius: 12px; }
+    .spotlight { position: relative; overflow: hidden; padding: 28px; color: #f5fbf7; background: var(--nav); border-radius: 20px; }
+    .spotlight::after { content: ""; position: absolute; right: -70px; bottom: -100px; width: 310px; height: 310px; border: 1px solid rgba(166, 215, 208, .22); border-radius: 50%; }
+    .spotlight-top { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }
+    .spotlight .eyebrow { color: #99d6d2; }
+    .spotlight h2 { margin: 8px 0 4px; color: #fff; font: 500 29px/1.08 var(--serif); letter-spacing: -.035em; }
+    .spotlight p { color: #b8ccca; font-size: 12px; }
+    .spotlight-amount { position: relative; z-index: 1; margin: 26px 0 23px; font: 500 clamp(42px, 5vw, 65px)/.95 var(--serif); letter-spacing: -.055em; }
+    .spotlight-amount small { color: #b7cfcd; font: 700 12px var(--sans); letter-spacing: 0; }
+    .stepper { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: 0 -6px 24px; }
+    .step { position: relative; padding: 0 8px; }
+    .step:not(:last-child)::after { content: ""; position: absolute; top: 11px; left: 43px; right: -1px; height: 2px; background: #3d686b; }
+    .step.done:not(:last-child)::after { background: #75b8a1; }
+    .step-node { position: relative; z-index: 1; width: 23px; height: 23px; display: grid; place-items: center; border: 2px solid #5f8583; border-radius: 50%; color: #a9c8c4; background: var(--nav); font-size: 10px; font-weight: 900; }
+    .step.done .step-node { border-color: #8ac6ab; color: #123d35; background: #9bd1b9; }
+    .step.active .step-node { border-color: #9ed8d0; color: #123d42; background: #b4e0da; }
+    .step strong { display: block; margin-top: 9px; color: #f1f7f4; font-size: 11px; }
+    .step span { display: block; margin-top: 3px; color: #9bb5b3; font-size: 10px; }
+    .spotlight-footer { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .spotlight .primary { color: var(--nav); background: #b6e1d7; border-color: #b6e1d7; }
+    .spotlight .primary:hover { background: #d1eee6; }
+    .spotlight .secondary { color: #e7f2ef; background: transparent; border-color: #58777a; }
+    .spotlight .secondary:hover { background: #28525a; }
+    .insight-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 16px; margin-top: 16px; }
+    .insight-card { padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+    .insight-card.soft { background: #e3ebe6; }
+    .insight-card h2 { margin-bottom: 5px; }
+    .insight-card > p { color: var(--muted); font-size: 12px; }
+    .pulse-line { display: flex; align-items: center; gap: 8px; margin-top: 18px; color: var(--green); font-size: 12px; font-weight: 800; }
+    .pulse-line i { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 1.8s ease-in-out infinite; }
+    .mini-activity { display: grid; gap: 0; margin-top: 14px; }
+    .mini-activity div { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 0; border-bottom: 1px solid #d8e0da; font-size: 12px; }
+    .mini-activity div:last-child { border-bottom: 0; }
+    .mini-activity span { color: var(--muted); font-size: 11px; }
+    .mini-activity strong { font-size: 12px; }
+    @keyframes pulse { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
     @media (max-width: 900px) {
       .app { grid-template-columns: 1fr; }
       aside { padding: 15px 18px; gap: 15px; }
@@ -186,6 +221,9 @@
       .card { padding: 16px; }
       .deal-row { grid-template-columns: 1fr auto; gap: 9px; }
       .deal-row > :nth-child(2), .deal-row > :nth-child(3) { display: none; }
+      .spotlight { padding: 21px; }
+      .spotlight-footer { align-items: flex-start; flex-direction: column; }
+      .insight-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -283,24 +321,20 @@
 
     function buyerOverview() {
       return `
-        <div class="view-heading"><div><div class="eyebrow">Good morning, Accra Trading Co.</div><h1>Your trade, in one place.</h1><p>Three deals are moving. One needs your review today; nothing is released without a condition you can see.</p></div>${actionButton("Create a deal", "create")}</div>
-        <div class="grid stats">
-          <div class="card"><div class="stat-label">Active deals</div><div class="stat-value">3</div><div class="stat-note">2 on track</div></div>
-          <div class="card"><div class="stat-label">Locked in escrow</div><div class="stat-value">$38.2k</div><div class="stat-note">USDC · protected</div></div>
-          <div class="card"><div class="stat-label">Needs your review</div><div class="stat-value">1</div><div class="stat-note" style="color:var(--amber)">11h 42m left</div></div>
-          <div class="card"><div class="stat-label">Settled this year</div><div class="stat-value">12</div><div class="stat-note">100% reconciled</div></div>
-        </div>
-        <div class="grid two">
-          <div class="card"><div class="card-title"><h2>Active deals</h2><button class="secondary" data-view="deals">View all</button></div>
-            <div class="deal-row" data-view="detail"><div><div class="deal-name">Foshan Home Goods order</div><div class="deal-sub">WB-1048 · Ghana → Shenzhen</div></div><div><span class="status amber">Your review</span><div class="deal-sub">Pre-shipment inspection</div></div><div class="deal-amount">$12,450<small>USDC</small></div><div class="deal-sub">11h 42m left</div><div class="arrow">›</div></div>
-            <div class="deal-row"><div><div class="deal-name">Kumasi textiles</div><div class="deal-sub">WB-1041 · Arrival confirmed</div></div><div><span class="status blue">In review</span></div><div class="deal-amount">$8,200<small>USDC</small></div><div class="deal-sub">32h left</div><div class="arrow">›</div></div>
-            <div class="deal-row"><div><div class="deal-name">Yiwu packaging</div><div class="deal-sub">WB-1032 · Settled 2d ago</div></div><div><span class="status green">Settled</span></div><div class="deal-amount">$17,600<small>USDC</small></div><div class="deal-sub">Record ready</div><div class="arrow">›</div></div>
-          </div></div>
-          <div class="card soft"><div class="card-title"><h2>Next actions</h2><span class="status amber">3 open</span></div>
-            <div class="task" data-view="detail"><div class="task-icon">01</div><div><strong>Review inspection evidence</strong><span>WB-1048 · closes in 11h 42m</span></div></div>
-            <div class="task"><div class="task-icon">02</div><div><strong>Confirm payout address</strong><span>WB-1041 · supplier proposed a change</span></div></div>
-            <div class="task"><div class="task-icon">03</div><div><strong>Download settled record</strong><span>WB-1032 · ready to share</span></div></div>
+        <div class="view-heading"><div><div class="eyebrow">Good morning, Accra Trading Co.</div><h1>Keep the next decision close.</h1><p>Your most important action is waiting inside the deal timeline. Everything else can wait.</p></div><div class="actions" style="margin-top:0">${actionButton("Create a deal", "create")}</div></div>
+        <section class="spotlight" aria-label="Priority deal">
+          <div class="spotlight-top"><div><div class="eyebrow">Priority deal · WB-1048</div><h2>Foshan Home Goods order</h2><p>Ghana → Shenzhen · funded 18 Oct 2026</p></div><span class="status amber">Review open</span></div>
+          <div class="spotlight-amount">$12,450 <small>USDC locked in escrow</small></div>
+          <div class="stepper" aria-label="Deal progress">
+            <div class="step done"><div class="step-node">✓</div><strong>Terms accepted</strong><span>Funds locked</span></div>
+            <div class="step active"><div class="step-node">2</div><strong>Inspection review</strong><span>11h 42m left</span></div>
+            <div class="step"><div class="step-node">3</div><strong>Arrival confirmed</strong><span>Waiting</span></div>
           </div>
+          <div class="spotlight-footer"><div><strong>Two attestations received</strong><p>Inspector Lin and Forwarder Chen signed the same statement.</p></div><div class="actions" style="margin-top:0">${actionButton("Review evidence", "review")}${actionButton("Open deal", "detail", "secondary")}</div></div>
+        </section>
+        <div class="insight-grid">
+          <section class="insight-card"><div class="card-title"><h2>Today</h2><span class="status amber">1 decision</span></div><p>A focused queue instead of a wall of deals.</p><div class="mini-activity"><div><span>Review inspection evidence</span><strong>11h 42m</strong></div><div><span>Confirm payout address</span><strong>WB-1041</strong></div><div><span>Download settled record</span><strong>WB-1032</strong></div></div><div class="pulse-line"><i></i> Nothing is waiting on the relayer</div></section>
+          <section class="insight-card soft"><div class="card-title"><h2>Escrow snapshot</h2><span class="status green">Healthy</span></div><div class="amount" style="font-size:34px">$38.2k <small>USDC protected</small></div><p>3 active deals · 12 settled this year</p><div class="actions">${actionButton("See all deals", "deals", "secondary")}</div></section>
         </div>`;
     }
 
@@ -371,6 +405,7 @@
 
     function handleAction(action) {
       if (action === "detail") { view = "detail"; render(); return; }
+      if (action === "deals" || action === "profile") { view = action; render(); return; }
       if (action === "review") { view = "review"; render(); return; }
       if (action === "attestation") { view = "attestation"; render(); return; }
       if (action === "dispute") { view = "dispute"; dealState.dispute = true; render(); return; }
