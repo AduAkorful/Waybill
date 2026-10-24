@@ -1,0 +1,587 @@
+{
+  "contractAddress": "0x117892b79ee09f3a6213f850ed9cd4865d075d5f",
+  "network": "ARC-TESTNET",
+  "deployerWalletId": "3c2464b2-8369-52e2-a782-800bbeca5396",
+  "contract_code_path": "/home/user/app/contracts/DisputeLogic.sol",
+  "contract_compiled_code_path": "/home/user/app/contracts/out/DisputeLogic.sol/DisputeLogic.json",
+  "contract_network_and_links": {
+    "Arc Testnet": "https://explorer.testnet.arc.io/address/0x117892b79ee09f3a6213f850ed9cd4865d075d5f"
+  },
+  "contract_deployments": [
+    {
+      "chain": "Arc Testnet",
+      "address": "0x117892b79ee09f3a6213f850ed9cd4865d075d5f",
+      "explorerUrl": "https://explorer.testnet.arc.io/address/0x117892b79ee09f3a6213f850ed9cd4865d075d5f",
+      "txHash": "0xa2e1d423b8e7fdf6e5029a83a07c8dce2c02646d61b1e0db26fa061b82bc58a9",
+      "deployedAt": "2026-10-17T06:26:24.384Z"
+    }
+  ],
+  "abi": [
+    {
+      "type": "event",
+      "name": "DealSettled",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "DefaultApplied",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        },
+        {
+          "name": "toSupplier",
+          "type": "bool",
+          "indexed": false,
+          "internalType": "bool"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "DisputeRaised",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        },
+        {
+          "name": "raiser",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "evidenceHash",
+          "type": "bytes32",
+          "indexed": false,
+          "internalType": "bytes32"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "DisputeResolved",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        },
+        {
+          "name": "arbiter",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "toSupplier",
+          "type": "bool",
+          "indexed": false,
+          "internalType": "bool"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "DisputeResponseAdded",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        },
+        {
+          "name": "responder",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "evidenceHash",
+          "type": "bytes32",
+          "indexed": false,
+          "internalType": "bytes32"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "MilestoneRefundable",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": false,
+          "internalType": "uint8"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "PayoutChangeApplied",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "oldAddr",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "newAddr",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "PayoutChangeProposed",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "oldAddr",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "newAddr",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "eta",
+          "type": "uint64",
+          "indexed": false,
+          "internalType": "uint64"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "PayoutChangeRejected",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "rejected",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "PayoutFailed",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        },
+        {
+          "name": "recipient",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "RefundChangeApplied",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "oldAddr",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "newAddr",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "RefundChangeProposed",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "oldAddr",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "newAddr",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "eta",
+          "type": "uint64",
+          "indexed": false,
+          "internalType": "uint64"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "RefundChangeRejected",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "rejected",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "RefundFailed",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        },
+        {
+          "name": "recipient",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "TrancheRefunded",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        },
+        {
+          "name": "recipient",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "feeRefunded",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "TrancheSplit",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        },
+        {
+          "name": "supplierBps",
+          "type": "uint16",
+          "indexed": false,
+          "internalType": "uint16"
+        },
+        {
+          "name": "supplierAmount",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "buyerAmount",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "error",
+      "name": "ArbiterDeadlineActive",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ArbiterDeadlinePassed",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "BuyerDisputeNotInReview",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ChangeDelayActive",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "DealMissing",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "Disputed",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "GraceActive",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "GraceExpired",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidDealState",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidMilestone",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidSplitBps",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NoDefaultPath",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NoPendingChange",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotArbiter",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotBuyerForPayout",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotBuyerForRefund",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotDisputeResponder",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotDisputed",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotParticipant",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotSupplierForPayout",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotSupplierForRefund",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ResponseAlreadySubmitted",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ResponseWindowClosed",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "SplitTransferFailed",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "SupplierDisputeNotOverdue",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ZeroAddressProposal",
+      "inputs": []
+    }
+  ]
+}

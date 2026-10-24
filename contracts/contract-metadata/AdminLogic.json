@@ -1,0 +1,140 @@
+{
+  "contractAddress": "0xd4978d5e0564b3576b4a3ce553715fe0c56da084",
+  "network": "ARC-TESTNET",
+  "deployerWalletId": "3c2464b2-8369-52e2-a782-800bbeca5396",
+  "contract_code_path": "/home/user/app/contracts/AdminLogic.sol",
+  "contract_compiled_code_path": "/home/user/app/contracts/out/AdminLogic.sol/AdminLogic.json",
+  "contract_network_and_links": {
+    "Arc Testnet": "https://explorer.testnet.arc.io/address/0xd4978d5e0564b3576b4a3ce553715fe0c56da084"
+  },
+  "contract_deployments": [
+    {
+      "chain": "Arc Testnet",
+      "address": "0xd4978d5e0564b3576b4a3ce553715fe0c56da084",
+      "explorerUrl": "https://explorer.testnet.arc.io/address/0xd4978d5e0564b3576b4a3ce553715fe0c56da084",
+      "txHash": "0xd3d2544001c565a059a180184ef2c530b1ac788c5b3d78fa698cd9e233f06f08",
+      "deployedAt": "2026-10-17T06:27:07.645Z"
+    }
+  ],
+  "abi": [
+    {
+      "type": "event",
+      "name": "NewDealsPaused",
+      "inputs": [],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "NewDealsUnpaused",
+      "inputs": [],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "SetFeeBpsRangeExecuted",
+      "inputs": [
+        {
+          "name": "minBps",
+          "type": "uint16",
+          "indexed": false,
+          "internalType": "uint16"
+        },
+        {
+          "name": "maxBps",
+          "type": "uint16",
+          "indexed": false,
+          "internalType": "uint16"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "SetFeeBpsRangeScheduled",
+      "inputs": [
+        {
+          "name": "minBps",
+          "type": "uint16",
+          "indexed": false,
+          "internalType": "uint16"
+        },
+        {
+          "name": "maxBps",
+          "type": "uint16",
+          "indexed": false,
+          "internalType": "uint16"
+        },
+        {
+          "name": "eta",
+          "type": "uint64",
+          "indexed": false,
+          "internalType": "uint64"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "SetTreasuryExecuted",
+      "inputs": [
+        {
+          "name": "oldTreasury",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "newTreasury",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "SetTreasuryScheduled",
+      "inputs": [
+        {
+          "name": "proposed",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "eta",
+          "type": "uint64",
+          "indexed": false,
+          "internalType": "uint64"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "error",
+      "name": "ChangeDelayActive",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidFeeBpsRange",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NoPendingChange",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotPauser",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "TreasuryZeroAddress",
+      "inputs": []
+    }
+  ]
+}

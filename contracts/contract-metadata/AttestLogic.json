@@ -1,0 +1,206 @@
+{
+  "contractAddress": "0xbd7ea59f7e611e448717c0cdf6f2f0522e0cf65e",
+  "network": "ARC-TESTNET",
+  "deployerWalletId": "3c2464b2-8369-52e2-a782-800bbeca5396",
+  "contract_code_path": "/home/user/app/contracts/AttestLogic.sol",
+  "contract_compiled_code_path": "/home/user/app/contracts/out/AttestLogic.sol/AttestLogic.json",
+  "contract_network_and_links": {
+    "Arc Testnet": "https://explorer.testnet.arc.io/address/0xbd7ea59f7e611e448717c0cdf6f2f0522e0cf65e"
+  },
+  "contract_deployments": [
+    {
+      "chain": "Arc Testnet",
+      "address": "0xbd7ea59f7e611e448717c0cdf6f2f0522e0cf65e",
+      "explorerUrl": "https://explorer.testnet.arc.io/address/0xbd7ea59f7e611e448717c0cdf6f2f0522e0cf65e",
+      "txHash": "0x2de2adae128bf7b34161eabca5ad3c5117adc504f6707cf3f5db3e598eeb3aed",
+      "deployedAt": "2026-10-16T23:00:56.553Z"
+    }
+  ],
+  "abi": [
+    {
+      "type": "event",
+      "name": "AttestationSubmitted",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        },
+        {
+          "name": "attestor",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "evidenceHash",
+          "type": "bytes32",
+          "indexed": false,
+          "internalType": "bytes32"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "MilestoneApprovedEarly",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "MilestoneClaimable",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "ReviewWindowStarted",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        },
+        {
+          "name": "startedAt",
+          "type": "uint64",
+          "indexed": false,
+          "internalType": "uint64"
+        },
+        {
+          "name": "windowHours",
+          "type": "uint32",
+          "indexed": false,
+          "internalType": "uint32"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "ThresholdMet",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        },
+        {
+          "name": "threshold",
+          "type": "uint8",
+          "indexed": false,
+          "internalType": "uint8"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "error",
+      "name": "AlreadyAttested",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "AttestationUsed",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "GraceExpired",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidDealState",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidMilestone",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidMilestoneState",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidSignedAt",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidSigner",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotAttestationMilestone",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotBuyer",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotBuyerApproval",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "SignatureExpired",
+      "inputs": []
+    }
+  ]
+}

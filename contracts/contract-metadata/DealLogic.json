@@ -1,0 +1,407 @@
+{
+  "contractAddress": "0x05fe044d4201b391015d5649d3bb39a23b4ec563",
+  "network": "ARC-TESTNET",
+  "deployerWalletId": "3c2464b2-8369-52e2-a782-800bbeca5396",
+  "contract_code_path": "/home/user/app/contracts/DealLogic.sol",
+  "contract_compiled_code_path": "/home/user/app/contracts/out/DealLogic.sol/DealLogic.json",
+  "contract_network_and_links": {
+    "Arc Testnet": "https://explorer.testnet.arc.io/address/0x05fe044d4201b391015d5649d3bb39a23b4ec563"
+  },
+  "contract_deployments": [
+    {
+      "chain": "Arc Testnet",
+      "address": "0x05fe044d4201b391015d5649d3bb39a23b4ec563",
+      "explorerUrl": "https://explorer.testnet.arc.io/address/0x05fe044d4201b391015d5649d3bb39a23b4ec563",
+      "txHash": "0xab1a5cf33b64fbd52f4c27a059f03c51421537760dd4d10d0f43b4d25d95bac6",
+      "deployedAt": "2026-10-16T23:00:24.637Z"
+    }
+  ],
+  "abi": [
+    {
+      "type": "event",
+      "name": "ArbiterAccepted",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "arbiter",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "AttestorAccepted",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": false,
+          "internalType": "uint8"
+        },
+        {
+          "name": "attestor",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "DealCancelled",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "DealCreated",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "buyer",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "supplier",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "arbiter",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "totalAmount",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "feeBps",
+          "type": "uint16",
+          "indexed": false,
+          "internalType": "uint16"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "DealFunded",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "totalAmount",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "prepaidFee",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "MilestoneClaimable",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "ReviewWindowStarted",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "indexed": true,
+          "internalType": "uint8"
+        },
+        {
+          "name": "startedAt",
+          "type": "uint64",
+          "indexed": false,
+          "internalType": "uint64"
+        },
+        {
+          "name": "windowHours",
+          "type": "uint32",
+          "indexed": false,
+          "internalType": "uint32"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "SupplierAccepted",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "indexed": true,
+          "internalType": "uint256"
+        },
+        {
+          "name": "supplier",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        },
+        {
+          "name": "payoutAddress",
+          "type": "address",
+          "indexed": false,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "error",
+      "name": "AcceptanceExpired",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "AcceptanceNotExpired",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "AlreadyAccepted",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ArbiterIsBuyer",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ArbiterIsSupplier",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ArbiterNotAllowed",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "ArbiterZeroAddress",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "AttestorAlreadyAccepted",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "AttestorIsArbiter",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "AttestorIsBuyer",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "AttestorIsSupplier",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "AttestorRequired",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "AttestorsNotEmpty",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "BuyerRefundZeroAddress",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "DealMissing",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "DuplicateAttestor",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidAcceptanceDeadline",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidArbiterHours",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidBpsSum",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidDealState",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidFeeBps",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidMilestone",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidMilestoneCount",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidThreshold",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "InvalidTotal",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "MaxLockedExceeded",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NewDealsPausedError",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotArbiter",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotAttestationMilestone",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotAttestor",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotBuyer",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotFullyAccepted",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "NotSupplier",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "SafeERC20FailedOperation",
+      "inputs": [
+        {
+          "name": "token",
+          "type": "address",
+          "internalType": "address"
+        }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "SupplierZeroAddress",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "TooManyAttestors",
+      "inputs": []
+    }
+  ]
+}

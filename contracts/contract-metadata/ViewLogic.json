@@ -1,0 +1,510 @@
+{
+  "contractAddress": "0xd09efc212dc16a3d11a04f0cefda3fb4ca5d5297",
+  "network": "ARC-TESTNET",
+  "deployerWalletId": "3c2464b2-8369-52e2-a782-800bbeca5396",
+  "contract_code_path": "/home/user/app/contracts/ViewLogic.sol",
+  "contract_compiled_code_path": "/home/user/app/contracts/out/ViewLogic.sol/ViewLogic.json",
+  "contract_network_and_links": {
+    "Arc Testnet": "https://explorer.testnet.arc.io/address/0xd09efc212dc16a3d11a04f0cefda3fb4ca5d5297"
+  },
+  "contract_deployments": [
+    {
+      "chain": "Arc Testnet",
+      "address": "0xd09efc212dc16a3d11a04f0cefda3fb4ca5d5297",
+      "explorerUrl": "https://explorer.testnet.arc.io/address/0xd09efc212dc16a3d11a04f0cefda3fb4ca5d5297",
+      "txHash": "0x347bcd387f95a0bfc2777020a11807c706fe596bdedb72d431785ff0fa5ac4a4",
+      "deployedAt": "2026-10-17T06:27:45.759Z"
+    }
+  ],
+  "abi": [
+    {
+      "type": "function",
+      "name": "feeBalance",
+      "inputs": [
+        {
+          "name": "account",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getAttestors",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "internalType": "uint8"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address[]",
+          "internalType": "address[]"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getDeal",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "tuple",
+          "internalType": "struct IWaybillEscrow.Deal",
+          "components": [
+            {
+              "name": "buyer",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "supplier",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "supplierPayout",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "buyerRefund",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "arbiter",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "state",
+              "type": "IWaybillEscrow.DealState",
+              "internalType": "enum IWaybillEscrow.DealState"
+            },
+            {
+              "name": "totalAmount",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "prepaidFee",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "feeBps",
+              "type": "uint16",
+              "internalType": "uint16"
+            },
+            {
+              "name": "milestoneCount",
+              "type": "uint8",
+              "internalType": "uint8"
+            },
+            {
+              "name": "acceptanceDeadline",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "arbiterDeadlineHours",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "arbiterAccepted",
+              "type": "bool",
+              "internalType": "bool"
+            },
+            {
+              "name": "newDealPaused",
+              "type": "bool",
+              "internalType": "bool"
+            },
+            {
+              "name": "settled",
+              "type": "bool",
+              "internalType": "bool"
+            },
+            {
+              "name": "responsePeriodHours",
+              "type": "uint32",
+              "internalType": "uint32"
+            },
+            {
+              "name": "protocolTreasury",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "fundFirst",
+              "type": "bool",
+              "internalType": "bool"
+            }
+          ]
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getDisputeResponse",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "internalType": "uint8"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bytes32",
+          "internalType": "bytes32"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getMilestone",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "internalType": "uint8"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "tuple",
+          "internalType": "struct IWaybillEscrow.Milestone",
+          "components": [
+            {
+              "name": "bps",
+              "type": "uint256",
+              "internalType": "uint256"
+            },
+            {
+              "name": "condition",
+              "type": "IWaybillEscrow.ReleaseCondition",
+              "internalType": "enum IWaybillEscrow.ReleaseCondition"
+            },
+            {
+              "name": "attestor",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "deadline",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "gracePeriod",
+              "type": "uint32",
+              "internalType": "uint32"
+            },
+            {
+              "name": "reviewWindow",
+              "type": "uint32",
+              "internalType": "uint32"
+            },
+            {
+              "name": "state",
+              "type": "IWaybillEscrow.MilestoneState",
+              "internalType": "enum IWaybillEscrow.MilestoneState"
+            },
+            {
+              "name": "attestorAccepted",
+              "type": "bool",
+              "internalType": "bool"
+            },
+            {
+              "name": "attested",
+              "type": "bool",
+              "internalType": "bool"
+            },
+            {
+              "name": "evidenceHash",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "disputed",
+              "type": "bool",
+              "internalType": "bool"
+            },
+            {
+              "name": "buyerRaisedDispute",
+              "type": "bool",
+              "internalType": "bool"
+            },
+            {
+              "name": "reviewWindowStart",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "arbiterDeadline",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "threshold",
+              "type": "uint8",
+              "internalType": "uint8"
+            },
+            {
+              "name": "attestCount",
+              "type": "uint8",
+              "internalType": "uint8"
+            },
+            {
+              "name": "disputeRaiser",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "disputeTime",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "disputeEvidenceHash",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "responseDeadline",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
+              "name": "responseHash",
+              "type": "bytes32",
+              "internalType": "bytes32"
+            },
+            {
+              "name": "responseSubmitted",
+              "type": "bool",
+              "internalType": "bool"
+            }
+          ]
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getPendingFeeBpsRange",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "minBps",
+          "type": "uint16",
+          "internalType": "uint16"
+        },
+        {
+          "name": "maxBps",
+          "type": "uint16",
+          "internalType": "uint16"
+        },
+        {
+          "name": "eta",
+          "type": "uint64",
+          "internalType": "uint64"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getPendingPayoutChange",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "tuple",
+          "internalType": "struct IWaybillEscrow.PendingAddressChange",
+          "components": [
+            {
+              "name": "proposed",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "eta",
+              "type": "uint64",
+              "internalType": "uint64"
+            }
+          ]
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getPendingRefundChange",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "tuple",
+          "internalType": "struct IWaybillEscrow.PendingAddressChange",
+          "components": [
+            {
+              "name": "proposed",
+              "type": "address",
+              "internalType": "address"
+            },
+            {
+              "name": "eta",
+              "type": "uint64",
+              "internalType": "uint64"
+            }
+          ]
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getPendingTreasury",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "proposed",
+          "type": "address",
+          "internalType": "address"
+        },
+        {
+          "name": "eta",
+          "type": "uint64",
+          "internalType": "uint64"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getThreshold",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "internalType": "uint8"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint8",
+          "internalType": "uint8"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getTrancheFee",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "internalType": "uint256"
+        },
+        {
+          "name": "milestoneIndex",
+          "type": "uint8",
+          "internalType": "uint8"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "isFullyAccepted",
+      "inputs": [
+        {
+          "name": "dealId",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool",
+          "internalType": "bool"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "error",
+      "name": "InvalidMilestone",
+      "inputs": []
+    }
+  ]
+}
