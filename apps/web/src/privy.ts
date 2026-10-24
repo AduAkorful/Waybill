@@ -18,6 +18,7 @@ export function getPrivyProviderProps(environment: BrowserEnvironment = publicEn
     appId: required(environment, 'NEXT_PUBLIC_PRIVY_APP_ID'),
     ...(clientId ? { clientId } : {}),
     config: {
+      loginMethods: ['email' as const, 'wallet' as const],
       embeddedWallets: {
         ethereum: {
           createOnLogin: 'users-without-wallets' as const,

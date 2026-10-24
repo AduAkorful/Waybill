@@ -6,6 +6,7 @@ import { describeAttestorEvent, parseAttestor, parseAttestors } from './attestor
 import { parseDealEvents, splitDecisions } from './events'
 import { refundedFor, releasedFor, splitBuyerReceives, unknownSplitParts } from './derive'
 import type { DealView, Tranche } from './types'
+import { dealsInShell, heldShells, parseWalletDeals, rolesIn } from './wallet'
 
 const part = (fee: bigint) => ({ fee }) as Tranche
 
@@ -116,5 +117,39 @@ describe('attestor model', () => {
     expect(describeAttestorEvent(ev('OutcomeRecorded', { kind: 1 }))).toContain('decided against')
     expect(describeAttestorEvent(ev('StatusExecuted', { status: 2 }))).toContain('suspended')
     expect(describeAttestorEvent(ev('SomethingNew', {}))).toBe('SomethingNew')
+  })
+})
+
+describe('wallet deals', () => {
+  const raw = [
+    { dealId: '278', state: 'SETTLED', roles: [{ role: 'buyer', milestoneIndex: null }] },
+    {
+      dealId: '2',
+      state: null,
+      roles: [
+        { role: 'attestor', milestoneIndex: 0 },
+        { role: 'panel', milestoneIndex: null },
+      ],
+    },
+  ]
+
+  test('parses ids to bigint and part numbers', () => {
+    const deals = parseWalletDeals(raw)
+    expect(deals[0]!.dealId).toBe(278n)
+    expect(deals[1]!.roles[0]).toEqual({ role: 'attestor', part: 0 })
+  })
+
+  test('groups by shell, with panel members under arbiter', () => {
+    const deals = parseWalletDeals(raw)
+    expect(heldShells(deals)).toEqual(['buyer', 'attestor', 'arbiter'])
+    expect(dealsInShell(deals, 'arbiter').map((d) => d.dealId)).toEqual([2n])
+    expect(rolesIn(deals[1]!, 'attestor')).toEqual([{ role: 'attestor', part: 0 }])
+  })
+
+  test('rejects what it does not understand', () => {
+    expect(() => parseWalletDeals({})).toThrow()
+    expect(() => parseWalletDeals([{ dealId: 'x', state: null, roles: [] }])).toThrow()
+    expect(() => parseWalletDeals([{ dealId: '1', state: null, roles: [{ role: 'admin', milestoneIndex: null }] }])).toThrow()
+    expect(() => parseWalletDeals([{ dealId: '1', state: null, roles: [] }])).toThrow()
   })
 })
