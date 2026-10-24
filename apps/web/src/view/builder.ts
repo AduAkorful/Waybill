@@ -160,6 +160,12 @@ export interface BuiltDeal {
 export type BuildResult = { ok: true; deal: BuiltDeal; fee: bigint } | { ok: false; errors: string[] }
 
 /** The protocol fee the contract takes on a total: rounded up, as the escrow does. */
+/** Who pays what of the Waybill fee, as the escrow splits it: the buyer prepays all of it, none of it, or the larger half when split. */
+export function feeShares(fee: bigint, payer: FeePayer): { buyer: bigint; supplier: bigint } {
+  const buyer = payer === 0 ? fee : payer === 1 ? 0n : (fee + 1n) / 2n
+  return { buyer, supplier: fee - buyer }
+}
+
 export const feeFor = (total: bigint, feeBps: number): bigint => (total * BigInt(feeBps) + 9_999n) / 10_000n
 
 /** Checks every rule the escrow checks that can be known before signing, and builds the exact createDeal arguments. */

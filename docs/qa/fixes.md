@@ -5,6 +5,33 @@ After each batch the web app on port 3000 is rebuilt and restarted; retest again
 "Fixed" means changed in code, covered by a unit test where the logic is pure, and the page answers as described below.
 It does not mean a signed transaction was re-run in a browser — that is what QA is for.
 
+## Batch 4 — 2026-10-20 (fee amounts, operator role, wallet timeout, evidence reads)
+
+Web app restarted on the new build. axe: 0 violations on the public pages and `/operator` at 375 and 1440 px, light and dark.
+
+### Builder summary (WB-QA-033, 031 part)
+- The fee line now says who pays what in USDC, following the escrow's own rule: *"You prepay all of it (X USDC)…"*, *"Taken from the supplier at payout (X USDC); you prepay none"*, or *"Split: you prepay X USDC, the supplier pays Y USDC at payout"* (the buyer gets the larger half when it does not divide evenly).
+- **"At most you lock"** is now correct for a split fee (it used to count the whole fee only for buyer-pays and nothing for a split). It matches what the Fund dialog shows after creation.
+- Not changed: dust totals are still allowed.
+
+### Operator (WB-QA-050 part)
+- The header shows the connected wallet and its role: **"0x4632…D0F1 · pauser"**, **"… · not the pauser (read only)"**, or "No wallet connected".
+
+### Wallet waiting (WB-QA-098)
+- After 60 seconds waiting for the wallet the dialog text becomes *"Still waiting for your wallet. If you closed its window, stop waiting and try again."* (the Stop waiting button from batch 1 is there from the start).
+
+### Evidence (WB-QA-042)
+- Opening the files of several parts now asks for **one** wallet signature per deal for about eight minutes, not one per part. A declined signature is not remembered; the next click asks again.
+
+### Retest checklist for batch 4
+1. `/app/new`: pick each fee payer and read the fee line and the "At most you lock" total; fund the created deal and compare with the Fund dialog.
+2. `/operator` as the pauser and as another wallet: header chip text.
+3. Leave the wallet prompt untouched for a minute: text changes.
+4. Open "Show the files" on two parts of deal 284: one signature prompt.
+
+### Not done in this batch
+Arbiter and attestor pickers still show addresses (arbiters have no profile; attestor names are whatever the registry holds, all "Waybill test" today); dust minimum; Chinese copy review; legal text review; signed-in axe run. These need either data or a decision.
+
 ## Batch 3 — 2026-10-20 (builder amounts, receipts, loading, copy)
 
 Web app and relayer restarted on the new code (the relayer now reports which optional services are on). axe: 0 violations on the public pages and `/operator` at 375 and 1440 px, light and dark.

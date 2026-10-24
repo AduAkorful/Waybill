@@ -111,3 +111,25 @@ describe('evidence client', () => {
     expect(seen).toEqual(['http://localhost:3001/v1/deals/7/evidence', 'http://localhost:3001/v1/deals/7/evidence/a'])
   })
 })
+
+describe('evidence reader signatures', () => {
+  test('a declined signature is asked for again, not remembered', async () => {
+    process.env.NEXT_PUBLIC_WAYBILL_API_BASE_URL = 'http://localhost:3001'
+    process.env.NEXT_PUBLIC_WAYBILL_NETWORK = 'testnet'
+    let signs = 0
+    const reader = evidenceReader({
+      dealId: 7n,
+      signer: '0x00000000000000000000000000000000000000aa',
+      sign: async () => {
+        signs++
+        if (signs === 1) throw new Error('declined')
+        return '0xabcd'
+      },
+      now: () => 1_800_000_000,
+      fetcher: (async () => new Response('[]', { status: 200 })) as unknown as typeof fetch,
+    })
+    await expect(reader.list()).rejects.toThrow('declined')
+    await expect(reader.list()).resolves.toEqual([])
+    expect(signs).toBe(2)
+  })
+})

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useSignMessage } from 'wagmi'
-import { describeUploadError, evidenceReader, type StoredEvidence } from '@/integration/evidence'
+import { describeUploadError, sharedEvidenceReader, type StoredEvidence } from '@/integration/evidence'
 import { formatDateTime, shortAddress } from '@/view/format'
 
 const kb = (n: number) => (n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`)
@@ -14,7 +14,7 @@ const kb = (n: number) => (n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024)
 export function EvidenceList({ dealId, owner, part }: { dealId: bigint; owner: `0x${string}`; part?: number }) {
   const { signMessageAsync } = useSignMessage()
   const [state, setState] = useState<{ kind: 'idle' } | { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; files: StoredEvidence[] }>({ kind: 'idle' })
-  const [reader] = useState(() => evidenceReader({ dealId, signer: owner, sign: (message) => signMessageAsync({ message }) }))
+  const [reader] = useState(() => sharedEvidenceReader({ dealId, signer: owner, sign: (message) => signMessageAsync({ message }) }))
   const [opening, setOpening] = useState<string | null>(null)
   const [openError, setOpenError] = useState('')
 

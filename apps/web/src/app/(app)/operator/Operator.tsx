@@ -61,7 +61,10 @@ export function Operator() {
           <Link href="/" aria-label="Waybill home"><Wordmark /></Link>
           <span className="label">Operator</span>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-3">
+          <WalletChip pauser={read.kind === 'ready' ? read.summary.chain.pauser : null} />
+          <ThemeToggle />
+        </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 pt-6 pb-20 md:px-8 md:pt-10">
         <h1 className="text-[28px] leading-tight font-semibold tracking-tight">Operator console</h1>
@@ -190,6 +193,18 @@ function Monitor({ summary: s, health, onChanged }: { summary: OperatorSummary; 
         )}
       </section>
     </>
+  )
+}
+
+/** Who is connected here and whether it is the pauser, so it is clear which controls will work. */
+function WalletChip({ pauser }: { pauser: string | null }) {
+  const { address } = useAccount()
+  if (!address) return <span className="text-[12px] text-graphite">No wallet connected</span>
+  const isPauser = pauser !== null && address.toLowerCase() === pauser.toLowerCase()
+  return (
+    <span className="rounded-full border border-rule px-2.5 py-1 text-[12px]">
+      <span className="mono">{shortAddress(address)}</span> · {pauser === null ? 'checking role' : isPauser ? 'pauser' : 'not the pauser (read only)'}
+    </span>
   )
 }
 

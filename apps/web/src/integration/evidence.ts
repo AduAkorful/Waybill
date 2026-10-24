@@ -171,7 +171,14 @@ export function evidenceReader(input: { dealId: bigint; signer: string; sign: Si
   const fetcher = input.fetcher ?? fetch
   const now = input.now ?? (() => Math.floor(Date.now() / 1000))
   let headers: Promise<Record<string, string>> | null = null
-  const auth = () => (headers ??= signedReadHeaders(input.dealId, input.signer, input.sign, now))
+  const auth = () => {
+    // a declined or failed signature must not be remembered: the next try asks again
+    headers ??= signedReadHeaders(input.dealId, input.signer, input.sign, now).catch((error) => {
+      headers = null
+      throw error
+    })
+    return headers
+  }
   return {
     async list(): Promise<StoredEvidence[]> {
       const response = await fetcher(`${base}/v1/deals/${input.dealId}/evidence`, { headers: await auth() })
@@ -194,4 +201,17 @@ export function evidenceReader(input: { dealId: bigint; signer: string; sign: Si
       return response.blob()
     },
   }
+}
+
+const READER_LIFETIME_MS = 8 * 60_000
+const readers = new Map<string, { reader: ReturnType<typeof evidenceReader>; created: number }>()
+
+/** One reader per deal and wallet, reused for a few minutes, so opening the files of several parts asks for one signature, not one per part. */
+export function sharedEvidenceReader(input: { dealId: bigint; signer: string; sign: SignText }) {
+  const key = `${input.dealId}:${input.signer.toLowerCase()}`
+  const held = readers.get(key)
+  if (held && Date.now() - held.created < READER_LIFETIME_MS) return held.reader
+  const reader = evidenceReader(input)
+  readers.set(key, { reader, created: Date.now() })
+  return reader
 }

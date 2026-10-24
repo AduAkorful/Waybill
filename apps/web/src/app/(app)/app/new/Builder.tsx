@@ -10,7 +10,7 @@ import { getBrowserNetwork } from '@/integration/network'
 import { Modal } from '@/ui/Modal'
 import { LineItems } from '@/ui/Sheet'
 import { TxFlow } from '@/ui/TxFlow'
-import { partAmount, buildDeal, buildTerms, CONDITION_LABEL, emptyDetails, emptyForm, feeFor, TEMPLATES, type BuilderForm, type DetailsForm, type PartForm, type Template } from '@/view/builder'
+import { feeShares, partAmount, buildDeal, buildTerms, CONDITION_LABEL, emptyDetails, emptyForm, feeFor, TEMPLATES, type BuilderForm, type DetailsForm, type PartForm, type Template } from '@/view/builder'
 import { formatAmount, shortAddress } from '@/view/format'
 import { ShareDeal } from './ShareDeal'
 
@@ -265,10 +265,10 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
               <LineItems
                 items={[
                   { label: 'Deal total', amount: total, note: `${form.parts.length} ${form.parts.length === 1 ? 'payment' : 'payments'} to the supplier` },
-                  { label: `Waybill fee, ${Number(form.feeBps) / 100}%`, amount: feeFor(total, Number(form.feeBps)), note: form.feePayer === 0 ? 'You prepay it; returned with any refunded part' : form.feePayer === 1 ? 'Taken from the supplier at payout' : 'Shared with the supplier' },
+                  { label: `Waybill fee, ${Number(form.feeBps) / 100}%`, amount: feeFor(total, Number(form.feeBps)), note: feeNote(feeFor(total, Number(form.feeBps)), form.feePayer) },
                   { label: 'Arbiter fee', amount: arbiterFee, note: 'Paid only if a dispute is decided in time' },
                 ]}
-                total={total + (form.feePayer === 0 ? feeFor(total, Number(form.feeBps)) : 0n) + arbiterFee}
+                total={total + feeShares(feeFor(total, Number(form.feeBps)), form.feePayer).buyer + arbiterFee}
                 totalLabel="At most you lock"
               />
               <p className="mt-2 text-[12px] text-graphite">The exact figure is fixed when you fund. Nothing is locked until then.</p>
@@ -323,6 +323,13 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
       {lookup ? <p role="alert" className="text-[13px] text-hold lg:col-span-2">{lookup} Check your deals list for the new deal.</p> : null}
     </main>
   )
+}
+
+function feeNote(fee: bigint, payer: FeePayer): string {
+  const { buyer, supplier } = feeShares(fee, payer)
+  if (payer === 0) return `You prepay all of it (${formatAmount(buyer)} USDC); returned with any refunded part`
+  if (payer === 1) return `Taken from the supplier at payout (${formatAmount(supplier)} USDC); you prepay none`
+  return `Split: you prepay ${formatAmount(buyer)} USDC, the supplier pays ${formatAmount(supplier)} USDC at payout`
 }
 
 function Small({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {

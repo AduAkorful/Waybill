@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { partAmount, buildDeal, buildTerms, emptyDetails, emptyForm, feeFor, parseAmount, percentToBps, TEMPLATES, type BuilderForm, type BuilderLimits } from './builder'
+import { feeShares, partAmount, buildDeal, buildTerms, emptyDetails, emptyForm, feeFor, parseAmount, percentToBps, TEMPLATES, type BuilderForm, type BuilderLimits } from './builder'
 
 const buyer = '0x00000000000000000000000000000000000000b1'
 const supplier = '0x00000000000000000000000000000000000000c2'
@@ -170,5 +170,13 @@ describe('part amounts and the comma hint', () => {
     const r = buildDeal(form({ total: '1,5' }), buyer, limits, { allowed: true, fee: 0n } as never, NOW)
     expect(r.ok).toBe(false)
     expect((r as { errors: string[] }).errors.join(' ')).toContain('dot for decimals')
+  })
+})
+
+describe('fee shares', () => {
+  test('buyer pays all, none, or the larger half, matching the escrow', () => {
+    expect(feeShares(7_501n, 0)).toEqual({ buyer: 7_501n, supplier: 0n })
+    expect(feeShares(7_501n, 1)).toEqual({ buyer: 0n, supplier: 7_501n })
+    expect(feeShares(7_501n, 2)).toEqual({ buyer: 3_751n, supplier: 3_750n })
   })
 })

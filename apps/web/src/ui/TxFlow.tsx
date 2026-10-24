@@ -51,6 +51,7 @@ export function TxFlow({
   const [hashes, setHashes] = useState<Hex[]>([])
   const [recheck, setRecheck] = useState<'idle' | 'checking' | 'still-unknown'>('idle')
   const [confirmedUnknown, setConfirmedUnknown] = useState(false)
+  const [slowWallet, setSlowWallet] = useState(false)
   const done = useRef(false)
   const step = steps[index]!
   const { state } = tx
@@ -80,6 +81,14 @@ export function TxFlow({
     const timer = setTimeout(() => advance(hash), 900)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.status])
+
+  // A wallet window that was closed without an answer never reports back; say so after a minute.
+  useEffect(() => {
+    setSlowWallet(false)
+    if (state.status !== 'signing') return
+    const timer = setTimeout(() => setSlowWallet(true), 60_000)
+    return () => clearTimeout(timer)
   }, [state.status])
 
   async function lookAgain(hash: Hex) {
@@ -141,7 +150,7 @@ export function TxFlow({
 
       {state.status === 'signing' ? (
         <div role="status" className="rounded-md border border-rule bg-paper px-3.5 py-3 text-[14px]">
-          <p>Check your wallet and approve to continue.</p>
+          <p>{slowWallet ? 'Still waiting for your wallet. If you closed its window, stop waiting and try again.' : 'Check your wallet and approve to continue.'}</p>
           <p className="mt-1 text-[12.5px] text-graphite">
             Nothing happens until you approve. If the wallet window closed or never appeared, you can stop waiting and try again.
           </p>
