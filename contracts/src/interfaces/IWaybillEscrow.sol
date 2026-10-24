@@ -238,7 +238,8 @@ interface IWaybillEscrow {
 
     // Parameter timelock (03e)
     error DirectParamChange();    // addArbiter/removeArbiter called directly (use schedule/execute)
-    error InvalidFeeBpsRange();   // min > max or values outside 1–10000
+    error InvalidFeeBpsRange();
+    error InvalidCaps();          // zero cap, a lower that raises, or a raise that lowers or changes nothing   // min > max or values outside 1–10000
 
     // Registry (03h)
     error RegistryZeroAddress();
@@ -359,6 +360,11 @@ interface IWaybillEscrow {
     event SetTreasuryExecuted(address indexed oldTreasury, address indexed newTreasury);
     event SetFeeBpsRangeScheduled(uint16 minBps, uint16 maxBps, uint64 eta);
     event SetFeeBpsRangeExecuted(uint16 minBps, uint16 maxBps);
+    /// @notice Caps lowered at once by the pauser; any scheduled raise is cancelled.
+    event CapsLowered(uint256 maxDealAmount, uint256 maxLocked);
+    /// @notice A cap raise was scheduled; it can be executed from `eta`.
+    event CapsRaiseScheduled(uint256 maxDealAmount, uint256 maxLocked, uint64 eta);
+    event CapsRaised(uint256 maxDealAmount, uint256 maxLocked);
     // Address-change delay (03d)
     event PayoutChangeProposed(uint256 indexed dealId, address oldAddr, address newAddr, uint64 eta);
     event PayoutChangeRejected(uint256 indexed dealId, address rejected);
@@ -512,6 +518,16 @@ interface IWaybillEscrow {
     function scheduleSetFeeBpsRange(uint16 minBps, uint16 maxBps) external;
     function executeSetFeeBpsRange() external;
 
+    /// @notice Lowers the per-deal and total caps immediately (pauser only). Each value must be non-zero and no higher
+    ///         than the current cap. Cancels any scheduled raise. Funded deals are unaffected; a total cap below
+    ///         currentLocked only blocks new deals and funding until enough settles.
+    function lowerCaps(uint256 newMaxDealAmount, uint256 newMaxLocked) external;
+    /// @notice Schedules a raise of the caps (pauser only), executable after 48 hours. Each value must be at least
+    ///         the current cap and at least one must be higher. Replaces any earlier scheduled raise.
+    function scheduleRaiseCaps(uint256 newMaxDealAmount, uint256 newMaxLocked) external;
+    /// @notice Applies the scheduled raise once its delay has passed (pauser only).
+    function executeRaiseCaps() external;
+
     // Address-change delay (03d)
     function proposePayout(uint256 dealId, address newAddr) external;
     function rejectPayoutChange(uint256 dealId) external;
@@ -562,4 +578,10 @@ interface IWaybillEscrow {
     function attestorRegistry() external view returns (address);   // 03h: the AttestorRegistry contract
     function getPendingTreasury() external view returns (address proposed, uint64 eta);
     function getPendingFeeBpsRange() external view returns (uint16 minBps, uint16 maxBps, uint64 eta);
+    /// @notice The scheduled cap raise; all zero when none is pending.
+    function getPendingCaps() external view returns (uint256 newMaxDealAmount, uint256 newMaxLocked, uint64 eta);
+    /// @notice Largest total, in USDC raw units, a new deal may have.
+    function maxDealAmount() external view returns (uint256);
+    /// @notice Most the escrow may hold across deals (principal plus prepaid fees) when a deal is created or funded.
+    function maxLocked() external view returns (uint256);
 }

@@ -557,6 +557,31 @@ contract WaybillHandler is Test {
         try escrow.unpauseNewDeals() {} catch {}
     }
 
+    /// Lower the caps at once, or schedule a raise and (sometimes) execute it after the delay. Caps stay between 1 USDC
+    /// and the setUp values so they actually bind deal creation and funding during the run.
+    function op_changeCaps(uint256 seed) external {
+        uint256 newDeal = bound(seed, 1e6, 100_000e6);
+        uint256 newLocked = bound(seed >> 64, 1e6, 10_000_000e6);
+        if (seed % 2 == 0) {
+            vm.prank(pauser);
+            try escrow.lowerCaps(newDeal, newLocked) {
+                assertEq(escrow.maxDealAmount(), newDeal, "lower applied");
+            } catch {}
+            return;
+        }
+        vm.prank(pauser);
+        try escrow.scheduleRaiseCaps(newDeal, newLocked) {} catch { return; }
+        (,, uint64 eta) = escrow.getPendingCaps();
+        vm.prank(pauser);
+        try escrow.executeRaiseCaps() { revert("raise applied before its delay"); } catch {}
+        if ((seed >> 128) % 2 == 0) {
+            vm.warp(eta);
+            vm.prank(pauser);
+            escrow.executeRaiseCaps();
+            assertEq(escrow.maxLocked(), newLocked, "raise applied");
+        }
+    }
+
     /// Withdraw treasury fees.
     function op_withdrawFees(uint256 seed) external {
         uint256 bal = escrow.feeBalance(treasury);
@@ -815,7 +840,7 @@ contract Invariant04j is StdInvariant, Test {
         targetContract(address(handler));
 
         // Select handler functions as targets
-        bytes4[] memory selectors = new bytes4[](25);
+        bytes4[] memory selectors = new bytes4[](26);
         selectors[0]  = WaybillHandler.op_createAcceptanceDeal.selector;
         selectors[1]  = WaybillHandler.op_createAttestationDeal.selector;
         selectors[2]  = WaybillHandler.op_claim.selector;
@@ -841,6 +866,7 @@ contract Invariant04j is StdInvariant, Test {
         selectors[22] = WaybillHandler.op_withdrawDispute.selector;
         selectors[23] = WaybillHandler.op_resolveSplit.selector;
         selectors[24] = WaybillHandler.op_panelVote.selector;
+        selectors[25] = WaybillHandler.op_changeCaps.selector;
 
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }

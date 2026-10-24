@@ -15,6 +15,9 @@ export const ADMIN_EVENT_NAMES = [
   'SetTreasuryExecuted',
   'SetFeeBpsRangeScheduled',
   'SetFeeBpsRangeExecuted',
+  'CapsLowered',
+  'CapsRaiseScheduled',
+  'CapsRaised',
 ] as const
 
 const STATE_SQL = `

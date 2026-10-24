@@ -64,6 +64,44 @@ library AdminLogic {
         emit IWaybillEscrow.SetFeeBpsRangeExecuted(p.minBps, p.maxBps);
     }
 
+    uint64 private constant CAP_RAISE_DELAY = 48 hours;
+
+    function executeLowerCaps(address pauser_, uint256 newMaxDealAmount, uint256 newMaxLocked) external {
+        if (msg.sender != pauser_) revert IWaybillEscrow.NotPauser();
+        WaybillStorage.Layout storage s = _layout();
+        if (newMaxDealAmount == 0 || newMaxLocked == 0) revert IWaybillEscrow.InvalidCaps();
+        if (newMaxDealAmount > s.maxDealAmount || newMaxLocked > s.maxLocked) revert IWaybillEscrow.InvalidCaps();
+        s.maxDealAmount = newMaxDealAmount;
+        s.maxLocked = newMaxLocked;
+        // a raise scheduled before an emergency lower must not quietly undo it later
+        delete s.pendingCaps;
+        emit IWaybillEscrow.CapsLowered(newMaxDealAmount, newMaxLocked);
+    }
+
+    function executeScheduleRaiseCaps(address pauser_, uint256 newMaxDealAmount, uint256 newMaxLocked) external {
+        if (msg.sender != pauser_) revert IWaybillEscrow.NotPauser();
+        WaybillStorage.Layout storage s = _layout();
+        if (newMaxDealAmount < s.maxDealAmount || newMaxLocked < s.maxLocked) revert IWaybillEscrow.InvalidCaps();
+        if (newMaxDealAmount == s.maxDealAmount && newMaxLocked == s.maxLocked) revert IWaybillEscrow.InvalidCaps();
+        uint64 eta = uint64(block.timestamp) + CAP_RAISE_DELAY;
+        s.pendingCaps = WaybillStorage.PendingCaps({
+            maxDealAmount: newMaxDealAmount, maxLocked: newMaxLocked, eta: eta, pending: true
+        });
+        emit IWaybillEscrow.CapsRaiseScheduled(newMaxDealAmount, newMaxLocked, eta);
+    }
+
+    function executeRaiseCaps(address pauser_) external {
+        if (msg.sender != pauser_) revert IWaybillEscrow.NotPauser();
+        WaybillStorage.Layout storage s = _layout();
+        WaybillStorage.PendingCaps memory p = s.pendingCaps;
+        if (!p.pending)              revert IWaybillEscrow.NoPendingChange();
+        if (block.timestamp < p.eta) revert IWaybillEscrow.ChangeDelayActive();
+        s.maxDealAmount = p.maxDealAmount;
+        s.maxLocked = p.maxLocked;
+        delete s.pendingCaps;
+        emit IWaybillEscrow.CapsRaised(p.maxDealAmount, p.maxLocked);
+    }
+
     // -------------------------------------------------------------------------
     // Storage accessor
     // -------------------------------------------------------------------------

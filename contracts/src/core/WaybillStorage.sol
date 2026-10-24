@@ -106,11 +106,19 @@ abstract contract WaybillStorage {
         // decisionOpensAt[dealId][milestoneIndex] — once the other side responds, the earliest time the arbiter or
         // panel may decide (response + REBUTTAL_PERIOD, or earlier if the raiser waives). 0 while no response.
         mapping(uint256 => mapping(uint8 => uint64))                      decisionOpensAt;
+
+        // ── (51) Early-access caps, adjustable by the pauser ─────────────────
+        // Lowering applies at once; raising waits CAP_RAISE_DELAY so it is public before it applies.
+        // Caps are checked only when a deal is created or funded; funded deals are never affected.
+        uint256      maxDealAmount;
+        uint256      maxLocked;
+        PendingCaps  pendingCaps;
     }
 
     // ── timelock structs (kept here so Layout compiles) ──────────────────────
     struct PendingTreasury    { address proposed; uint64 eta; }
     struct PendingFeeBpsRange { uint16 minBps; uint16 maxBps; uint64 eta; bool pending; }
+    struct PendingCaps        { uint256 maxDealAmount; uint256 maxLocked; uint64 eta; bool pending; }
 
     /// @dev Returns the singleton Layout pointer at the fixed slot.
     ///      Works in WaybillEscrow AND in any library called via DELEGATECALL.
@@ -125,8 +133,6 @@ abstract contract WaybillStorage {
 
     IERC20            public immutable usdc;
     address           public immutable pauser;
-    uint256           public immutable maxDealAmount;
-    uint256           public immutable maxLocked;
     IArbiterList      internal immutable _arbiterListContract;
     IAttestorRegistry internal immutable _registryContract;
 

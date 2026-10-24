@@ -121,5 +121,8 @@ const CHANGE_WORDS: Record<string, string> = {
   SetTreasuryExecuted: 'The treasury changed',
   SetFeeBpsRangeScheduled: 'A new fee range was scheduled',
   SetFeeBpsRangeExecuted: 'The fee range changed',
+  CapsLowered: 'The deal limits were lowered',
+  CapsRaiseScheduled: 'Higher deal limits were scheduled',
+  CapsRaised: 'The deal limits were raised',
 }
 export const describeChange = (name: string): string => CHANGE_WORDS[name] ?? name

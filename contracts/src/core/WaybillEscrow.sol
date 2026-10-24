@@ -50,14 +50,14 @@ contract WaybillEscrow is IWaybillEscrow, WaybillStorage, EIP712, ReentrancyGuar
         // Immutables — assigned once
         usdc                 = IERC20(_usdc);
         pauser               = _pauser;
-        maxDealAmount        = _maxDealAmount;
-        maxLocked            = _maxLocked;
         _arbiterListContract = IArbiterList(_arbiterList);
         _registryContract    = IAttestorRegistry(_registry);
 
         // Mutable initial values stored in the Layout struct
         WaybillStorage.Layout storage s = _layout();
-        s.treasury   = _treasury;
+        s.treasury      = _treasury;
+        s.maxDealAmount = _maxDealAmount;
+        s.maxLocked     = _maxLocked;
         s.minFeeBps  = 50;
         s.maxFeeBps  = 100;
     }
@@ -72,6 +72,8 @@ contract WaybillEscrow is IWaybillEscrow, WaybillStorage, EIP712, ReentrancyGuar
     function treasury()       external view override returns (address) { return _layout().treasury; }
     function minFeeBps()      external view override returns (uint16)  { return _layout().minFeeBps; }
     function maxFeeBps()      external view override returns (uint16)  { return _layout().maxFeeBps; }
+    function maxDealAmount()  external view override returns (uint256) { return _layout().maxDealAmount; }
+    function maxLocked()      external view override returns (uint256) { return _layout().maxLocked; }
 
     // Public mapping accessors needed by tests / external callers
     function deals(uint256 dealId) external view returns (Deal memory) {
@@ -102,7 +104,7 @@ contract WaybillEscrow is IWaybillEscrow, WaybillStorage, EIP712, ReentrancyGuar
         uint32 arbiterDeadlineHours, MilestoneInput[] calldata milestoneInputs
     ) external override returns (uint256 dealId) {
         return DealLogic.executeCreateDeal(
-            address(usdc), pauser, maxDealAmount, maxLocked,
+            address(usdc), pauser, _layout().maxDealAmount, _layout().maxLocked,
             address(_arbiterListContract), address(_registryContract), _layout().treasury,
             supplier, buyerRefund, arbiter, totalAmount, feeBps,
             acceptanceDeadlineTs, arbiterDeadlineHours, milestoneInputs, false, 0,
@@ -117,7 +119,7 @@ contract WaybillEscrow is IWaybillEscrow, WaybillStorage, EIP712, ReentrancyGuar
         bool fundFirst
     ) external override returns (uint256 dealId) {
         return DealLogic.executeCreateDeal(
-            address(usdc), pauser, maxDealAmount, maxLocked,
+            address(usdc), pauser, _layout().maxDealAmount, _layout().maxLocked,
             address(_arbiterListContract), address(_registryContract), _layout().treasury,
             supplier, buyerRefund, arbiter, totalAmount, feeBps,
             acceptanceDeadlineTs, arbiterDeadlineHours, milestoneInputs, fundFirst, 0,
@@ -133,7 +135,7 @@ contract WaybillEscrow is IWaybillEscrow, WaybillStorage, EIP712, ReentrancyGuar
         bool fundFirst, uint256 arbiterFee
     ) external override returns (uint256 dealId) {
         return DealLogic.executeCreateDeal(
-            address(usdc), pauser, maxDealAmount, maxLocked,
+            address(usdc), pauser, _layout().maxDealAmount, _layout().maxLocked,
             address(_arbiterListContract), address(_registryContract), _layout().treasury,
             supplier, buyerRefund, arbiter, totalAmount, feeBps,
             acceptanceDeadlineTs, arbiterDeadlineHours, milestoneInputs, fundFirst, arbiterFee,
@@ -149,7 +151,7 @@ contract WaybillEscrow is IWaybillEscrow, WaybillStorage, EIP712, ReentrancyGuar
         bool fundFirst, uint256 arbiterFee, FeePayer feePayer
     ) external override returns (uint256 dealId) {
         return DealLogic.executeCreateDeal(
-            address(usdc), pauser, maxDealAmount, maxLocked,
+            address(usdc), pauser, _layout().maxDealAmount, _layout().maxLocked,
             address(_arbiterListContract), address(_registryContract), _layout().treasury,
             supplier, buyerRefund, arbiter, totalAmount, feeBps,
             acceptanceDeadlineTs, arbiterDeadlineHours, milestoneInputs, fundFirst, arbiterFee,
@@ -167,7 +169,7 @@ contract WaybillEscrow is IWaybillEscrow, WaybillStorage, EIP712, ReentrancyGuar
         bool fundFirst, uint256 arbiterFee, FeePayer feePayer
     ) external override returns (uint256 dealId) {
         return DealLogic.executeCreateDealWithPanel(
-            address(usdc), pauser, maxDealAmount, maxLocked,
+            address(usdc), pauser, _layout().maxDealAmount, _layout().maxLocked,
             address(_arbiterListContract), address(_registryContract), _layout().treasury,
             supplier, buyerRefund, arbiter, panel, totalAmount, feeBps,
             acceptanceDeadlineTs, arbiterDeadlineHours, milestoneInputs, fundFirst, arbiterFee,
@@ -192,7 +194,7 @@ contract WaybillEscrow is IWaybillEscrow, WaybillStorage, EIP712, ReentrancyGuar
     }
 
     function fund(uint256 dealId) external override nonReentrant {
-        DealLogic.executeFund(address(usdc), maxLocked, dealId);
+        DealLogic.executeFund(address(usdc), _layout().maxLocked, dealId);
     }
 
     // -------------------------------------------------------------------------
@@ -344,6 +346,23 @@ contract WaybillEscrow is IWaybillEscrow, WaybillStorage, EIP712, ReentrancyGuar
 
     function executeSetFeeBpsRange() external override {
         AdminLogic.executeSetFeeBpsRange(pauser);
+    }
+
+    function lowerCaps(uint256 newMaxDealAmount, uint256 newMaxLocked) external override {
+        AdminLogic.executeLowerCaps(pauser, newMaxDealAmount, newMaxLocked);
+    }
+
+    function scheduleRaiseCaps(uint256 newMaxDealAmount, uint256 newMaxLocked) external override {
+        AdminLogic.executeScheduleRaiseCaps(pauser, newMaxDealAmount, newMaxLocked);
+    }
+
+    function executeRaiseCaps() external override {
+        AdminLogic.executeRaiseCaps(pauser);
+    }
+
+    function getPendingCaps() external view override returns (uint256 newMaxDealAmount, uint256 newMaxLocked, uint64 eta) {
+        WaybillStorage.PendingCaps memory p = _layout().pendingCaps;
+        return (p.maxDealAmount, p.maxLocked, p.eta);
     }
 
     // -------------------------------------------------------------------------
