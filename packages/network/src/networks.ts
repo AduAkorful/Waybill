@@ -47,7 +47,7 @@ export const ARC_TESTNET: WaybillNetworkManifest = {
   },
   nativeGasDecimals: 18,
   contracts: {
-    // Plan 50 deploy, commit 5df7e2b, 2026-10-24 (plans/50-deploy.json). Previous escrow 0xcf08…5EfA is retired:
+    // Plan 50 deploy, commit 4a60eb9, 2026-10-24 (plans/50-deploy.json). Previous escrow 0xcf08…5EfA is retired:
     // the app no longer reads it; its last open deals are recorded in AGENTS.md.
     escrow: '0x542601ad285c9845cBEd91c18af34fD06993f831',
     arbiterList: '0x9748a603B1E6503DDF2350D17d17ea98fE09c33c',
