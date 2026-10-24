@@ -113,7 +113,7 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
   const stage = disputeStage(part, deal.chainTime, early)
   const raiser = part.disputeRaiser && part.disputeRaiser.toLowerCase() === deal.buyer.toLowerCase() ? 'buyer' : 'supplier'
   const iRaised = who === raiser
-  const events = (deal.events ?? []).filter((e) => e.position === part.position && /^Dispute|^Tranche(Split|Refunded|Claimed)|DefaultApplied|^Panel(VoteCast|Resolved)/.test(e.name))
+  const events = (deal.events ?? []).filter((e) => e.position === part.position && /^Dispute|^ArbiterDeadlineReset|^Tranche(Split|Refunded|Claimed)|DefaultApplied|^Panel(VoteCast|Resolved)/.test(e.name))
   const rows = historyRows(events)
   const historyNote = 'The dispute history could not be read from the relayer right now. The part\'s state above is read from the escrow.'
 

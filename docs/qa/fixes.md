@@ -38,6 +38,55 @@ These come up in retests. Each has a reason. If one of them is wrong *for a diff
 | Console lines `Privy logout 400` and `sessions 401` after Sign out (SF-15) | The browser reports a failed network call to the wallet library's own server (the session had already ended there). A page cannot hide a failed request from the console, and the person is signed out either way. | – |
 | NF-19 message seen with Rabby (SF-17) | See batch 13: the app now checks the balance first, so the wallet is not opened. | – |
 
+## Batch 20 — 2026-10-24 (report §31–§32: retest of batch 19, deal 285, operator, fork work audit)
+
+The fork-session work from §31.9–§32.9 was audited and is now committed, along with the fixes below.
+
+### Important for testing disputes
+- **The "decide as soon as the other side responds" rule (§31.7) is in the contract code but not on the testnet escrow `0xcf08…5EfA`.** That escrow can't be upgraded, so the rule only arrives with a fresh deploy. The app now knows this. On testnet, after a response, the arbiter is told they can decide when the 72-hour window ends, not "now". On a build pointed at an escrow that has the rule (`NEXT_PUBLIC_WAYBILL_MAINNET_EARLY_RESOLVE=1`, as on the local fork), the arbiter is told they can decide straight away. Don't report the testnet wording as a bug.
+- The contract now emits `ArbiterDeadlineReset` when a response moves the arbiter's deadline. The history shows "The arbiter's deadline on part N is now …". This only appears on a newly deployed escrow (the fork after a redeploy).
+- The relayer's response email no longer says the arbiter can decide now. It says to open the room to see when.
+
+### Fixed
+| ID | What changed |
+|---|---|
+| NF-57 | The network block uses one money format: two decimals, or more only for sub-cent amounts. The note reads "of the 1,000,000.00 USDC early-access cap · largest deal allowed 100,000.00 USDC". |
+| NF-58 | After the timeout, the lists say "Still reading… This is taking longer than usual; use Try again above" instead of "Reading the escrow…". The single **Try again** covers the whole block. |
+| NF-59 | Tiles split about 1:2 from 640 px (Deals created 362 px, Held 723 px at 1440), and one tile per row on phones. |
+| NF-60 | The `/signin` card uses even spacing between the heading, intro, steps and note. |
+| NF-61 | Attestor row labels read "Waybill test, address ending 13Cd, 39 signed", with no ellipsis character. |
+| SF-36 | A wallet that is both attestor and arbiter sees "Attestor fees" and "Arbiter fees". A wallet with one of those roles still sees "Fees". |
+| SF-37 | `/d/*`, signed out, on a proposed, accepted or funded deal: a **Sign in to act on this deal** button (EN/中文) loads sign-in in place, and the page stays on the deal. |
+| SF-38 | The Addresses card sits above the parts tracker, on both `/d/*` and `/app/deals/*`. |
+| SF-39 | The propose, apply and reject dialogs show From and To in full, without truncation. **Cancel** in every transaction dialog is now a 44 px outlined button with ink text. |
+| SF-40 | Before the wallet opens, address dialogs show "What you are signing": contract, action, deal, from, to and cost. |
+| SF-41 | The dialog's action area keeps its height when "Confirming on Arc…" replaces the button. After confirmation the card shows the outcome inline (for example "Change applied. Where the supplier is paid is now 0x2Fac…4D73."), not only in a toast. |
+| SF-42 | The 48-hour footnote shows once per card, and only while a change is waiting. |
+| SF-43 | The banner says who proposed the change ("You" or "The supplier/buyer") and gives the full address with **Copy**. It says either "can be applied from …" or "the 48-hour delay ended …, so anyone named in the deal can apply it now". |
+| SF-44 | Addresses are two columns from 768 px, with full addresses and copy buttons (deal-details card not changed; see below). |
+| SF-45 | `/operator` signed out: the pause card has a **Sign in with the pauser wallet** button. Sign-in returns to `/operator`, because `/signin?next=` accepts only `/operator`, `/app…` and `/d/N`. The header chip also links there. |
+| SF-46 | **Label deals** starts with no label chosen. "Choose a label first." shows until one is picked. |
+| SF-47 | Pending arbiter additions and removals say "ready: the 48-hour delay ended …, so it can be added now", or "can be added from …". |
+| SF-48 | Arbiter-list buttons are named after the action, not "Sign". The shared transaction flow shows "Waiting for your wallet…" and then "Confirming on Arc…". |
+| SF-49 | A return visit in the same tab shows the last figures at once, with "Showing the last reading from this tab while a fresh one loads…". |
+
+### From the audit (not QA-visible unless noted)
+- Read proxy `/v1/rpc`: `eth_getLogs` and `eth_getStorageAt` are refused (the app never uses them). Each client gets 1,200 calls a minute; `eth_estimateGas` and `eth_getTransactionCount` count 5 each, and over the limit the proxy answers HTTP 429. The client is read from `X-Forwarded-For` according to `WAYBILL_API_PROXY_HOPS`. Checked live: the 38th batch of 32 got 429, and another client still got 200.
+- A pending transaction is remembered per sender for at most 30 minutes, so another account's transaction is never picked up.
+- The "already done" check stops once your wallet opens, so the dialog can't close on you mid-transaction.
+- If a node is a block behind and can't answer the pinned read made just after a confirmation, the read is retried at the latest block.
+- A hosted build (Vercel or Render) refuses to build with dev-wallet sign-in switched on.
+
+### Not changed, and why
+- SF-44, the deal-details card: only the Addresses card was redesigned this batch.
+- QA flagged the test matrix and §7.1 as out of date about the direction of deal 285's change. That's QA's document, so it's not changed here.
+
+### Retest checklist for batch 20
+1. `/d/abc`, `/signin` and `/join` at 1440 and 320: tile widths, note wording, and the row label read by a screen reader.
+2. `/d/285` signed out: **Sign in to act on this deal**. Signed in as the supplier or buyer: the Addresses card is above the tracker, the dialog shows From/To and "What you are signing", Cancel is a full button, and the outcome shows in the card.
+3. Testnet dispute room after a response: the arbiter is told they can decide after the window ends (not "now").
+4. `/operator` signed out: one sign-in button, which returns to `/operator`. Label deals has no default. Pending arbiter rows say whether they can be done now.
+
 ## Logo — 2026-10-23
 
 Waybill now has a mark: a waybill sheet with its tear-off stub, the stub in highlighter yellow with a check (the part released). It sits beside the name "WAYBILL" in every header and footer, and is the browser-tab icon (`/favicon.ico`, `/icon.svg`, and `/apple-icon.png` for phone home screens). It follows the light and dark themes. Under 360 px wide the header shows the mark alone (the name stays for screen readers) so the header keeps one row. axe 0 violations, 133 tests pass.

@@ -8,7 +8,7 @@ import { getBrowserNetwork } from '@/integration/network'
 import { getReadClient } from '@/integration/read-client'
 import { useBuilderLimits } from '@/data/builder-reads'
 import { parseAttestors, type Attestor } from '@/view/attestor'
-import { formatAmount, formatAmountsAligned, shortAddress } from '@/view/format'
+import { formatAmount, shortAddress } from '@/view/format'
 import { loadDealView } from '@/view/from-chain'
 import type { DealView } from '@/view/types'
 
@@ -96,11 +96,12 @@ function Snapshot({ compact, onRetry }: { compact: boolean; onRetry: () => void 
   }, [network])
 
   const limitsFresh = limits.status === 'ready' && limits.fresh !== false
+  // one money format everywhere in the block: two decimals unless an amount has sub-cent digits (as the deal rows)
   const [heldText, capText, perDealText] =
     limits.status === 'ready'
-      ? formatAmountsAligned(limits.value.currentLocked, limits.value.maxLocked, limits.value.maxDealAmount)
+      ? [formatAmount(limits.value.currentLocked), formatAmount(limits.value.maxLocked), formatAmount(limits.value.maxDealAmount)]
       : ['', '', '']
-  const stillWaiting = slow && limits.status === 'loading'
+  const stillWaiting = slow && (limits.status === 'loading' || recent.status === 'loading' || people.status === 'loading')
   const failed = limits.status === 'error' || recent.status === 'error' || people.status === 'unavailable' || stillWaiting
   const updating = (limits.status === 'ready' && !limitsFresh) || (recent.status === 'ready' && !recent.fresh)
 
@@ -119,9 +120,9 @@ function Snapshot({ compact, onRetry }: { compact: boolean; onRetry: () => void 
       <h2 id="snapshot-h" className="text-[20px] font-semibold tracking-tight">On this network right now</h2>
       <p className="mt-1 text-[13px] text-graphite">Read from {network.network === 'testnet' ? 'the Arc test network' : 'Arc'} when this page opened. {network.network === 'testnet' ? 'Test money only.' : ''}</p>
 
-      <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-rule bg-rule">
+      <dl className="mt-5 grid grid-cols-1 gap-px sm:grid-cols-[1fr_2fr] overflow-hidden rounded-md border border-rule bg-rule">
         {tile('Deals created', recent.status === 'ready' ? recent.total.toString() : null, undefined, recent.status === 'ready' && !recent.fresh)}
-        {tile('Held in escrow now', limits.status === 'ready' ? `${heldText} USDC` : null, limits.status === 'ready' ? `of ${capText} USDC early-access cap · largest deal ${perDealText}` : undefined, limits.status === 'ready' && !limitsFresh)}
+        {tile('Held in escrow now', limits.status === 'ready' ? `${heldText} USDC` : null, limits.status === 'ready' ? `of the ${capText} USDC early-access cap · largest deal allowed ${perDealText} USDC` : undefined, limits.status === 'ready' && !limitsFresh)}
       </dl>
 
       {failed ? (
@@ -134,7 +135,7 @@ function Snapshot({ compact, onRetry }: { compact: boolean; onRetry: () => void 
       <div className={`mt-6 gap-8 md:grid-cols-2 ${compact ? 'hidden md:grid' : 'grid'}`}>
         <div>
           <h3 className="label">Newest funded or settled deals</h3>
-          {recent.status === 'loading' ? <p role="status" className="mt-3 text-[13px] text-graphite">Reading the escrow…</p> : null}
+          {recent.status === 'loading' ? <p role="status" className="mt-3 text-[13px] text-graphite">{slow ? 'Still reading the escrow. This is taking longer than usual; use Try again above.' : 'Reading the escrow…'}</p> : null}
           {recent.status === 'error' ? <p className="mt-3 text-[13px] text-graphite">Recent deals are not available right now.</p> : null}
           {recent.status === 'ready' && recent.deals.length === 0 ? <p className="mt-3 text-[13px] text-graphite">No funded or settled deal found among the newest {SCAN_LIMIT}.</p> : null}
           {recent.status === 'ready' && recent.deals.length > 0 ? (
@@ -162,14 +163,14 @@ function Snapshot({ compact, onRetry }: { compact: boolean; onRetry: () => void 
 
         <div>
           <h3 className="label">Attestors with the most signed statements</h3>
-          {people.status === 'loading' ? <p role="status" className="mt-3 text-[13px] text-graphite">Reading the registry…</p> : null}
+          {people.status === 'loading' ? <p role="status" className="mt-3 text-[13px] text-graphite">{slow ? 'Still reading the registry. This is taking longer than usual; use Try again above.' : 'Reading the registry…'}</p> : null}
           {people.status === 'unavailable' ? <p className="mt-3 text-[13px] text-graphite">The attestor list is not available right now.</p> : null}
           {people.status === 'ready' && people.top.length === 0 ? <p className="mt-3 text-[13px] text-graphite">No attestor has signed anything yet.</p> : null}
           {people.status === 'ready' && people.top.length > 0 ? (
             <ul className="mt-2 divide-y divide-rule rounded-md border border-rule bg-sheet">
               {people.top.map((a) => (
                 <li key={a.address}>
-                  <Link href={`/attestors/${a.address}`} aria-label={`${a.profile?.name ?? 'Attestor'} ${shortAddress(a.address)}, ${a.attested} signed${a.upheld > 0 ? `, ${a.upheld} upheld against` : ''}`} className="flex min-h-11 items-center justify-between gap-3 px-4 py-2.5 text-[13.5px] hover:bg-paper">
+                  <Link href={`/attestors/${a.address}`} aria-label={`${a.profile?.name ?? 'Attestor'}, address ending ${a.address.slice(-4)}, ${a.attested} signed${a.upheld > 0 ? `, ${a.upheld} upheld against` : ''}`} className="flex min-h-11 items-center justify-between gap-3 px-4 py-2.5 text-[13.5px] hover:bg-paper">
                     <span className="min-w-0">
                       <span className="font-semibold">{a.profile?.name ?? shortAddress(a.address)}</span>
                       {a.profile?.name ? <span className="mono ml-2 text-[12px] text-graphite">{shortAddress(a.address)}</span> : null}

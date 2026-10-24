@@ -42,7 +42,18 @@ export function pinRequest(method: string, params: unknown, now = Date.now()): u
 function pinning(inner: Transport): Transport {
   return (opts) => {
     const base = inner(opts)
-    return custom({ request: ({ method, params }) => base.request({ method, params: pinRequest(method, params) } as never) })(opts)
+    return custom({
+      request: async ({ method, params }) => {
+        const pinnedParams = pinRequest(method, params)
+        if (pinnedParams === params) return base.request({ method, params } as never)
+        try {
+          return await base.request({ method, params: pinnedParams } as never)
+        } catch {
+          // a node a block behind may not know the pinned block yet ("header not found"): ask for latest instead
+          return base.request({ method, params } as never)
+        }
+      },
+    })(opts)
   }
 }
 

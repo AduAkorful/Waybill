@@ -79,6 +79,7 @@ library DisputeLogic {
         ms.arbiterDeadline   = uint64(block.timestamp) + uint64(deal.arbiterDeadlineHours) * 1 hours;
 
         emit IWaybillEscrow.DisputeResponseAdded(dealId, milestoneIndex, msg.sender, evidenceHash);
+        emit IWaybillEscrow.ArbiterDeadlineReset(dealId, milestoneIndex, ms.arbiterDeadline);
     }
 
     // -------------------------------------------------------------------------

@@ -305,6 +305,8 @@ interface IWaybillEscrow {
     event PayoutFailed(uint256 indexed dealId, uint8 indexed milestoneIndex, address recipient, uint256 amount);
     event DisputeRaised(uint256 indexed dealId, uint8 indexed milestoneIndex, address raiser, bytes32 evidenceHash);
     event DisputeResponseAdded(uint256 indexed dealId, uint8 indexed milestoneIndex, address responder, bytes32 evidenceHash);
+    /// @notice A response re-anchors the arbiter's deadline; indexers and alerts must use this value from now on
+    event ArbiterDeadlineReset(uint256 indexed dealId, uint8 indexed milestoneIndex, uint64 arbiterDeadline);
     // (04d)
     event DisputeEvidenceAppended(uint256 indexed dealId, uint8 indexed milestoneIndex, address indexed submitter, bytes32 evidenceHash, uint256 index);
     event DisputeWithdrawn(uint256 indexed dealId, uint8 indexed milestoneIndex, address buyer);

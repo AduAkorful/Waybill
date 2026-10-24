@@ -244,7 +244,7 @@ export function TxFlow({
               Waiting for your wallet… Checking the action with Arc first, then your wallet asks you to approve.
             </p>
           ) : null}
-          <button onClick={onCancel} className="mt-1 w-full py-2 text-[13px] text-graphite hover:text-ink">
+          <button type="button" onClick={onCancel} className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-rule text-[13.5px] font-semibold text-ink hover:bg-paper">
             Cancel
           </button>
         </>

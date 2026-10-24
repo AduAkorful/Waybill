@@ -13,6 +13,7 @@ import { parseArbiters, type Arbiter } from '@/view/arbiter'
 import { formatAmount, formatDateTime, shortAddress } from '@/view/format'
 import { parseAmount } from '@/view/builder'
 import type { OperatorSummary } from '@/view/operator'
+import { PauserOnly } from './PauserOnly'
 
 const input = 'mt-1.5 w-full rounded-md border border-rule bg-paper px-3 py-2.5 text-[14px] focus:border-held'
 
@@ -74,8 +75,8 @@ export function ArbiterListCard({ summary: s, onChanged }: { summary: OperatorSu
                 <span>
                   <span className="mono text-[12.5px]">{shortAddress(a.address)}</span>{' '}
                   <span className={a.allowed ? 'font-semibold text-released' : 'text-graphite'}>{a.allowed ? `On the list · fee ${formatAmount(a.fee)} USDC` : 'Not on the list'}</span>
-                  {a.pendingAdd ? <span className="block text-[12px] text-graphite">Addition scheduled for {formatDateTime(a.pendingAdd.eta)} · fee {formatAmount(a.pendingAdd.fee)} USDC</span> : null}
-                  {a.pendingRemove ? <span className="block text-[12px] text-graphite">Removal scheduled for {formatDateTime(a.pendingRemove.eta)}</span> : null}
+                  {a.pendingAdd ? <span className="block text-[12px] text-graphite">{addReady ? `Addition ready: the 48-hour delay ended ${formatDateTime(a.pendingAdd.eta)}, so it can be added now` : `Addition scheduled: can be added from ${formatDateTime(a.pendingAdd.eta)}`} · fee {formatAmount(a.pendingAdd.fee)} USDC</span> : null}
+                  {a.pendingRemove ? <span className="block text-[12px] text-graphite">{removeReady ? `Removal ready: the delay ended ${formatDateTime(a.pendingRemove.eta)}, so it can be removed now` : `Removal scheduled: can be removed from ${formatDateTime(a.pendingRemove.eta)}`}</span> : null}
                 </span>
                 {isPauser ? (
                   <span className="flex gap-2">
@@ -115,7 +116,7 @@ export function ArbiterListCard({ summary: s, onChanged }: { summary: OperatorSu
           <button type="submit" disabled={!canSchedule} className="mt-3 rounded-md bg-ink px-4 py-2.5 text-[14px] font-semibold text-paper disabled:opacity-40">Schedule addition</button>
         </form>
       ) : (
-        <p className="mt-3 text-[12.5px] text-graphite">Only the pauser wallet <span className="mono">{shortAddress(s.chain.pauser)}</span> can change the list.</p>
+        <PauserOnly pauser={s.chain.pauser} address={address} what="change the list" link={false} />
       )}
 
       <Modal open={action !== null} onClose={() => setAction(null)} label={action ? TITLES[action.kind] : 'Arbiter list'}>
@@ -127,7 +128,7 @@ export function ArbiterListCard({ summary: s, onChanged }: { summary: OperatorSu
               {action.kind === 'scheduleAddArbiter' ? ` will be addable after 48 hours, with a fee of ${formatAmount(action.fee)} USDC per deal.` : action.kind === 'scheduleRemoveArbiter' ? ' will be removable after 48 hours. Deals that already exist keep this arbiter.' : '. The delay has passed.'}
             </p>
             <TxFlow
-              confirmLabel="Sign"
+              confirmLabel={TITLES[action.kind]}
               steps={[{ label: TITLES[action.kind], action: encodeArbiterListAction(action) }]}
               onCancel={() => setAction(null)}
               onDone={() => {

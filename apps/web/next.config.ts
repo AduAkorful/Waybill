@@ -11,6 +11,10 @@ const origin = (value: string | undefined): string | null => {
 // What the page talks to: itself, the relayer API, the chain RPC, and the sign-in and wallet providers.
 // The local fork stack signs in with the browser wallet only, so Privy and WalletConnect are left out there.
 const devWallet = process.env.NEXT_PUBLIC_WAYBILL_DEV_WALLET_AUTH === '1'
+// Dev-wallet sign-in skips Privy entirely; a hosted build (Vercel, Render) must never ship with it on.
+if (devWallet && (process.env.VERCEL || process.env.RENDER)) {
+  throw new Error('NEXT_PUBLIC_WAYBILL_DEV_WALLET_AUTH=1 is for the local fork only and is refused on a hosted build')
+}
 const providers = devWallet
   ? []
   : [

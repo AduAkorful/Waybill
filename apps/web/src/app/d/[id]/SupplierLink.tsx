@@ -166,6 +166,13 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
                         </>
                       )}
                     </div>
+                  ) : !walletOn && (d.state === 'funded' || d.state === 'accepted' || d.state === 'proposed') ? (
+                    <div className="mt-6">
+                      <button type="button" onClick={() => { setSignInAsked(true); setWalletOn(true) }} className="inline-flex min-h-11 items-center rounded-md border border-rule px-4 text-[14px] font-semibold hover:bg-sheet">{t.signInParty}</button>
+                      <p className="mt-2 text-[12.5px] text-graphite">{t.signInPartyHelp}</p>
+                    </div>
+                  ) : walletOn ? (
+                    <p role="status" className="mt-6 text-[13px] text-graphite">{t.loading}</p>
                   ) : null}
                   <section className="mt-10" aria-label={t.tracker}>
                     <h2 className="label mb-3">{t.tracker}</h2>

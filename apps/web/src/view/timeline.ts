@@ -1,4 +1,4 @@
-import { formatAmount } from './format'
+import { formatAmount, formatDateTime } from './format'
 import type { DealEvent } from './types'
 
 function amount(value: unknown): string | null {
@@ -64,6 +64,8 @@ export function describeEvent(e: DealEvent): string {
       return `Part${part} disputed`
     case 'DisputeResponseAdded':
       return `A response was filed on part${part}`
+    case 'ArbiterDeadlineReset':
+      return `The arbiter's deadline on part${part} is now ${typeof a.arbiterDeadline === 'string' || typeof a.arbiterDeadline === 'number' ? formatDateTime(BigInt(a.arbiterDeadline)) : 'reset from the response'}`
     case 'DisputeEvidenceAppended':
       return `Evidence was added on part${part}`
     case 'DisputeWithdrawn':

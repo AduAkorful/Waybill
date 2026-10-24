@@ -7,6 +7,7 @@ import { DEAL_LABELS, parseDealRanges, setDealLabels, type DealLabel } from '@/i
 import { plainError } from '@/integration/transactions'
 import { shortAddress } from '@/view/format'
 import type { OperatorSummary } from '@/view/operator'
+import { PauserOnly } from './PauserOnly'
 
 const input = 'mt-1.5 w-full rounded-md border border-rule bg-paper px-3 py-2.5 text-[14px] focus:border-held'
 
@@ -21,7 +22,8 @@ export function LabelCard({ summary: s, onChanged }: { summary: OperatorSummary;
   const { address } = useAccount()
   const { signMessageAsync } = useSignMessage()
   const [text, setText] = useState('')
-  const [label, setLabel] = useState<DealLabel>('self-dealing')
+  // no label is chosen for the operator: a wrong default would mislabel volume by accident
+  const [label, setLabel] = useState<DealLabel | null>(null)
   const [outcome, setOutcome] = useState<Outcome>({ kind: 'idle' })
   const isPauser = !!address && address.toLowerCase() === s.chain.pauser.toLowerCase()
   const unlabelled = s.index.volume.find((v) => v.label === null)
@@ -39,7 +41,7 @@ export function LabelCard({ summary: s, onChanged }: { summary: OperatorSummary;
           className="mt-3"
           onSubmit={async (e) => {
             e.preventDefault()
-            if (!parsed.ok || !address) return
+            if (!parsed.ok || !address || !label) return
             setOutcome({ kind: 'working' })
             try {
               const labelled = await setDealLabels({ signer: address, ranges: parsed.ranges, label, sign: (message) => signMessageAsync({ message }) })
@@ -67,14 +69,15 @@ export function LabelCard({ summary: s, onChanged }: { summary: OperatorSummary;
               ))}
             </div>
           </fieldset>
-          <button type="submit" disabled={!parsed.ok || outcome.kind === 'working'} className="mt-4 rounded-md bg-ink px-4 py-2.5 text-[14px] font-semibold text-paper disabled:opacity-40">
+          <button type="submit" disabled={!parsed.ok || label === null || outcome.kind === 'working'} className="mt-4 rounded-md bg-ink px-4 py-2.5 text-[14px] font-semibold text-paper disabled:opacity-40">
             {outcome.kind === 'working' ? 'Waiting for your wallet…' : 'Sign and label'}
           </button>
+          {label === null && parsed.ok ? <p className="mt-1.5 text-[12px] text-graphite">Choose a label first.</p> : null}
           {outcome.kind === 'done' ? <p role="status" className="mt-2 text-[13px]">Labelled {outcome.labelled} {outcome.labelled === 1 ? 'deal' : 'deals'} as {outcome.label}.</p> : null}
           {outcome.kind === 'error' ? <p role="alert" className="mt-2 text-[13px] text-hold">{outcome.message}</p> : null}
         </form>
       ) : (
-        <p className="mt-3 text-[12.5px] text-graphite">Only the pauser wallet <span className="mono">{shortAddress(s.chain.pauser)}</span> can label deals{address ? ` (you are connected as ${shortAddress(address)})` : '; connect it to see the form'}.</p>
+        <PauserOnly pauser={s.chain.pauser} address={address} what="label deals" link={false} />
       )}
     </section>
   )

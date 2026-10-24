@@ -616,6 +616,8 @@ contract Dispute04d is Test {
     function testEarly_arbiterDeadlineReanchoredOnResponse() public {
         (uint256 dealId,) = _setup_buyerDispute();
         vm.warp(block.timestamp + 10 hours);
+        vm.expectEmit(true, true, false, true, address(escrow));
+        emit IWaybillEscrow.ArbiterDeadlineReset(dealId, 0, uint64(block.timestamp) + uint64(ARB_HOURS) * 1 hours);
         vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
         IWaybillEscrow.Milestone memory m = escrow.getMilestone(dealId, 0);
         assertEq(m.arbiterDeadline, uint64(block.timestamp) + uint64(ARB_HOURS) * 1 hours, "re-anchored");

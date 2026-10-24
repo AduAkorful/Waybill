@@ -294,15 +294,15 @@ export function DealScreen({ idText }: { idText: string }) {
           )}
         </div>
 
+        {isBuyer || (!!address && address.toLowerCase() === d.supplier.toLowerCase()) ? (
+          <AddressChanges deal={d} viewer={isBuyer ? 'buyer' : 'supplier'} onChanged={() => setRefresh((n) => n + 1)} />
+        ) : null}
         <div className="mt-8">
           <LiveWaybill deal={d} detail="summary" compact showLockStamp={false} actions={actions} />
         </div>
 
         {address ? <PrivateTerms deal={d} wallet={address} /> : null}
 
-        {isBuyer || (!!address && address.toLowerCase() === d.supplier.toLowerCase()) ? (
-          <AddressChanges deal={d} viewer={isBuyer ? 'buyer' : 'supplier'} onChanged={() => setRefresh((n) => n + 1)} />
-        ) : null}
 
         <p className="mt-10 max-w-2xl text-[12.5px] leading-relaxed text-graphite">
           {funded ? 'Terms froze when the deal was funded. ' : 'Terms freeze when the buyer funds. '}Nobody, including Waybill, can move this money except by these rules. Read from the escrow as of {formatDateTime(d.chainTime)}.

@@ -18,6 +18,20 @@ const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
  * Privy runs the email code and the wallet connection; this page is only the face of it.
  * Nothing here moves money: signing in asks for no signature on a deal.
  */
+/**
+ * Where to go after signing in: a `next` page inside this app (the operator console or a deal), else /app.
+ * Only own-site paths on a short list are followed, so a crafted link cannot send someone elsewhere.
+ */
+function returnPath(): string {
+  try {
+    const next = new URLSearchParams(window.location.search).get('next') ?? ''
+    if (/^\/(operator|app(\/[\w/-]*)?|d\/\d+)$/.test(next)) return next
+  } catch {
+    // no window (server render): the default
+  }
+  return '/app'
+}
+
 export function SignIn() {
   const router = useRouter()
   const { ready, authenticated } = usePrivy()
@@ -52,7 +66,7 @@ export function SignIn() {
   const wrongNetwork = ready && authenticated && !!address && chainId !== expected.chainId
 
   useEffect(() => {
-    if (ready && authenticated && address && !wrongNetwork) router.replace('/app')
+    if (ready && authenticated && address && !wrongNetwork) router.replace(returnPath())
   }, [ready, authenticated, address, wrongNetwork, router])
 
   useEffect(() => {
@@ -123,7 +137,7 @@ export function SignIn() {
       <SiteHeader signIn="signed-in" />
       <div className="mx-auto grid w-full max-w-6xl gap-x-16 px-4 pb-10 md:px-8 lg:grid-cols-[1fr_26rem] lg:items-center">
       <aside className="relative hidden rounded-md border border-rule bg-sheet lg:block">
-        <div className="flex h-full flex-col gap-10 p-10">
+        <div className="flex h-full flex-col gap-6 p-10">
           <div>
             <p className="max-w-xl text-[34px] leading-[1.08] font-semibold tracking-tight">
               Pay a deposit. Release the rest when <span className="marked">someone you trust</span> confirms the goods.

@@ -15,15 +15,17 @@ export function RoleShell({ address, children }: { address: string; children: Re
   const { signOut, signingOut } = useSignOut()
   const read = useWalletDeals()
   const shells = read.status === 'ready' ? heldShells(read.deals) : []
+  // a wallet that is both attestor and arbiter gets two fee pages; name them so the two links differ
+  const both = shells.includes('attestor') && shells.includes('arbiter')
   const nav = [
     ...shells.map((s) => ({ href: `/app/${s}`, label: shellLabel[s], active: path.startsWith(`/app/${s}`) })),
     ...(shells.includes('attestor')
       ? [
-          { href: '/app/attestor/fees', label: 'Fees', active: path.startsWith('/app/attestor/fees') },
+          { href: '/app/attestor/fees', label: both ? 'Attestor fees' : 'Fees', active: path.startsWith('/app/attestor/fees') },
           { href: '/app/attestor/profile', label: 'Profile', active: path.startsWith('/app/attestor/profile') },
         ]
       : []),
-    ...(shells.includes('arbiter') ? [{ href: '/app/arbiter/fees', label: 'Fees', active: path.startsWith('/app/arbiter/fees') }] : []),
+    ...(shells.includes('arbiter') ? [{ href: '/app/arbiter/fees', label: both ? 'Arbiter fees' : 'Fees', active: path.startsWith('/app/arbiter/fees') }] : []),
     { href: '/app/new', label: 'New deal', active: path.startsWith('/app/new') },
     { href: '/app/settings', label: 'Settings', active: path.startsWith('/app/settings') },
     { href: '/attestors', label: 'Attestors', active: false },

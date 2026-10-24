@@ -164,12 +164,12 @@ function Inner({ deal: d, lang, autoLogin, onMounted, onChanged, onViewer }: { d
     ) : null}
       </div>
 
+    {isSupplier ? <AddressChanges deal={d} viewer="supplier" onChanged={() => onChanged()} /> : null}
     <section className="mt-10" aria-label={t.tracker}>
       <h2 className="label mb-3">{t.tracker}</h2>
       <LiveWaybill deal={d} lang={lang} detail="summary" compact showLockStamp={false} actions={actions} />
     </section>
     {isSupplier && address ? <PrivateTerms deal={d} wallet={address} /> : null}
-    {isSupplier ? <AddressChanges deal={d} viewer="supplier" onChanged={() => onChanged()} /> : null}
 
     <Modal open={dialog === 'accept'} onClose={() => setDialog(null)} label={t.accept}>
       {dialog === 'accept' && address ? (

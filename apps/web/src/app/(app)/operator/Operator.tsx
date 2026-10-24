@@ -18,12 +18,27 @@ import { Modal } from '@/ui/Modal'
 import { ArbiterListCard } from './ArbiterListCard'
 import { LabelCard } from './LabelCard'
 import { TxFlow } from '@/ui/TxFlow'
+import { PauserOnly } from './PauserOnly'
 import { formatAmount, formatDateTime, shortAddress, shortHash } from '@/view/format'
 import { describeChange, gasToUsdcUnits, lagOf, parseOperatorSummary, type OperatorSummary } from '@/view/operator'
 
 const REFRESH_MS = 30_000
 
-type Read = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; summary: OperatorSummary; health: { ready: boolean; components: { name: string; ok: boolean; detail?: string }[] } | null }
+type Read =
+  | { kind: 'loading' }
+  | { kind: 'error'; message: string }
+  | { kind: 'ready'; summary: OperatorSummary; health: { ready: boolean; components: { name: string; ok: boolean; detail?: string }[] } | null; stale?: boolean }
+
+/** The last summary this tab read, kept so a return visit shows figures at once (marked as updating) instead of a wait. */
+const CACHE_KEY = 'wb-operator-summary'
+function cachedSummary(chainId: number): OperatorSummary | null {
+  try {
+    const v = JSON.parse(window.sessionStorage.getItem(CACHE_KEY) ?? 'null') as { chainId?: number; raw?: unknown } | null
+    return v && v.chainId === chainId ? parseOperatorSummary(v.raw) : null
+  } catch {
+    return null
+  }
+}
 
 /**
  * Read-only monitor of the whole deployment, and the one control the pauser has: stop or resume creating and funding
@@ -39,7 +54,13 @@ export function Operator() {
     const load = async () => {
       try {
         const base = loadBrowserApiBaseUrl()
-        const summary = parseOperatorSummary(await createWaybillApiClient(base, fetch, network).getOperatorSummary())
+        const raw = await createWaybillApiClient(base, fetch, network).getOperatorSummary()
+        const summary = parseOperatorSummary(raw)
+        try {
+          window.sessionStorage.setItem(CACHE_KEY, JSON.stringify({ chainId: network.chainId, raw }))
+        } catch {
+          // storage blocked: the next visit just waits for the read
+        }
         let health: Extract<Read, { kind: 'ready' }>['health'] = null
         try {
           const response = await fetch(`${base}/health`)
@@ -52,6 +73,8 @@ export function Operator() {
         if (!cancelled) setRead((prev) => (prev.kind === 'ready' ? prev : { kind: 'error', message: e instanceof Error ? e.message : String(e) }))
       }
     }
+    const cached = cachedSummary(network.chainId)
+    if (cached) setRead((prev) => (prev.kind === 'ready' ? prev : { kind: 'ready', summary: cached, health: null, stale: true }))
     void load()
     const timer = setInterval(load, REFRESH_MS)
     return () => {
@@ -68,6 +91,7 @@ export function Operator() {
         <p className="mt-1 max-w-2xl text-[13.5px] text-graphite">A monitor, plus three controls for the pauser wallet: pause new deals, label deals, and manage the approved-arbiter list. Nobody at Waybill can move, freeze or redirect money in escrow, and none of these can.</p>
         {read.kind === 'loading' ? <Skeleton label="Reading the deployment…" rows={5} /> : null}
         {read.kind === 'error' ? <p role="alert" className="mt-8 text-[14px] text-hold">The monitor could not be loaded, so no figures are shown: {read.message}</p> : null}
+        {read.kind === 'ready' && read.stale ? <p role="status" className="mt-4 text-[12.5px] text-graphite">Showing the last reading from this tab while a fresh one loads…</p> : null}
         {read.kind === 'ready' ? <Monitor summary={read.summary} health={read.health} onChanged={() => setRefresh((n) => n + 1)} /> : null}
       </main>
     </div>
@@ -202,7 +226,7 @@ function WalletChip({ pauser }: { pauser: string | null }) {
   const { signOut, signingOut } = useSignOut()
   // blank until the sign-in service and the wallet connection have both settled, so "Connect wallet" never flashes for someone signed in
   if (!ready || isConnecting || isReconnecting || (authenticated && !address)) return <span aria-hidden className="inline-block h-11 w-32" />
-  if (!address) return <Link href="/signin" className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] font-semibold whitespace-nowrap hover:bg-sheet">Connect wallet</Link>
+  if (!address) return <Link href="/signin?next=/operator" className="inline-flex min-h-11 items-center rounded-full border border-rule px-3 text-[12px] font-semibold whitespace-nowrap hover:bg-sheet">Connect wallet</Link>
   const isPauser = pauser !== null && address.toLowerCase() === pauser.toLowerCase()
   return (
     <>
@@ -242,7 +266,7 @@ function PauseCard({ summary: s, onChanged }: { summary: OperatorSummary; onChan
           {paused ? 'Resume new deals' : 'Pause new deals'}
         </button>
       ) : (
-        <p className="mt-3 text-[12.5px] text-graphite">Only the pauser wallet <span className="mono">{shortAddress(s.chain.pauser)}</span> can change this{address ? ` (you are connected as ${shortAddress(address)})` : '; connect it to see the control'}.</p>
+        <PauserOnly pauser={s.chain.pauser} address={address} what="change this" />
       )}
       <Modal open={open} onClose={() => setOpen(false)} label={paused ? 'Resume new deals' : 'Pause new deals'}>
         {open ? (
@@ -264,3 +288,4 @@ function PauseCard({ summary: s, onChanged }: { summary: OperatorSummary; onChan
     </section>
   )
 }
+
