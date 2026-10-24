@@ -60,7 +60,7 @@ export function Operator() {
     <div className="min-h-dvh">
       <header className="flex items-center justify-between border-b border-rule px-4 py-2.5 md:px-6">
         <div className="flex items-baseline gap-3">
-          <Link href="/" aria-label="Waybill home"><Wordmark /></Link>
+          <Link href="/" aria-label="Waybill home" className="inline-flex min-h-11 items-center"><Wordmark /></Link>
           <span className="label">Operator</span>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">

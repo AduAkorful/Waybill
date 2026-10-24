@@ -48,11 +48,16 @@ export default function Legal() {
   return (
     <PublicShell>
       <main className="mx-auto max-w-3xl px-4 pt-8 pb-20 md:px-8 md:pt-14">
-        <p className="label">Draft, pending review by counsel</p>
+        <p role="note" className="inline-block rounded-md border border-hold/50 bg-hold-wash px-3 py-1.5 text-[13px] font-semibold">Draft, pending review by counsel</p>
         <h1 className="mt-2 text-[34px] leading-tight font-semibold tracking-tight">Terms, privacy and security</h1>
         <p className="mt-3 text-[15px] leading-relaxed text-graphite">
           Plain-language statements of how Waybill works today. The full documents are written and reviewed before launch, and nothing here is legal advice.
         </p>
+        <nav aria-label="On this page" className="mt-5 flex flex-wrap gap-x-5 text-[13.5px]">
+          {sections.map((s) => (
+            <a key={s.id} href={`#${s.id}`} className="inline-flex min-h-11 items-center underline">{s.title}</a>
+          ))}
+        </nav>
         {sections.map((s) => (
           <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`} className="mt-10 scroll-mt-20 border-t border-ink/80 pt-4">
             <h2 id={`${s.id}-h`} className="text-[20px] font-semibold">{s.title}</h2>

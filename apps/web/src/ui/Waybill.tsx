@@ -182,46 +182,44 @@ export function Waybill({
             </>
           ) : (
             <div className="-mr-px -mb-px grid grid-cols-2 @3xl:grid-cols-4">
-              <Box n="01" label="Buyer" className="col-span-2 @lg:col-span-1">
-                {terms?.buyerName ? <span className="block font-semibold">{terms.buyerName}</span> : null}
-                <span className="mono text-[12.5px]">{shortAddress(deal.buyer)}</span>
-              </Box>
-              <Box n="02" label="Supplier" className="col-span-2 @lg:col-span-1">
-                {terms?.supplierName ? <span className="block font-semibold">{terms.supplierName}</span> : null}
-                <span className="mono text-[12.5px]">{shortAddress(deal.supplier)}</span>
-                {deal.supplierPayout === null ? <span className="block text-graphite">Payout wallet not set yet</span> : null}
-              </Box>
-              {terms?.goods ? (
-                <Box n="03" label="Goods" className="col-span-2 @lg:col-span-1">
-                  {terms.goods}
-                  {terms.units !== undefined ? (
-                    <span className="mono block text-[12px] text-graphite">
-                      {terms.units.toLocaleString("en-US")} units{terms.cartons !== undefined ? ` · ${terms.cartons} cartons` : ""}
-                    </span>
-                  ) : null}
-                </Box>
-              ) : null}
-              <Box n="04" label="Deal total">
-                <span className="mono text-[17px] font-medium">{formatAmount(deal.totalAmount)}</span>{" "}
-                <span className="condensed text-[12px] font-semibold text-graphite">USDC</span>
-              </Box>
-              <Box n="05" label="Fee">
-                <span className="mono">
-                  {deal.feeBps / 100}% · {formatAmount(feeTotal)}
-                </span>
-                <span className="block text-graphite">{feeWording[deal.feePayer]}</span>
-              </Box>
-              <Box n="06" label={deal.panel ? "Arbiter panel" : "Arbiter"}>
-                <span className="mono text-[12.5px]">{deal.panel ? deal.panel.members.map(shortAddress).join(", ") : shortAddress(deal.arbiter)}</span>
-                <span className="mono block text-[12px] text-graphite">fee {formatAmount(deal.arbiterFee)} · prepaid by buyer</span>
-              </Box>
-              {terms?.template ? (
-                <Box n="07" label="Terms">
-                  {terms.template}
-                </Box>
-              ) : null}
-              <Box n="08" label="Escrow">
-                {deal.state === "cancelled" ? (
+              {(() => {
+                // Boxes are numbered in the order shown. The header already carries both addresses, so a party's box
+                // appears only when it adds something: a name, or the note that the payout wallet is not set.
+                const boxes: { label: string; className?: string; body: React.ReactNode }[] = [];
+                if (terms?.buyerName) {
+                  boxes.push({ label: "Buyer", className: "col-span-2 @lg:col-span-1", body: (<><span className="block font-semibold">{terms.buyerName}</span><span className="mono text-[12.5px]">{shortAddress(deal.buyer)}</span></>) });
+                }
+                if (terms?.supplierName || deal.supplierPayout === null) {
+                  boxes.push({ label: "Supplier", className: "col-span-2 @lg:col-span-1", body: (<>
+                    {terms?.supplierName ? <span className="block font-semibold">{terms.supplierName}</span> : null}
+                    <span className="mono text-[12.5px]">{shortAddress(deal.supplier)}</span>
+                    {deal.supplierPayout === null ? <span className="block text-graphite">Payout wallet not set yet</span> : null}
+                  </>) });
+                }
+                if (terms?.goods) {
+                  boxes.push({ label: "Goods", className: "col-span-2 @lg:col-span-1", body: (<>
+                    {terms.goods}
+                    {terms.units !== undefined ? (
+                      <span className="mono block text-[12px] text-graphite">
+                        {terms.units.toLocaleString("en-US")} units{terms.cartons !== undefined ? ` · ${terms.cartons} cartons` : ""}
+                      </span>
+                    ) : null}
+                  </>) });
+                }
+                boxes.push({ label: "Deal total", body: (<>
+                  <span className="mono text-[17px] font-medium">{formatAmount(deal.totalAmount)}</span>{" "}
+                  <span className="condensed text-[12px] font-semibold text-graphite">USDC</span>
+                </>) });
+                boxes.push({ label: "Fee", body: (<>
+                  <span className="mono">{deal.feeBps / 100}% · {formatAmount(feeTotal)}</span>
+                  <span className="block text-graphite">{feeWording[deal.feePayer]}</span>
+                </>) });
+                boxes.push({ label: deal.panel ? "Arbiter panel" : "Arbiter", body: (<>
+                  <span className="mono text-[12.5px]">{deal.panel ? deal.panel.members.map(shortAddress).join(", ") : shortAddress(deal.arbiter)}</span>
+                  <span className="mono block text-[12px] text-graphite">fee {formatAmount(deal.arbiterFee)} · prepaid by buyer</span>
+                </>) });
+                if (terms?.template) boxes.push({ label: "Terms", body: terms.template });
+                boxes.push({ label: "Escrow", body: deal.state === "cancelled" ? (
                   <span>Cancelled before funding</span>
                 ) : funded ? (
                   <>
@@ -230,8 +228,19 @@ export function Waybill({
                   </>
                 ) : (
                   <span>Not funded yet</span>
-                )}
-              </Box>
+                ) });
+                return boxes.map((x, i) => (
+                  <Box
+                    key={x.label}
+                    n={String(i + 1).padStart(2, "0")}
+                    label={x.label}
+                    // an odd last box fills its row on phones instead of leaving an empty cell
+                    className={`${x.className ?? ""} ${i === boxes.length - 1 && boxes.length % 2 === 1 ? "col-span-2 @3xl:col-span-1" : ""}`}
+                  >
+                    {x.body}
+                  </Box>
+                ));
+              })()}
             </div>
           )}
 

@@ -5,6 +5,32 @@ After each batch the web app on port 3000 is rebuilt and restarted; retest again
 "Fixed" means changed in code, covered by a unit test where the logic is pure, and the page answers as described below.
 It does not mean a signed transaction was re-run in a browser — that is what QA is for.
 
+## Batch 9 — 2026-10-21 (remaining layout and copy items)
+
+Web app rebuilt and restarted; no relayer or contract changes.
+
+### Fixed
+- **Waybill boxes (MW-07, M-S05):** the numbered boxes are numbered in the order shown (no skipped 03). The header already carries both addresses, so the Buyer and Supplier boxes appear only when they add something (a name, or "Payout wallet not set yet"). An odd last box fills its row on phones, so there is no empty cell.
+- **Attestor directory (MW-11):** a table with column headers on desktop (Signed, Upheld against, Slashed, Status, numbers right-aligned), stacked rows on phones, and a short "Who attests" note under the list.
+- **Home page (MW-23):** smaller headline on phones, "Sign in" and "How it works" buttons in the first screen, and the deal-count line in the normal text face.
+- **Legal page (MW-25):** the draft notice is a visible banner, and a short "On this page" link row sits under the heading.
+- **File picker (M-S10):** the choose-file button is styled like the other buttons.
+- **Operator logo (leftover from batch 8):** 44 px tall on phones.
+
+### Checked and left as is
+- **RT-26:** deal 280 appears in the arbiter's "needs you" list because it is a real proposed deal naming that wallet as arbiter, so it does need an accept. Not a bug.
+- **MW-22:** the "How it works" steps are already four across and the rules two across at 768 px and wider.
+
+### Still open
+MW-05 (language toggle on public pages, waits for reviewed Chinese copy), MW-08, MW-18, MW-19 (needs Chinese strings), MW-20 (one shared header), MW-21 (long operator paragraphs), RT-25 (the `/app/attestor` list stays narrow and centred), M-S02 (long address clipped in the phone form), M-S04 (short addresses can break across lines), M-S06, M-S09 (tab bar shows 3 tabs, then more after the read), M-S11 (friendlier retry copy for a failed fetch), M-S12, M-S13.
+
+### Retest checklist for batch 9
+1. `/record/284`: boxes are numbered 01, 02, 03… with no gaps; no empty cell at 320 px.
+2. `/attestors` at 1440 px: column headers and aligned numbers; at 375 px: stacked rows.
+3. `/` at 320 px: the headline fits in four lines or fewer and the Sign in button is on the first screen.
+4. `/legal`: draft banner and the three links under the heading.
+5. `/app/attest/<id>` choose-file button looks like the other buttons.
+
 ## Batch 8 — 2026-10-21 (signed-in blockers, phone layout, desktop space)
 
 Fixes for QA's retest of batches 6 and 7 (report §10) and the real-device review (report §11). Web app rebuilt and restarted. Nothing changed in the relayer or contracts.

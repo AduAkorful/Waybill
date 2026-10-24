@@ -46,13 +46,17 @@ export default async function Home() {
       <main className="mx-auto max-w-5xl px-4 pb-24 md:px-8">
         <section className="pt-10 pb-12 md:pt-16">
           <p className="label">Early access · {net.network === 'testnet' ? 'Arc test network' : 'Arc'}</p>
-          <h1 className="mt-2 max-w-3xl text-[36px] leading-[1.08] font-semibold tracking-tight md:text-[52px]">
+          <h1 className="mt-2 max-w-3xl text-[30px] leading-[1.1] font-semibold tracking-tight min-[400px]:text-[36px] md:text-[52px]">
             Pay overseas suppliers in stages, released when named people confirm.
           </h1>
           <p className="mt-4 max-w-2xl text-[16px] leading-relaxed text-graphite">
             Waybill holds a buyer’s USDC in an escrow contract and pays a supplier one part at a time, as the people both sides agreed on sign for each part.
           </p>
-          <p className="mono mt-5 text-[12.5px] text-graphite">
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Link href="/signin" className="inline-flex min-h-11 items-center rounded-md bg-ink px-5 text-[14px] font-semibold text-paper">Sign in</Link>
+            <Link href="#how" className="inline-flex min-h-11 items-center rounded-md border border-rule px-5 text-[14px] font-semibold hover:bg-sheet">How it works</Link>
+          </div>
+          <p className="mt-5 text-[13px] text-graphite">
             {total.toString()} {total === 1n ? 'deal' : 'deals'} created on this network so far
             {net.network === 'testnet' ? ' · test money only' : ''}
           </p>
