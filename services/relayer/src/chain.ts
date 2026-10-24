@@ -24,6 +24,8 @@ export const RELAYER_SIGNAL_EVENTS = parseAbi([
   'event MilestoneRefundable(uint256 indexed dealId, uint8 indexed milestoneIndex)',
   'event RefundFailed(uint256 indexed dealId, uint8 indexed milestoneIndex, address recipient, uint256 amount)',
   'event DisputeRaised(uint256 indexed dealId, uint8 indexed milestoneIndex, address raiser, bytes32 evidenceHash)',
+  // a withdrawn dispute leaves the part claimable without a MilestoneClaimable event; without this nothing claims it
+  'event DisputeWithdrawn(uint256 indexed dealId, uint8 indexed milestoneIndex, address buyer)',
 ])
 
 export interface RelayerChain {
@@ -126,13 +128,13 @@ export function candidateFromSignal(
   eventName: string,
   args: Record<string, unknown> | undefined,
 ): RelayerCandidate | null {
-  if (!['MilestoneClaimable', 'PayoutFailed', 'MilestoneRefundable', 'RefundFailed', 'DisputeRaised'].includes(eventName)) {
+  if (!['MilestoneClaimable', 'PayoutFailed', 'MilestoneRefundable', 'RefundFailed', 'DisputeRaised', 'DisputeWithdrawn'].includes(eventName)) {
     return null
   }
   if (!args) throw new Error(`Missing arguments for relayer event ${eventName}`)
 
   const operation: RelayerOperation =
-    eventName === 'MilestoneClaimable' || eventName === 'PayoutFailed'
+    eventName === 'MilestoneClaimable' || eventName === 'PayoutFailed' || eventName === 'DisputeWithdrawn'
       ? 'claim'
       : eventName === 'MilestoneRefundable' || eventName === 'RefundFailed'
         ? 'refund'

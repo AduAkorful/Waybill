@@ -38,6 +38,10 @@ These come up in retests. Each has a reason. If one of them is wrong *for a diff
 | Console lines `Privy logout 400` and `sessions 401` after Sign out (SF-15) | The browser reports a failed network call to the wallet library's own server (the session had already ended there). A page cannot hide a failed request from the console, and the person is signed out either way. | – |
 | NF-19 message seen with Rabby (SF-17) | See batch 13: the app now checks the balance first, so the wallet is not opened. | – |
 
+## Batch 22 — 2026-10-24 (relayer after a withdrawn dispute)
+- **Fixed:** after a buyer withdraws a dispute, the part is claimable but no `MilestoneClaimable` event is emitted, so the relayer never claimed it and the supplier had to claim by hand. The relayer now also wakes on `DisputeWithdrawn` and claims, after checking the part is claimable on chain. Found on the fork run (report §36).
+- Retest: dispute a part, respond, withdraw as the buyer, then wait about 30 s. The part should show as paid, with the claim sent by the relayer's address.
+
 ## Batch 21 — 2026-10-24 (rebuttal day for disputes; terms checkbox)
 
 ### The rule (product decision, in the contract)

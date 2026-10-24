@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Test}              from "forge-std/Test.sol";
+import {console2}          from "forge-std/console2.sol";
 import {StdInvariant}      from "forge-std/StdInvariant.sol";
 import {WaybillEscrow}     from "../../src/core/WaybillEscrow.sol";
 import {IWaybillEscrow}    from "../../src/interfaces/IWaybillEscrow.sol";
@@ -31,6 +32,9 @@ contract WaybillHandler is Test {
     uint256 internal constant ATT0_PK      = 0xA110;
     uint256 internal constant LENDER_PK    = 0xC01;
     uint256 internal constant LENDER2_PK   = 0xC02;
+    uint256 internal constant P0_PK        = 0xD01;
+    uint256 internal constant P1_PK        = 0xD02;
+    uint256 internal constant P2_PK        = 0xD03;
 
     address internal buyer;
     address internal supplier;
@@ -44,7 +48,7 @@ contract WaybillHandler is Test {
     address internal pauser;
 
     // ── Handler tracking ─────────────────────────────────────────────────────
-    uint256 internal constant MAX_DEALS   = 4;
+    uint256 internal constant MAX_DEALS   = 48;
     uint16  internal constant FEE_BPS     = 75;   // within [50,100]
     uint256 internal constant TRANCHE_AMT = 1_000e6; // 1 000 USDC per deal
 
@@ -57,6 +61,14 @@ contract WaybillHandler is Test {
 
     // Pending blocked-delivery liabilities
     mapping(uint256 => bool) internal pendingBlocked; // dealId => has pending blocked delivery
+
+    // Panel deals (three arbiters, two matching votes decide)
+    mapping(uint256 => bool) internal panelDeal;
+    // how often each new path really ran (not just returned early): read in afterInvariant
+    uint256 public nResponded; uint256 public nWaived; uint256 public nDecided; uint256 public nGateRefused; uint256 public nPanelDecided; uint256 public nWithdrawn; uint256 public nPanelVotes; uint256 public nPanelDisputed;
+    address[3] internal panel;
+    uint32  internal constant ARB_HOURS = 48;
+    uint64  internal constant REBUTTAL  = 24 hours;
 
     // Vault balance snapshots (for isolation invariant)
     uint256 internal escrowBalBefore;
@@ -96,6 +108,7 @@ contract WaybillHandler is Test {
         lender2        = vm.addr(LENDER2_PK);
         supplierPayout = address(0xAAAA1);
         buyerRefund    = address(0xBBBB1);
+        panel = [vm.addr(P0_PK), vm.addr(P1_PK), vm.addr(P2_PK)];
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────
@@ -212,7 +225,7 @@ contract WaybillHandler is Test {
 
     /// Attest on an attestation deal (brings it to IN_REVIEW).
     function op_attest(uint256 seed) external {
-        uint256 did = _pickFunded(seed);
+        uint256 did = _pickState(seed, IWaybillEscrow.MilestoneState.WAITING);
         if (did == 0) return;
         IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
         if (ms.condition != IWaybillEscrow.ReleaseCondition.ATTESTATION) return;
@@ -245,7 +258,9 @@ contract WaybillHandler is Test {
         IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
         if (ms.condition != IWaybillEscrow.ReleaseCondition.ATTESTATION) return;
         // Warp past deadline + grace
-        vm.warp(ms.deadline + ms.gracePeriod * 1 hours + 1);
+        // a chain clock never runs backwards: only move forward (an earlier absolute warp broke the dispute clocks)
+        uint256 target = uint256(ms.deadline) + uint256(ms.gracePeriod) * 1 hours + 1;
+        if (target > block.timestamp && target - block.timestamp <= 2 days) vm.warp(target);
         try escrow.applyDefault(did, 0) {} catch {}
     }
 
@@ -274,7 +289,7 @@ contract WaybillHandler is Test {
 
     /// Dispute a claimable/in-review milestone.
     function op_dispute(uint256 seed) external {
-        uint256 did = _pickFunded(seed);
+        uint256 did = _pickState(seed, IWaybillEscrow.MilestoneState.IN_REVIEW);
         if (did == 0) return;
         IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
         bool canDispute = (ms.state == IWaybillEscrow.MilestoneState.IN_REVIEW);
@@ -286,14 +301,14 @@ contract WaybillHandler is Test {
 
     /// Resolve DISPUTED milestone via arbiter (to supplier).
     function op_resolveToSupplier(uint256 seed) external {
-        uint256 did = _pickFunded(seed);
+        uint256 did = _pickState(seed, IWaybillEscrow.MilestoneState.DISPUTED);
         if (did == 0) return;
         uint8 fate = milestoneFate[did * 10];
         if (fate != 0) return;
         IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
-        if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED) return;
-        // Warp past response deadline
-        if (ms.responseDeadline > 0) vm.warp(ms.responseDeadline + 1);
+        if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED || panelDeal[did]) return;
+        _warpAroundGate(did, ms, seed);
+        bool allowed = _decisionAllowed(did, ms);
 
         uint256 supBefore    = usdc.balanceOf(supplierPayout);
         uint256 lockedBefore = escrow.currentLocked();
@@ -302,23 +317,29 @@ contract WaybillHandler is Test {
 
         vm.prank(arbiter);
         try escrow.resolve(did, 0, true) {
+            assertTrue(allowed, "INV-gate: resolved while decisions were closed");
+            nDecided++;
             milestoneFate[did * 10] = 3;
             assertGe(usdc.balanceOf(supplierPayout), supBefore,
                 "INV-resolve: supplier not paid");
             assertEq(escrow.currentLocked(), lockedBefore - (TRANCHE_AMT + bpf),
                 "INV-resolve: locked not decremented");
-        } catch {}
+        } catch {
+            assertFalse(allowed, "INV-gate: resolve refused while decisions were open");
+            nGateRefused++;
+        }
     }
 
     /// Resolve DISPUTED milestone via arbiter (to buyer).
     function op_resolveToBuyer(uint256 seed) external {
-        uint256 did = _pickFunded(seed);
+        uint256 did = _pickState(seed, IWaybillEscrow.MilestoneState.DISPUTED);
         if (did == 0) return;
         uint8 fate = milestoneFate[did * 10];
         if (fate != 0) return;
         IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
-        if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED) return;
-        if (ms.responseDeadline > 0) vm.warp(ms.responseDeadline + 1);
+        if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED || panelDeal[did]) return;
+        _warpAroundGate(did, ms, seed);
+        bool allowed = _decisionAllowed(did, ms);
 
         uint256 buyerBefore  = usdc.balanceOf(buyerRefund);
         uint256 lockedBefore = escrow.currentLocked();
@@ -326,13 +347,207 @@ contract WaybillHandler is Test {
 
         vm.prank(arbiter);
         try escrow.resolve(did, 0, false) {
+            assertTrue(allowed, "INV-gate: resolved while decisions were closed");
+            nDecided++;
             milestoneFate[did * 10] = 3;
             assertEq(usdc.balanceOf(buyerRefund), buyerBefore + TRANCHE_AMT + bpf,
                 "INV-resolve-buyer: buyer not refunded");
             assertEq(escrow.currentLocked(), lockedBefore - (TRANCHE_AMT + bpf),
                 "INV-resolve-buyer: locked not decremented");
-        } catch {}
+        } catch {
+            assertFalse(allowed, "INV-gate: resolve refused while decisions were open");
+            nGateRefused++;
+        }
     }
+
+
+    // ── Dispute clock (31.7 + 33): respond, rebuttal, waive, decide ──────────
+
+    /// True when the escrow should accept a decision on this disputed part right now.
+    function _decisionAllowed(uint256 did, IWaybillEscrow.Milestone memory ms) internal view returns (bool) {
+        if (block.timestamp > ms.arbiterDeadline) return false;
+        if (ms.responseSubmitted) return block.timestamp >= escrow.getDecisionOpensAt(did, 0);
+        return block.timestamp > ms.responseDeadline;
+    }
+
+    /// Moves time to one of: now, just before decisions open, or exactly when they open, so both sides of the gate are hit.
+    function _warpAroundGate(uint256 did, IWaybillEscrow.Milestone memory ms, uint256 seed) internal {
+        uint256 opens = ms.responseSubmitted ? escrow.getDecisionOpensAt(did, 0) : uint256(ms.responseDeadline) + 1;
+        uint256 pick = seed % 3;
+        if (pick == 1 && opens > block.timestamp + 1) vm.warp(opens - 1);
+        if (pick == 2 && opens > block.timestamp) vm.warp(opens);
+    }
+
+    /// Create a funded three-member panel deal with a buyer-approval part.
+    function op_createPanelDeal(uint256 seed) external {
+        if (dealsCreated >= MAX_DEALS) return;
+        usdc.mint(buyer, _depositAmount());
+        vm.prank(buyer); usdc.approve(address(escrow), type(uint256).max);
+        address[] memory members = new address[](3);
+        members[0] = panel[0]; members[1] = panel[1]; members[2] = panel[2];
+        vm.prank(buyer);
+        uint256 did = escrow.createDealWithPanel(
+            supplier, buyerRefund, address(0), members, TRANCHE_AMT, FEE_BPS,
+            uint64(block.timestamp + 90 days), ARB_HOURS, _ms1(false),
+            false, 0, IWaybillEscrow.FeePayer.BuyerPrepaid
+        );
+        vm.prank(supplier); escrow.acceptSupplier(did, supplierPayout);
+        for (uint256 i; i < 3; i++) { vm.prank(panel[i]); escrow.acceptArbiter(did); }
+        vm.prank(buyer); escrow.fund(did);
+        panelDeal[did] = true;
+        dealIds[dealsCreated] = did;
+        dealsCreated++;
+        // most panel deals go straight into dispute, so panel voting is exercised within a run
+        if (seed % 4 != 0) {
+            vm.prank(buyer); escrow.dispute(did, 0, keccak256("panel-dispute"));
+            nPanelDisputed++;
+        }
+    }
+
+    /// Buyer confirms delivery of a waiting buyer-approval part (starts its review).
+    function op_buyerConfirm(uint256 seed) external {
+        uint256 did = _pickState(seed, IWaybillEscrow.MilestoneState.WAITING);
+        if (did == 0) return;
+        IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
+        if (ms.condition != IWaybillEscrow.ReleaseCondition.ACCEPTANCE || ms.state != IWaybillEscrow.MilestoneState.WAITING) return;
+        if (block.timestamp > ms.deadline) return;
+        vm.prank(buyer);
+        try escrow.approveMilestone(did, 0) {} catch {}
+    }
+
+    /// Supplier disputes an overdue part inside its grace period.
+    function op_supplierDisputeOverdue(uint256 seed) external {
+        uint256 did = _pickFunded(seed);
+        if (did == 0) return;
+        IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
+        if (ms.state != IWaybillEscrow.MilestoneState.WAITING && ms.state != IWaybillEscrow.MilestoneState.OVERDUE) return;
+        uint256 graceEnd = uint256(ms.deadline) + uint256(ms.gracePeriod) * 1 hours;
+        if (block.timestamp > graceEnd) return;
+        if (block.timestamp <= ms.deadline) vm.warp(bound(seed, uint256(ms.deadline) + 1, graceEnd));
+        vm.prank(supplier);
+        try escrow.dispute(did, 0, keccak256("supplier-evidence")) {} catch {}
+    }
+
+    /// The side that did not raise the dispute responds, sometimes late in the window.
+    function op_respond(uint256 seed) external {
+        uint256 did = _pickState(seed, IWaybillEscrow.MilestoneState.DISPUTED);
+        if (did == 0) return;
+        IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
+        if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED || ms.responseSubmitted) return;
+        if (block.timestamp > ms.responseDeadline) return;
+        if (seed % 4 == 0) vm.warp(ms.responseDeadline);
+        address responder = ms.disputeRaiser == buyer ? supplier : buyer;
+        vm.prank(responder);
+        escrow.respondToDispute(did, 0, keccak256(abi.encode("response", seed)));
+        nResponded++;
+        // after a response, decisions open a rebuttal day later and the arbiter window runs from then
+        uint64 opens = escrow.getDecisionOpensAt(did, 0);
+        assertEq(opens, uint64(block.timestamp) + REBUTTAL, "INV-respond: decisions must open a day after the response");
+        assertEq(escrow.getMilestone(did, 0).arbiterDeadline, opens + uint64(ARB_HOURS) * 1 hours, "INV-respond: arbiter window must run from opening");
+    }
+
+    /// The raiser ends the rebuttal early; a stranger never can.
+    function op_waiveRebuttal(uint256 seed) external {
+        uint256 did = _pickState(seed, IWaybillEscrow.MilestoneState.DISPUTED);
+        if (did == 0) return;
+        IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
+        if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED || !ms.responseSubmitted) return;
+        address other = ms.disputeRaiser == buyer ? supplier : buyer;
+        vm.prank(other);
+        vm.expectRevert(IWaybillEscrow.NotDisputeRaiser.selector);
+        escrow.waiveRebuttal(did, 0);
+        if (block.timestamp >= escrow.getDecisionOpensAt(did, 0)) return;
+        vm.prank(ms.disputeRaiser);
+        escrow.waiveRebuttal(did, 0);
+        nWaived++;
+        assertEq(escrow.getDecisionOpensAt(did, 0), uint64(block.timestamp), "INV-waive: decisions must open now");
+        assertEq(escrow.getMilestone(did, 0).arbiterDeadline, uint64(block.timestamp) + uint64(ARB_HOURS) * 1 hours, "INV-waive: full window from now");
+    }
+
+    /// Either side adds evidence; never moves money.
+    function op_appendEvidence(uint256 seed) external {
+        uint256 did = _pickState(seed, IWaybillEscrow.MilestoneState.DISPUTED);
+        if (did == 0) return;
+        IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
+        if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED) return;
+        uint256 lockedBefore = escrow.currentLocked();
+        vm.prank(seed % 2 == 0 ? buyer : supplier);
+        try escrow.appendDisputeEvidence(did, 0, keccak256(abi.encode("more", seed))) {} catch {}
+        assertEq(escrow.currentLocked(), lockedBefore, "INV-evidence: evidence moved money");
+    }
+
+    /// Buyer withdraws a dispute they raised; the part returns to claimable and its clock is cleared.
+    function op_withdrawDispute(uint256 seed) external {
+        uint256 did = _pickState(seed, IWaybillEscrow.MilestoneState.DISPUTED);
+        if (did == 0) return;
+        IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
+        if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED || ms.disputeRaiser != buyer) return;
+        uint256 lockedBefore = escrow.currentLocked();
+        vm.prank(buyer);
+        escrow.withdrawDispute(did, 0);
+        nWithdrawn++;
+        assertEq(escrow.getDecisionOpensAt(did, 0), 0, "INV-withdraw: rebuttal not cleared");
+        assertEq(escrow.currentLocked(), lockedBefore, "INV-withdraw: money moved");
+    }
+
+    /// Single arbiter splits a disputed part; checks the gate and that nothing beyond the part leaves the escrow.
+    function op_resolveSplit(uint256 seed) external {
+        uint256 did = _pickState(seed, IWaybillEscrow.MilestoneState.DISPUTED);
+        if (did == 0 || panelDeal[did] || milestoneFate[did * 10] != 0) return;
+        IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
+        if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED) return;
+        _warpAroundGate(did, ms, seed);
+        bool allowed = _decisionAllowed(did, ms);
+        uint16 bps = uint16(bound(seed >> 8, 0, 10_000));
+        uint256 lockedBefore = escrow.currentLocked();
+        uint256 outBefore = usdc.balanceOf(supplierPayout) + usdc.balanceOf(buyerRefund);
+        uint256 bpf = escrow.getTrancheFee(did, 0);
+        vm.prank(arbiter);
+        try escrow.resolveSplit(did, 0, bps) {
+            assertTrue(allowed, "INV-gate: split while decisions were closed");
+            nDecided++;
+            milestoneFate[did * 10] = 3;
+            assertEq(escrow.currentLocked(), lockedBefore - (TRANCHE_AMT + bpf), "INV-split: locked not decremented");
+            assertLe(usdc.balanceOf(supplierPayout) + usdc.balanceOf(buyerRefund) - outBefore, TRANCHE_AMT + bpf, "INV-split: paid out more than the part");
+        } catch {
+            assertFalse(allowed, "INV-gate: split refused while decisions were open");
+            nGateRefused++;
+        }
+    }
+
+    /// A panel member votes; two matching votes decide. Votes outside the decision window must fail.
+    function op_panelVote(uint256 seed) external {
+        uint256 did = _pickPanelDisputed(seed);
+        if (did == 0 || !panelDeal[did] || milestoneFate[did * 10] != 0) return;
+        IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
+        if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED) return;
+        _warpAroundGate(did, ms, seed);
+        bool allowed = _decisionAllowed(did, ms);
+        address member = panel[(seed >> 4) % 3];
+        if (escrow.getPanelVote(did, 0, member) != 0) return;
+        uint256 kind = (seed >> 12) % 3;
+        // splits from a small set, so two members can actually agree on one
+        uint32 vote = kind == 0 ? 1 : kind == 1 ? 2 : uint32(2_500 * (1 + (seed >> 16) % 3)) + 3;
+        uint256 lockedBefore = escrow.currentLocked();
+        uint256 bpf = escrow.getTrancheFee(did, 0);
+        vm.prank(member);
+        try escrow.castPanelVote(did, 0, vote) {
+            assertTrue(allowed, "INV-gate: panel vote while decisions were closed");
+            nPanelVotes++;
+            if (escrow.getMilestone(did, 0).state != IWaybillEscrow.MilestoneState.DISPUTED) {
+                milestoneFate[did * 10] = 3;
+                nPanelDecided++;
+                assertEq(escrow.currentLocked(), lockedBefore - (TRANCHE_AMT + bpf), "INV-panel: locked not decremented");
+            } else {
+                assertEq(escrow.currentLocked(), lockedBefore, "INV-panel: a single vote moved money");
+            }
+        } catch {
+            assertFalse(allowed, "INV-gate: panel vote refused while decisions were open");
+            nGateRefused++;
+        }
+    }
+
+    function isPanelDeal(uint256 did) external view returns (bool) { return panelDeal[did]; }
 
     /// Pause then unpause (pauser-only paths).
     function op_pauseUnpause(uint256 seed) external {
@@ -441,7 +656,8 @@ contract WaybillHandler is Test {
 
     /// Time-warp forward by a bounded amount to exercise deadline-sensitive paths.
     function op_timeWarp(uint256 seed) external {
-        uint256 skip = bound(seed, 1 hours, 14 days);
+        // short steps, so 72h response windows and the 24h rebuttal are reached inside a run, not jumped over
+        uint256 skip = bound(seed, 10 minutes, 2 days);
         vm.warp(block.timestamp + skip);
     }
 
@@ -503,11 +719,40 @@ contract WaybillHandler is Test {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+
+    /// A disputed panel deal, searched from a seeded start, or 0 when none is.
+    function _pickPanelDisputed(uint256 seed) internal view returns (uint256) {
+        if (dealsCreated == 0) return 0;
+        uint256 start = seed % dealsCreated;
+        for (uint256 k; k < dealsCreated; k++) {
+            uint256 did = dealIds[(start + k) % dealsCreated];
+            if (panelDeal[did] && escrow.getMilestone(did, 0).state == IWaybillEscrow.MilestoneState.DISPUTED) return did;
+        }
+        return 0;
+    }
+
+    /// A deal whose part is in `state`, searched from a seeded start, or 0 when none is.
+    function _pickState(uint256 seed, IWaybillEscrow.MilestoneState state) internal view returns (uint256) {
+        if (dealsCreated == 0) return 0;
+        uint256 start = seed % dealsCreated;
+        for (uint256 k; k < dealsCreated; k++) {
+            uint256 did = dealIds[(start + k) % dealsCreated];
+            if (escrow.getMilestone(did, 0).state == state) return did;
+        }
+        return 0;
+    }
+
     /// Pick a created, funded deal using seed % dealsCreated. Returns 0 if none.
     function _pickFunded(uint256 seed) internal view returns (uint256) {
         if (dealsCreated == 0) return 0;
-        uint256 idx = seed % dealsCreated;
-        return dealIds[idx];
+        // prefer a deal whose part is still open, so later calls keep exercising live paths instead of settled deals
+        uint256 start = seed % dealsCreated;
+        for (uint256 k; k < dealsCreated; k++) {
+            uint256 did = dealIds[(start + k) % dealsCreated];
+            IWaybillEscrow.MilestoneState st = escrow.getMilestone(did, 0).state;
+            if (st != IWaybillEscrow.MilestoneState.RELEASED && st != IWaybillEscrow.MilestoneState.REFUNDED && st != IWaybillEscrow.MilestoneState.RESOLVED) return did;
+        }
+        return dealIds[start];
     }
 
     // ── Ghost-state reads for invariant target ────────────────────────────────
@@ -538,8 +783,11 @@ contract Invariant04j is StdInvariant, Test {
     function setUp() public {
         usdc = new MockUSDC();
 
-        address[] memory initArbiters = new address[](1);
+        address[] memory initArbiters = new address[](4);
         initArbiters[0] = vm.addr(0xA01); // arbiter
+        initArbiters[1] = vm.addr(0xD01); // panel
+        initArbiters[2] = vm.addr(0xD02);
+        initArbiters[3] = vm.addr(0xD03);
         arbList = new ArbiterList(pauser, initArbiters);
         reg     = new AttestorRegistry(pauser);
 
@@ -567,7 +815,7 @@ contract Invariant04j is StdInvariant, Test {
         targetContract(address(handler));
 
         // Select handler functions as targets
-        bytes4[] memory selectors = new bytes4[](16);
+        bytes4[] memory selectors = new bytes4[](25);
         selectors[0]  = WaybillHandler.op_createAcceptanceDeal.selector;
         selectors[1]  = WaybillHandler.op_createAttestationDeal.selector;
         selectors[2]  = WaybillHandler.op_claim.selector;
@@ -584,6 +832,15 @@ contract Invariant04j is StdInvariant, Test {
         selectors[13] = WaybillHandler.op_timeWarp.selector;
         selectors[14] = WaybillHandler.op_financeActorIsolation.selector;
         selectors[15] = WaybillHandler.op_blockedRefundRetry.selector;
+        selectors[16] = WaybillHandler.op_createPanelDeal.selector;
+        selectors[17] = WaybillHandler.op_buyerConfirm.selector;
+        selectors[18] = WaybillHandler.op_supplierDisputeOverdue.selector;
+        selectors[19] = WaybillHandler.op_respond.selector;
+        selectors[20] = WaybillHandler.op_waiveRebuttal.selector;
+        selectors[21] = WaybillHandler.op_appendEvidence.selector;
+        selectors[22] = WaybillHandler.op_withdrawDispute.selector;
+        selectors[23] = WaybillHandler.op_resolveSplit.selector;
+        selectors[24] = WaybillHandler.op_panelVote.selector;
 
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }
@@ -679,6 +936,40 @@ contract Invariant04j is StdInvariant, Test {
                 ms.state == IWaybillEscrow.MilestoneState.RESOLVED,
                 "INV5: handler says terminal but escrow state is not"
             );
+        }
+    }
+
+    /// Proof the dispute paths were exercised, printed once per run (forge -vv).
+    function afterInvariant() public view {
+        console2.log("responded", handler.nResponded(), "waived", handler.nWaived());
+        console2.log("decided", handler.nDecided(), "panel decided", handler.nPanelDecided());
+        console2.log("gate refused", handler.nGateRefused(), "withdrawn", handler.nWithdrawn());
+        console2.log("panel disputed", handler.nPanelDisputed(), "panel votes", handler.nPanelVotes());
+    }
+
+    // =========================================================================
+    // Invariant 7 (31.7 + 33): every open dispute's clocks are consistent.
+    //   No response: no rebuttal, arbiter deadline = response deadline + window.
+    //   Responded: decisions open at most a day after the response deadline, and
+    //   the arbiter deadline is exactly the opening time + window.
+    // =========================================================================
+    function invariant_disputeClocks() public view {
+        uint256 n = handler.numDeals();
+        for (uint256 i = 0; i < n; i++) {
+            uint256 did = handler.getDealId(i);
+            if (did == 0) continue;
+            IWaybillEscrow.Milestone memory ms = escrow.getMilestone(did, 0);
+            if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED) continue;
+            uint64 opens = escrow.getDecisionOpensAt(did, 0);
+            assertEq(ms.responseDeadline, ms.disputeTime + 72 hours, "INV7: response window is not 72h");
+            if (!ms.responseSubmitted) {
+                assertEq(opens, 0, "INV7: rebuttal set without a response");
+                assertEq(ms.arbiterDeadline, ms.responseDeadline + 48 hours, "INV7: deadline moved without a response");
+            } else {
+                assertGe(opens, ms.disputeTime, "INV7: decisions open before the dispute");
+                assertLe(opens, ms.responseDeadline + 24 hours, "INV7: rebuttal longer than a day past the window");
+                assertEq(ms.arbiterDeadline, opens + 48 hours, "INV7: arbiter window not anchored to opening");
+            }
         }
     }
 

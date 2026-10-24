@@ -16,7 +16,7 @@ describe('relayer chain boundary', () => {
   })
 
   test('declares only the signals used to wake the relayer', () => {
-    expect(RELAYER_SIGNAL_EVENTS.length).toBe(5)
+    expect(RELAYER_SIGNAL_EVENTS.map((e) => e.name)).toEqual(['MilestoneClaimable', 'PayoutFailed', 'MilestoneRefundable', 'RefundFailed', 'DisputeRaised', 'DisputeWithdrawn'])
   })
 
   test('maps claim, refund, and default signals to recheck candidates', () => {
@@ -36,6 +36,12 @@ describe('relayer chain boundary', () => {
       operation: 'applyDefault',
       dealId: 9n,
       milestoneIndex: 0,
+    })
+    // a withdrawn dispute leaves the part claimable with no MilestoneClaimable event (found on the fork run)
+    expect(candidateFromSignal('DisputeWithdrawn', { dealId: 10, milestoneIndex: 1 })).toMatchObject({
+      operation: 'claim',
+      dealId: 10n,
+      milestoneIndex: 1,
     })
   })
 
