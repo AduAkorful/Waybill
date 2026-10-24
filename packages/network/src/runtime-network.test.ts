@@ -54,11 +54,11 @@ describe('loadRuntimeNetwork', () => {
 
   test('refuses mainnet when no manifest is checked in and this is not the local fork', () => {
     const { WAYBILL_LOCAL_FORK: _, ...env } = FORK_ENV
-    expect(() => loadRuntimeNetwork(env, undefined)).toThrow('No mainnet manifest is checked in')
+    expect(() => loadRuntimeNetwork(env, null)).toThrow('No mainnet manifest is checked in')
   })
 
   test('the local fork must read a chain on this machine', () => {
-    expect(() => loadRuntimeNetwork({ ...FORK_ENV, WAYBILL_MAINNET_RPC_URL: 'https://rpc.example.com' }, undefined)).toThrow('on localhost')
+    expect(() => loadRuntimeNetwork({ ...FORK_ENV, WAYBILL_MAINNET_RPC_URL: 'https://rpc.example.com' }, null)).toThrow('on localhost')
   })
 
   test('uses the checked-in manifest and lets only the RPC URL be replaced', () => {
@@ -90,13 +90,13 @@ describe('loadRuntimeNetwork', () => {
   })
 
   test('rejects incomplete mainnet configuration', () => {
-    expect(() => loadRuntimeNetwork({ WAYBILL_NETWORK: 'mainnet', WAYBILL_LOCAL_FORK: '1', WAYBILL_MAINNET_RPC_URL: 'http://127.0.0.1:8545' }, undefined)).toThrow(
+    expect(() => loadRuntimeNetwork({ WAYBILL_NETWORK: 'mainnet', WAYBILL_LOCAL_FORK: '1', WAYBILL_MAINNET_RPC_URL: 'http://127.0.0.1:8545' }, null)).toThrow(
       'Local fork: missing mainnet chainId',
     )
   })
 
   test('the local fork loads a complete mainnet manifest from the environment', () => {
-    const network = loadRuntimeNetwork(FORK_ENV, undefined)
+    const network = loadRuntimeNetwork(FORK_ENV, null)
 
     expect(network.network).toBe('mainnet')
     expect(network.chainId).toBe(5042)
@@ -108,7 +108,7 @@ describe('loadRuntimeNetwork', () => {
       loadRuntimeNetwork({
         ...FORK_ENV,
         WAYBILL_MAINNET_ESCROW_ADDRESS: 'not-an-address',
-      }, undefined),
+      }, null),
     ).toThrow('Invalid address for mainnet.contracts.escrow')
   })
 })

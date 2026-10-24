@@ -68,11 +68,40 @@ export const ARC_TESTNET: WaybillNetworkManifest = {
 }
 
 /**
- * Arc mainnet. Undefined until the mainnet deploy (plans/51-mainnet-launch.md): every value is copied from the deploy
- * record and checked with `cast` before it is committed, with a comment saying how, as for ARC_TESTNET above. While it
- * is undefined, mainnet refuses to start (except a flagged local fork, see resolveMainnet).
+ * Arc mainnet (plans/51-mainnet-launch.md). Every value is copied from the deploy record
+ * (contracts/broadcast/DeployWaybill.s.sol/5042/run-latest.json) and checked with `cast` before it was committed.
  */
-export const ARC_MAINNET: WaybillNetworkManifest | undefined = undefined
+export const ARC_MAINNET: WaybillNetworkManifest | undefined = {
+  network: 'mainnet',
+  chainId: 5_042,
+  rpcUrl: 'https://rpc.mainnet.arc.io',
+  explorerUrl: 'https://explorer.arc.io',
+  usdc: {
+    // Checked on Arc mainnet: decimals() is 6 and the token is not a proxy.
+    address: '0x3600000000000000000000000000000000000000',
+    decimals: 6,
+  },
+  nativeGasDecimals: 18,
+  contracts: {
+    // Deployed 2026-10-24 from commit fc84739 by the pauser 0x74B4…0ffd, which is also the treasury. Checked onchain:
+    // caps 1,000 / 10,000 USDC, fee range 50–100 bps, the three arbiters allowed, escrow and bond vault registry writers.
+    escrow: '0x8a13ff4FbfBd67cE10e1Fd015bD4a8De3179C5ff',
+    arbiterList: '0x02595bECED23EBA03386d440a92d5e91263789EF',
+    attestorRegistry: '0x3eA4F80Bf510B599D3EFaf21d1739FE4ac159286',
+    bondVault: '0x49A74167569270d4F0b72DD7Ec90832D3B4538C4',
+    financingVault: '0xf58bB23Dd7787542F855d8C6632DA3c0eAD3bCa8',
+  },
+  // Checked on Arc mainnet: `cast code` returns the contract and getChainId() returns 5042.
+  multicall3: '0xcA11bde05977b3631167028862bE2a173976CA11',
+  // Checked on Arc mainnet: `cast code` is empty at block 27636003 and present at 27636004.
+  escrowDeployBlock: 27_636_004n,
+  // Checked on Arc mainnet: `cast code` is empty at block 27635994 and present at 27635995.
+  attestorRegistryDeployBlock: 27_635_995n,
+  // Checked on Arc mainnet: `cast code` is empty at block 27635985 and present at 27635986.
+  arbiterListDeployBlock: 27_635_986n,
+  // Built from source with the decide-after-response rule, as on the plan-50 testnet escrow.
+  earlyResolve: true,
+}
 
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/
 

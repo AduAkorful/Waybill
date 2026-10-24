@@ -46,14 +46,14 @@ describe('browser network boundary', () => {
     expect(() =>
       loadBrowserNetwork(
         { NEXT_PUBLIC_WAYBILL_NETWORK: 'mainnet', NEXT_PUBLIC_WAYBILL_LOCAL_FORK: '1', NEXT_PUBLIC_WAYBILL_MAINNET_CHAIN_ID: '5042' },
-        undefined,
+        null,
       ),
     ).toThrow('Local fork: missing mainnet rpcUrl')
   })
 
   test('refuses mainnet with no checked-in manifest outside the local fork', () => {
     const { NEXT_PUBLIC_WAYBILL_LOCAL_FORK: _, ...env } = forkEnvironment
-    expect(() => loadBrowserNetwork(env, undefined)).toThrow('No mainnet manifest is checked in')
+    expect(() => loadBrowserNetwork(env, null)).toThrow('No mainnet manifest is checked in')
   })
 
   test('uses the checked-in mainnet manifest; the RPC may be the same-origin proxy', () => {
@@ -85,7 +85,7 @@ describe('browser network boundary', () => {
   })
 
   test('the local fork accepts a complete mainnet manifest without importing testnet addresses', () => {
-    const manifest = loadBrowserNetwork(forkEnvironment, undefined)
+    const manifest = loadBrowserNetwork(forkEnvironment, null)
     expect(manifest.chainId).toBe(5042)
     expect(manifest.contracts.escrow).toBe(forkEnvironment.NEXT_PUBLIC_WAYBILL_MAINNET_ESCROW_ADDRESS)
   })

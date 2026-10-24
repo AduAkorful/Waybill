@@ -59,17 +59,17 @@ function mainnetManifest(environment: RuntimeEnvironment, checkedIn: WaybillNetw
   })
 }
 
-/** `checkedInMainnet` is ARC_MAINNET; tests pass their own. */
+/** `checkedInMainnet` is ARC_MAINNET; tests pass their own, or null for none (undefined would select the default). */
 export function loadRuntimeNetwork(
   environment: RuntimeEnvironment,
-  checkedInMainnet: WaybillNetworkManifest | undefined = ARC_MAINNET,
+  checkedInMainnet: WaybillNetworkManifest | null = ARC_MAINNET ?? null,
 ): WaybillNetworkManifest {
   const network = environment.WAYBILL_NETWORK?.trim() as WaybillNetwork | undefined
   if (network === 'testnet') {
     return resolveWaybillNetwork('testnet', { testnet: ARC_TESTNET })
   }
   if (network === 'mainnet') {
-    return mainnetManifest(environment, checkedInMainnet)
+    return mainnetManifest(environment, checkedInMainnet ?? undefined)
   }
   throw new Error('WAYBILL_NETWORK must be explicitly set to testnet or mainnet')
 }
