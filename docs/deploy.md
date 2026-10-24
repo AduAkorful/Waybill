@@ -8,7 +8,7 @@ Order matters because each piece needs the previous one's URL: Supabase, then Re
 
 1. The repository must be on GitHub (or GitLab/Bitbucket) so Render and Vercel can read it. It has not been pushed anywhere yet.
 2. A **Privy** app (https://dashboard.privy.io). Note its App ID. You will add the web origin to it in step 4.
-3. Optional, for the full QA matrix: an **S3-compatible bucket** and a **Pinata** JWT (dispute and attestation evidence), and a **Resend** API key with a verified sender (email). Without them the app still runs and says plainly that those features are off; sections 2 and 8 of `docs/qa/test-matrix.md` then cannot be fully tested.
+3. Optional, for the full QA matrix: an **S3-compatible bucket** (Supabase Storage works: a private bucket, endpoint `https://<project-ref>.supabase.co/storage/v1/s3`, keys from Storage → S3 Connection) and a **Pinata** JWT whose key has only the `pinFileToIPFS` permission (dispute and attestation evidence), and a **Resend** API key with a verified sender (email). Without them the app still runs and says plainly that those features are off; sections 2 and 8 of `docs/qa/test-matrix.md` then cannot be fully tested.
 4. A new throwaway wallet for the relayer's gas. Make one with `cast wallet new`, keep the key for step 2, and fund the address with a few testnet USDC from the Arc testnet faucet (gas on Arc is paid in USDC). This wallet never holds deal money.
 
 Generate the evidence key (optional, only if you set up evidence): `echo 0x$(openssl rand -hex 32)`. Keep a copy: losing it makes stored evidence unreadable.

@@ -43,7 +43,7 @@ export function signV4(input: {
 }
 
 export interface S3Config {
-  /** https://… endpoint of an S3-compatible service, no bucket and no trailing slash */
+  /** https://… endpoint of an S3-compatible service, no bucket and no trailing slash. A fixed path is allowed, as Supabase Storage uses (https://<ref>.supabase.co/storage/v1/s3). */
   endpoint: string
   bucket: string
   region: string
@@ -57,20 +57,22 @@ export class S3ObjectStore implements ObjectStore {
     private readonly fetcher: typeof fetch = fetch,
     private readonly now: () => Date = () => new Date(),
   ) {
-    if (!/^https:\/\/[^/]+$/.test(config.endpoint)) throw new Error('S3 endpoint must be an https origin with no path')
+    if (!/^https:\/\/[^/?#]+(\/[A-Za-z0-9._~-]+)*$/.test(config.endpoint)) throw new Error('S3 endpoint must be an https address with no query and no trailing slash')
     if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(config.bucket)) throw new Error('S3 bucket name is invalid')
   }
 
   private async request(method: string, key: string, body?: Uint8Array, mimeType?: string): Promise<Response> {
-    const path = `/${this.config.bucket}/${key}`
-    const host = new URL(this.config.endpoint).host
+    const base = new URL(this.config.endpoint)
+    // a path on the endpoint is part of what is signed and sent, ahead of the bucket
+    const path = `${base.pathname === '/' ? '' : base.pathname}/${this.config.bucket}/${key}`
+    const host = base.host
     const amzDate = this.now().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
     const payloadHash = sha256Hex(body ?? '')
     const headers: Record<string, string> = { host, 'x-amz-content-sha256': payloadHash, 'x-amz-date': amzDate }
     if (mimeType) headers['content-type'] = mimeType
     const authorization = signV4({ method, path, headers, payloadHash, region: this.config.region, service: 's3', amzDate, credentials: this.config.credentials })
     const { host: _host, ...sendHeaders } = headers
-    return this.fetcher(`${this.config.endpoint}${encodePath(path)}`, {
+    return this.fetcher(`${base.origin}${encodePath(path)}`, {
       method,
       headers: { ...sendHeaders, authorization },
       ...(body ? { body: new Uint8Array(body) } : {}),

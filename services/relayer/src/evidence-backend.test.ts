@@ -139,9 +139,26 @@ describe('S3 request signing', () => {
     await expect(store.get('s3://other/x')).rejects.toThrow('configured bucket')
   })
 
+  test('an endpoint with a path (Supabase Storage) signs and sends the path ahead of the bucket', async () => {
+    const seen: { url: string; auth: string }[] = []
+    const fetcher = (async (url: string, init: RequestInit) => (seen.push({ url, auth: (init.headers as Record<string, string>).authorization! }), new Response(null, { status: 200 }))) as unknown as typeof fetch
+    const credentials = { accessKeyId: 'id', secretAccessKey: 'secret' }
+    const now = () => new Date('2026-10-20T12:00:00Z')
+    await new S3ObjectStore({ endpoint: 'https://abc.supabase.co/storage/v1/s3', bucket: 'evidence', region: 'us-east-1', credentials }, fetcher, now).put({ key: 'a/b', bytes: new Uint8Array([1]), mimeType: 'text/plain' })
+    expect(seen[0]!.url).toBe('https://abc.supabase.co/storage/v1/s3/evidence/a/b')
+    const expected = signV4({
+      method: 'PUT', path: '/storage/v1/s3/evidence/a/b', region: 'us-east-1', service: 's3', amzDate: '20261020T120000Z', credentials,
+      payloadHash: createHash('sha256').update(new Uint8Array([1])).digest('hex'),
+      headers: { host: 'abc.supabase.co', 'x-amz-content-sha256': createHash('sha256').update(new Uint8Array([1])).digest('hex'), 'x-amz-date': '20261020T120000Z', 'content-type': 'text/plain' },
+    })
+    expect(seen[0]!.auth).toBe(expected)
+  })
+
   test('refuses a plain-http endpoint and a bad bucket', () => {
     const cfg = { region: 'r', credentials: { accessKeyId: 'a', secretAccessKey: 'b' } }
     expect(() => new S3ObjectStore({ ...cfg, endpoint: 'http://s3.example.com', bucket: 'okbucket' })).toThrow('https')
+    expect(() => new S3ObjectStore({ ...cfg, endpoint: 'https://s3.example.com/', bucket: 'okbucket' })).toThrow('https')
+    expect(() => new S3ObjectStore({ ...cfg, endpoint: 'https://s3.example.com/x?y=1', bucket: 'okbucket' })).toThrow('https')
     expect(() => new S3ObjectStore({ ...cfg, endpoint: 'https://s3.example.com', bucket: 'Bad_Bucket' })).toThrow('bucket')
   })
 })

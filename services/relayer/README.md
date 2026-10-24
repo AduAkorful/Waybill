@@ -103,5 +103,5 @@ id, secret) and `WAYBILL_EVIDENCE_PINATA_JWT`, or none. A partial set stops the 
   record keeps the SHA-256 of the original file; a download whose bytes no longer match it is refused. Losing
   `WAYBILL_EVIDENCE_KEY` makes stored evidence unreadable, so keep it in the secret store with a backup.
 - On-chain, a dispute records `keccak256` of the file digests in upload order (`evidenceCommitment` in the web app).
-- Limits: 10 MiB per file, 10 files per signature. Not live-tested against a real bucket or Pinata yet: the S3
+- Limits: 10 MiB per file, 10 files per signature. Any S3-compatible service works, including Supabase Storage (endpoint `https://<project-ref>.supabase.co/storage/v1/s3`; the endpoint may carry a fixed path, which is signed and sent ahead of the bucket). Pinata is called through its pinFileToIPFS endpoint, so its API key needs only that one permission. Not live-tested against a real bucket or Pinata yet: the S3
   signing is checked against AWS's published test vector and both providers against fakes.
