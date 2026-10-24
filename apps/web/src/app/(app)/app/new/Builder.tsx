@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { parseEventLogs, parseAbi, type Hex } from 'viem'
 import { useAccount, usePublicClient } from 'wagmi'
-import { useArbiterCheck, useAttestorChoices, useBuilderLimits } from '@/data/builder-reads'
+import { useArbiterCheck, useArbiterChoices, useAttestorChoices, useBuilderLimits } from '@/data/builder-reads'
 import { encodeCurrentEscrowAction, type FeePayer, type ReleaseCondition } from '@/integration/current-actions'
 import { getBrowserNetwork } from '@/integration/network'
 import { Modal } from '@/ui/Modal'
@@ -39,6 +39,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnType<typeof useBuilderLimits>, { status: 'ready' }>['value'] }) {
   const client = usePublicClient()
   const directory = useAttestorChoices()
+  const arbiters = useArbiterChoices()
   const [template, setTemplate] = useState<Template>(TEMPLATES[1]!)
   const [form, setForm] = useState<BuilderForm>(() => emptyForm(buyer, limits.minFeeBps, TEMPLATES[1]!))
   const arbiter = useArbiterCheck(form.arbiter)
@@ -99,6 +100,15 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
           </div>
           <div className="sm:col-span-2">
             <label className="label block" htmlFor="arbiter">Arbiter&apos;s wallet</label>
+            {arbiters.arbiters.length > 0 ? (
+              <select aria-label="Choose an approved arbiter" className={`${input} mb-2`} value="" onChange={(e) => e.target.value && set({ arbiter: e.target.value })}>
+                <option value="">Choose from the approved list…</option>
+                {arbiters.arbiters.map((a) => (
+                  <option key={a.address} value={a.address}>{shortAddress(a.address)} · fee {formatAmount(a.fee)} USDC</option>
+                ))}
+              </select>
+            ) : null}
+            {arbiters.note ? <p className="mb-1 text-[12px] text-graphite">{arbiters.note}</p> : null}
             <input id="arbiter" className={`${input} mono`} value={form.arbiter} onChange={(e) => set({ arbiter: e.target.value })} placeholder="0x… from the approved list" spellCheck={false} />
             <p className="mt-1 text-[12px]" role="status">
               {arbiter === null ? <span className="text-graphite">Decides disputes. Must be on the approved list.</span> : null}

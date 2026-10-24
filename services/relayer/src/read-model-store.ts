@@ -71,6 +71,13 @@ const ATTESTOR_ADDRESSES_SQL = `
   ORDER BY lower(payload->>'attestor')
 `
 
+const ARBITER_ADDRESSES_SQL = `
+  SELECT DISTINCT ON (lower(payload->>'arbiter')) payload->>'arbiter' AS arbiter
+  FROM waybill_chain_events
+  WHERE network = $1 AND event_name = ANY($2::text[]) AND payload ? 'arbiter'
+  ORDER BY lower(payload->>'arbiter')
+`
+
 const ATTESTOR_EVENTS_SQL = `
   SELECT block_number, log_index, transaction_hash, event_name, milestone_index,
          block_timestamp, payload
@@ -289,6 +296,12 @@ export class PostgresReadModelStore {
   async listAttestorAddresses(network: WaybillNetwork, eventNames: readonly string[]): Promise<`0x${string}`[]> {
     const result = await this.database.query<{ attestor: `0x${string}` }>(ATTESTOR_ADDRESSES_SQL, [network, eventNames])
     return result.rows.map((row) => row.attestor)
+  }
+
+  /** Every arbiter address that has an event on the arbiter list. */
+  async listArbiterAddresses(network: WaybillNetwork, eventNames: readonly string[]): Promise<`0x${string}`[]> {
+    const result = await this.database.query<{ arbiter: `0x${string}` }>(ARBITER_ADDRESSES_SQL, [network, eventNames])
+    return result.rows.map((row) => row.arbiter)
   }
 
   /** The registry events for one attestor, oldest first. */

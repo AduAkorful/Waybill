@@ -78,6 +78,22 @@ export const WAYBILL_ESCROW_ABI = [
       ],
     }],
   },
+  ...(['getPendingPayoutChange', 'getPendingRefundChange'] as const).map((name) => ({
+    type: 'function' as const,
+    name,
+    stateMutability: 'view' as const,
+    inputs: [{ name: 'dealId', type: 'uint256' }],
+    outputs: [
+      {
+        name: 'change',
+        type: 'tuple',
+        components: [
+          { name: 'proposed', type: 'address' },
+          { name: 'eta', type: 'uint64' },
+        ],
+      },
+    ],
+  })),
   {
     type: 'function',
     name: 'nextDealId',
@@ -360,6 +376,22 @@ export function readMilestone(
     functionName: 'getMilestone',
     args: [dealId, milestoneIndex],
   })
+}
+
+/** A delayed payout or refund address change that is waiting, if any. */
+export async function readPendingChange(
+  publicClient: PublicClient,
+  dealId: bigint,
+  which: 'payout' | 'refund',
+  network: WaybillNetworkManifest = getBrowserNetwork(),
+): Promise<{ proposed: `0x${string}`; eta: bigint }> {
+  const change = (await publicClient.readContract({
+    address: network.contracts.escrow,
+    abi: WAYBILL_ESCROW_ABI,
+    functionName: which === 'payout' ? 'getPendingPayoutChange' : 'getPendingRefundChange',
+    args: [dealId],
+  })) as unknown as { proposed: `0x${string}`; eta: bigint }
+  return { proposed: change.proposed, eta: change.eta }
 }
 
 export function readNextDealId(

@@ -28,6 +28,7 @@ export interface WaybillNetworkManifest {
   escrowDeployBlock?: bigint
   /** First block at which the attestor registry has code; its event reads start here */
   attestorRegistryDeployBlock?: bigint
+  arbiterListDeployBlock?: bigint
 }
 
 export const ARC_TESTNET: WaybillNetworkManifest = {
@@ -53,6 +54,8 @@ export const ARC_TESTNET: WaybillNetworkManifest = {
   escrowDeployBlock: 67_900_503n,
   // Checked on Arc testnet: `cast code` is empty at block 67899718 and present at 67899719.
   attestorRegistryDeployBlock: 67_899_719n,
+  // Checked on Arc testnet: `cast code` is empty at block 67899712 and present at 67899713.
+  arbiterListDeployBlock: 67_899_713n,
 }
 
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/
@@ -94,6 +97,9 @@ function assertManifest(manifest: WaybillNetworkManifest): WaybillNetworkManifes
   }
   if (manifest.attestorRegistryDeployBlock !== undefined && manifest.attestorRegistryDeployBlock < 0n) {
     throw new Error(`Invalid ${manifest.network}.attestorRegistryDeployBlock`)
+  }
+  if (manifest.arbiterListDeployBlock !== undefined && manifest.arbiterListDeployBlock < 0n) {
+    throw new Error(`Invalid ${manifest.network}.arbiterListDeployBlock`)
   }
   if (manifest.multicall3 !== undefined) assertAddress(manifest.multicall3, `${manifest.network}.multicall3`)
   for (const [name, address] of Object.entries(manifest.contracts)) {

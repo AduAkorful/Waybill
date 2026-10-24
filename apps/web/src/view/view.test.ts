@@ -8,6 +8,7 @@ import { refundedFor, releasedFor, splitBuyerReceives, unknownSplitParts } from 
 import type { DealView, Tranche } from './types'
 import { dealsInShell, heldShells, parseWalletDeals, rolesIn } from './wallet'
 import { needsFrom, sectionOf } from './inbox'
+import { parseArbiters } from './arbiter'
 
 const part = (fee: bigint) => ({ fee }) as Tranche
 
@@ -193,5 +194,20 @@ describe('inbox', () => {
   test('settled deals are done and need nothing', () => {
     const d = deal({ state: 'settled' }, [tranche({ state: 'released' })])
     expect(sectionOf('buyer', d, wallet)).toBe('done')
+  })
+})
+
+describe('arbiter list', () => {
+  const row = { address: `0x${'ab'.repeat(20)}`, allowed: true, fee: '5000000', pendingAdd: null, pendingRemove: { eta: '1800000000' } }
+  test('parses amounts to bigint and keeps pending changes', () => {
+    const [a] = parseArbiters([row])
+    expect(a!.fee).toBe(5_000_000n)
+    expect(a!.pendingRemove).toEqual({ eta: 1_800_000_000n })
+    expect(a!.pendingAdd).toBeNull()
+  })
+  test('rejects what it does not understand', () => {
+    expect(() => parseArbiters({})).toThrow()
+    expect(() => parseArbiters([{ ...row, fee: 'x' }])).toThrow('fee')
+    expect(() => parseArbiters([{ ...row, address: '0x1' }])).toThrow('address')
   })
 })

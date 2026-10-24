@@ -9,6 +9,7 @@ import { useDeal } from '@/data/use-deal'
 import { encodeEscrowAction } from '@/integration/escrow'
 import { getBrowserNetwork } from '@/integration/network'
 import { ThemeToggle, Wordmark } from '@/ui/Chrome'
+import { AddressChanges } from '@/ui/AddressChanges'
 import { DisputeDialog } from '@/ui/DisputeDialog'
 import { LiveWaybill } from '@/ui/Live'
 import { Modal } from '@/ui/Modal'
@@ -137,6 +138,7 @@ export function SupplierLink({ idText }: { idText: string }) {
                 <h2 className="label mb-3">{t.tracker}</h2>
                 <LiveWaybill deal={d} lang={lang} detail="summary" compact showLockStamp={false} actions={actions} />
               </section>
+              {isSupplier ? <AddressChanges deal={d} viewer="supplier" onChanged={() => setRefresh((n) => n + 1)} /> : null}
               <p className="mt-8 text-[12px] text-graphite">{formatDateTime(d.chainTime)} UTC · {getBrowserNetwork().network}</p>
 
               <Modal open={dialog === 'accept'} onClose={() => setDialog(null)} label={t.accept}>

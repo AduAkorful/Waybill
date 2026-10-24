@@ -95,6 +95,13 @@ export interface SplitDecision {
   buyerPrincipal: bigint
 }
 
+/** A delayed address change waiting to be applied. The buyer or supplier on the other side can reject it until then. */
+export interface PendingChange {
+  proposed: Address
+  /** Unix seconds: earliest the change can be applied */
+  eta: bigint
+}
+
 export interface DealView {
   id: bigint
   buyer: Address
@@ -112,6 +119,10 @@ export interface DealView {
   arbiterFee: bigint
   arbiterAccepted: boolean
   fundFirst: boolean
+  /** Waiting change of where the supplier is paid, or null */
+  pendingPayout: PendingChange | null
+  /** Waiting change of where refunds go, or null */
+  pendingRefund: PendingChange | null
   settled: boolean
   /** Unix seconds */
   acceptanceDeadline: bigint

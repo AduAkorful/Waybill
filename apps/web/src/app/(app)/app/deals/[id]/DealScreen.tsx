@@ -9,6 +9,7 @@ import { encodeCurrentEscrowAction } from '@/integration/current-actions'
 import { getBrowserNetwork } from '@/integration/network'
 import { Acceptances } from '@/ui/Acceptances'
 import { LiveLedger, LiveWaybill } from '@/ui/Live'
+import { AddressChanges } from '@/ui/AddressChanges'
 import { DisputeDialog } from '@/ui/DisputeDialog'
 import { Modal } from '@/ui/Modal'
 import { TxFlow, type TxStep } from '@/ui/TxFlow'
@@ -155,6 +156,10 @@ export function DealScreen({ idText }: { idText: string }) {
         <div className="mt-8">
           <LiveWaybill deal={d} detail="summary" compact showLockStamp={false} actions={actions} />
         </div>
+
+        {isBuyer || (!!address && address.toLowerCase() === d.supplier.toLowerCase()) ? (
+          <AddressChanges deal={d} viewer={isBuyer ? 'buyer' : 'supplier'} onChanged={() => setRefresh((n) => n + 1)} />
+        ) : null}
 
         <p className="mt-10 max-w-2xl text-[12.5px] leading-relaxed text-graphite">
           {funded ? 'Terms froze when the deal was funded. ' : 'Terms freeze when the buyer funds. '}Nobody, including Waybill, can move this money except by these rules. Read from the escrow as of {formatDateTime(d.chainTime)}.

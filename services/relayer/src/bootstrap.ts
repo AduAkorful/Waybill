@@ -6,6 +6,7 @@ import type { RelayerChain } from './chain'
 import { createRelayerChain, readLiveDeal } from './chain'
 import { REGISTRY_EVENT_ABI, REGISTRY_EVENT_NAMES, readAttestor } from './registry'
 import { createWaybillApi } from './api'
+import { ARBITER_EVENT_ABI, ARBITER_EVENT_NAMES, readArbiter } from './arbiters'
 import { loadApiConfig } from './api-config'
 import { loadEvidenceService } from './evidence-config'
 import { PostgresEvidenceStore } from './evidence-store'
@@ -40,6 +41,7 @@ export interface BackendApplication {
   readonly relayer: RelayerRuntime
   readonly indexer: RelayerRuntime
   readonly registryIndexer: RelayerRuntime
+  readonly arbiterIndexer: RelayerRuntime
   /** The HTTP read API, or null when WAYBILL_API_PORT is not set */
   readonly api: Server | null
   start(): Promise<void>
@@ -138,6 +140,10 @@ export function createBackendApplication(
         readDeal: (dealId) => readService.getDeal(config.network.network, dealId),
         readDealEvents: (dealId) => readModel.getDealEvents(config.network.network, dealId),
         listWalletDeals: (address) => readModel.getWalletDeals(config.network.network, address),
+        listArbiters: async () => {
+          const addresses = await readModel.listArbiterAddresses(config.network.network, ARBITER_EVENT_NAMES)
+          return Promise.all(addresses.map((address) => readArbiter(chain.client, config.network, address)))
+        },
         listAttestors: async () => {
           const addresses = await readModel.listAttestorAddresses(config.network.network, REGISTRY_EVENT_NAMES)
           return Promise.all(addresses.map((address) => readAttestor(chain.client, config.network, address)))
@@ -169,6 +175,25 @@ export function createBackendApplication(
     },
   )
 
+  const arbiterIndexer = new RelayerRuntime(
+    new ChainEventIndexer(
+      createIndexerLogReader(chain),
+      new PostgresCursorStore(pool, 'arbiter-indexer'),
+      readModel,
+      {
+        ...config.network,
+        startBlock: config.network.arbiterListDeployBlock ?? config.startBlock,
+        maxBlockRange: config.maxBlockRange,
+        confirmations: config.confirmations,
+        target: { address: config.network.contracts.arbiterList, events: ARBITER_EVENT_ABI },
+      },
+    ),
+    {
+      pollIntervalMs: config.pollIntervalMs,
+      reportError: (error) => console.error('[waybill-arbiter-indexer]', error),
+    },
+  )
+
   const attestorHistory = (address: string) =>
     readModel.getAttestorEvents(config.network.network, address, REGISTRY_EVENT_NAMES)
 
@@ -179,6 +204,7 @@ export function createBackendApplication(
     relayer,
     indexer,
     registryIndexer,
+    arbiterIndexer,
     api,
     async start() {
       if (loopPromise) return loopPromise
@@ -193,7 +219,7 @@ export function createBackendApplication(
           })
         })
       }
-      loopPromise = Promise.all([relayer.run(), indexer.run(), registryIndexer.run()]).then(() => undefined)
+      loopPromise = Promise.all([relayer.run(), indexer.run(), registryIndexer.run(), arbiterIndexer.run()]).then(() => undefined)
       return loopPromise
     },
     async stop() {
@@ -202,6 +228,7 @@ export function createBackendApplication(
       relayer.stop()
       indexer.stop()
       registryIndexer.stop()
+      arbiterIndexer.stop()
       if (api?.listening) await new Promise<void>((resolve) => api.close(() => resolve()))
       await loopPromise
       loopPromise = null

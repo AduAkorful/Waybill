@@ -1,6 +1,6 @@
 import type { PublicClient } from 'viem'
 import type { WaybillNetworkManifest } from '@waybill/network/networks'
-import { readDeal, readMilestone, readTrancheFee } from '@/integration/escrow'
+import { readDeal, readMilestone, readPendingChange, readTrancheFee } from '@/integration/escrow'
 import {
   CONDITIONS,
   DEAL_STATES,
@@ -8,6 +8,7 @@ import {
   MILESTONE_STATES,
   type DealTerms,
   type DealView,
+  type PendingChange,
   type Tranche,
 } from './types'
 
@@ -52,6 +53,7 @@ export function toDealView(
   fees: readonly bigint[],
   chainTime: bigint,
   terms?: DealTerms,
+  pending: { payout: PendingChange | null; refund: PendingChange | null } = { payout: null, refund: null },
 ): DealView {
   if (milestones.length !== deal.milestoneCount || fees.length !== deal.milestoneCount) {
     throw new Error(`Deal ${id}: expected ${deal.milestoneCount} milestones, read ${milestones.length}`)
@@ -106,6 +108,8 @@ export function toDealView(
     acceptanceDeadline: deal.acceptanceDeadline,
     responsePeriodHours: deal.responsePeriodHours,
     tranches,
+    pendingPayout: pending.payout,
+    pendingRefund: pending.refund,
     chainTime,
     ...(terms ? { terms } : {}),
   }
@@ -120,9 +124,12 @@ export async function loadDealView(
 ): Promise<DealView> {
   const [deal, block] = await Promise.all([readDeal(client, id, network), client.getBlock()])
   const positions = Array.from({ length: deal.milestoneCount }, (_, i) => i)
-  const [milestones, fees] = await Promise.all([
+  const [milestones, fees, payout, refund] = await Promise.all([
     Promise.all(positions.map((i) => readMilestone(client, id, i, network))),
     Promise.all(positions.map((i) => readTrancheFee(client, id, i, network))),
+    readPendingChange(client, id, 'payout', network),
+    readPendingChange(client, id, 'refund', network),
   ])
-  return toDealView(id, deal, milestones, fees, block.timestamp, terms)
+  const waiting = (c: { proposed: `0x${string}`; eta: bigint }): PendingChange | null => (c.proposed.toLowerCase() === ZERO ? null : c)
+  return toDealView(id, deal, milestones, fees, block.timestamp, terms, { payout: waiting(payout), refund: waiting(refund) })
 }

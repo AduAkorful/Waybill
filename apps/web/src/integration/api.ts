@@ -43,6 +43,8 @@ export interface WaybillApiClient {
   getAttestors(): Promise<unknown>
   /** One attestor with registry history; rejects with a 404 WaybillApiError when unknown */
   getAttestor(address: string): Promise<unknown>
+  /** Every arbiter on or heading to the approved list, with live list state */
+  getArbiters(): Promise<unknown>
   /** Every deal that names a wallet, newest first, with the roles it holds in each */
   getWalletDeals(address: string): Promise<unknown>
 }
@@ -94,6 +96,9 @@ export function createWaybillApiClient(
     },
     async getAttestors() {
       return getJson('/v1/attestors')
+    },
+    async getArbiters() {
+      return getJson('/v1/arbiters')
     },
     async getWalletDeals(address) {
       if (!/^0x[0-9a-fA-F]{40}$/.test(address)) throw new Error('Invalid wallet address')

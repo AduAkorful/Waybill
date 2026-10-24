@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPublicClient, http, isAddress, parseAbi, type PublicClient } from 'viem'
 import { createWaybillApiClient, loadBrowserApiBaseUrl } from '@/integration/api'
 import { getBrowserChain, getBrowserNetwork } from '@/integration/network'
+import { parseArbiters, type Arbiter } from '@/view/arbiter'
 import { parseAttestors } from '@/view/attestor'
 import type { Attestor } from '@/view/attestor'
 import type { ArbiterCheck, BuilderLimits } from '@/view/builder'
@@ -93,6 +94,26 @@ export function useAttestorChoices(): { attestors: Attestor[]; note: string | nu
         .catch((e) => !cancelled && setState({ attestors: [], note: `The attestor directory is unavailable: ${e instanceof Error ? e.message : String(e)}` }))
     } catch {
       setState({ attestors: [], note: 'The attestor directory is not configured on this site.' })
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  return state
+}
+
+/** Arbiters currently on the approved list, for the picker. Empty with a reason when the API is not available. */
+export function useArbiterChoices(): { arbiters: Arbiter[]; note: string | null } {
+  const [state, setState] = useState<{ arbiters: Arbiter[]; note: string | null }>({ arbiters: [], note: null })
+  useEffect(() => {
+    let cancelled = false
+    try {
+      createWaybillApiClient(loadBrowserApiBaseUrl())
+        .getArbiters()
+        .then((raw) => !cancelled && setState({ arbiters: parseArbiters(raw).filter((a) => a.allowed), note: null }))
+        .catch((e) => !cancelled && setState({ arbiters: [], note: `The arbiter list is unavailable: ${e instanceof Error ? e.message : String(e)}` }))
+    } catch {
+      setState({ arbiters: [], note: 'The arbiter list is not configured on this site.' })
     }
     return () => {
       cancelled = true
