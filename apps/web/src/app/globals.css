@@ -94,6 +94,10 @@
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 html,
 body {
   background: var(--paper);

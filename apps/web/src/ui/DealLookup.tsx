@@ -42,8 +42,8 @@ export function DealLookup() {
         void open()
       }}
     >
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="block">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <label className="block sm:flex-1">
           <span className="label block">Look up a deal number</span>
           <input
             inputMode="numeric"
@@ -55,7 +55,7 @@ export function DealLookup() {
             }}
             aria-describedby="deal-lookup-note"
             placeholder="e.g. 284"
-            className="mt-1.5 min-h-11 w-44 rounded-md border border-rule bg-sheet px-3 text-base"
+            className="mt-1.5 min-h-11 w-full rounded-md border border-rule bg-sheet px-3 text-base"
           />
         </label>
         <button type="submit" disabled={busy} className="inline-flex min-h-11 items-center rounded-md bg-ink px-4 text-[14px] font-semibold text-paper disabled:opacity-70">

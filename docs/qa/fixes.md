@@ -38,6 +38,30 @@ These come up in retests. Each has a reason. If one of them is wrong *for a diff
 | Console lines `Privy logout 400` and `sessions 401` after Sign out (SF-15) | The browser reports a failed network call to the wallet library's own server (the session had already ended there). A page cannot hide a failed request from the console, and the person is signed out either way. | – |
 | NF-19 message seen with Rabby (SF-17) | See batch 13: the app now checks the balance first, so the wallet is not opened. | – |
 
+## Batch 16 — 2026-10-22 (findings from the batch 15 retest, report §25)
+
+Web app rebuilt and restarted; no relayer or contract changes. axe 0 violations on 8 pages at 320 and 1440; no horizontal scroll; 133 tests pass. All findings were Low.
+
+### Fixed
+- **Footer in the signed-in app (SF-28):** the app shell now ends with the same footer as the public pages, so a short page does not just stop.
+- **Settings layout (SF-29):** two columns from 1024 px: the form on the left, a short "What is emailed, and what is not" note on the right (wording taken from the page's own text; nothing new is promised).
+- **404 inside `/app/*` (SF-30):** a "Back to your deals" button appears first when the mistyped address starts with `/app`. The header on that 404 is the public one by design (an unmatched address cannot use the app shell).
+- **Scrollbar offset (NF-39):** `scrollbar-gutter: stable` on the page, so header and content share one gutter. On a classic scrollbar both shift left by half the scrollbar's width, together (headless Chrome: logo and content at 169 instead of 176 at 1440); with overlay scrollbars nothing shifts.
+- **404 look-up card (NF-40):** the input fills the card, the button sits beside it on desktop; the card is wider.
+- **`/join` (NF-41):** the divider is full width and the two answers sit side by side, each capped at about 70 characters per line.
+- **`/signin` card text (NF-42):** the body copy and steps span the card.
+
+### Not changed, and why
+- **`/app/new` 7.5 px offset (NF-39):** fixed by the scrollbar gutter above; QA should re-measure.
+- **SF-24, `/app/arbiter` empty state, SF-30 header on a 404:** unchanged, see the by-design list and above.
+
+### Retest checklist for batch 16
+1. `/app/attest/<id>`, `/app/settings`: footer at the bottom; settings has the right-hand note at 1280.
+2. `/app/fees` as a buyer: 404 with "Back to your deals".
+3. 1440: logo x equals content x on `/app/new` as on the other pages.
+4. `/join` at 1440: two answers side by side under a full-width divider.
+5. 404 at 1440: look-up card is full of input, not mostly empty.
+
 ## Batch 15 — 2026-10-21 (findings from the batch 14 retest, report §23)
 
 Web app rebuilt and restarted; no relayer or contract changes. Measured in a browser at 1280 and 1440 px; axe 0 violations on `/attestors/<address>`, `/signin`, `/legal`, `/d/abc`, `/join`, `/operator` at 320 and 1440.

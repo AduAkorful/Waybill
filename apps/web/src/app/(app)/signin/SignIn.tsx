@@ -111,11 +111,11 @@ export function SignIn() {
             <p className="max-w-xl text-[34px] leading-[1.08] font-semibold tracking-tight">
               Pay a deposit. Release the rest when <span className="marked">someone you trust</span> confirms the goods.
             </p>
-            <p className="mt-4 max-w-md text-[14.5px] leading-relaxed text-graphite">
+            <p className="mt-4 text-[14.5px] leading-relaxed text-graphite">
               One sign-in for every role. Your role is set per deal, so you can be a buyer on one and an inspector on another.
             </p>
           </div>
-          <ol className="max-w-md space-y-2 text-[13.5px] text-graphite">
+          <ol className="space-y-2 text-[13.5px] text-graphite">
             <li><span className="mono mr-2">1</span>The supplier accepts the deal and the buyer locks the money.</li>
             <li><span className="mono mr-2">2</span>A named person confirms each part with a signed statement.</li>
             <li><span className="mono mr-2">3</span>Each part is paid when it is confirmed, or refunded if it is not.</li>

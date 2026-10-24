@@ -69,7 +69,8 @@ export default function SettingsPage() {
 
   const current = read.kind === 'ready' ? read.settings : null
   return (
-    <main className="max-w-xl px-4 pt-6 pb-8 md:px-8 md:pt-10">
+    <main className="px-4 pt-6 pb-8 md:px-8 md:pt-10 lg:grid lg:grid-cols-[minmax(0,36rem)_minmax(0,1fr)] lg:gap-x-16">
+      <div>
       <p className="label">Settings · <span className="mono normal-case">{shortAddress(address)}</span> · {getBrowserNetwork().network}</p>
       <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">Email updates</h1>
       <p className="mt-1 text-[13.5px] leading-relaxed text-graphite">
@@ -108,6 +109,16 @@ export default function SettingsPage() {
           <p className="mt-2 text-[12px] text-graphite">This is stored by Waybill, not on the chain, and used only for these updates. Saving needs a free wallet signature.</p>
         </form>
       ) : null}
+      </div>
+      <aside aria-label="About these emails" className="mt-10 max-w-md text-[13.5px] leading-relaxed text-graphite lg:mt-16">
+        <h2 className="text-[15px] font-semibold text-ink">What is emailed, and what is not</h2>
+        <ul className="mt-2 space-y-2">
+          <li>You hear about an invitation, a confirmation to review, a dispute or its decision.</li>
+          <li>Each email names the deal and the part and links back here. It never includes commercial detail.</li>
+          <li>Nothing is sent until you confirm the address from the link in the first email.</li>
+          <li>The address is stored by Waybill, not on the chain, and used only for these updates.</li>
+        </ul>
+      </aside>
     </main>
   )
 }

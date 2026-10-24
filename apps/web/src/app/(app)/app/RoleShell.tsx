@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useSignOut } from '@/components/use-sign-out'
 import { useWalletDeals } from '@/data/wallet-deals'
 import { ThemeToggle, Wordmark } from '@/ui/Chrome'
+import { SiteFooter } from '@/ui/SiteFooter'
 import { shortAddress } from '@/view/format'
 import { heldShells, shellLabel } from '@/view/wallet'
 
@@ -68,6 +69,7 @@ export function RoleShell({ address, children }: { address: string; children: Re
         </div>
       </header>
       <div className="mx-auto w-full max-w-6xl flex-1">{children}</div>
+      <SiteFooter />
       <nav hidden={read.status === 'loading'} className="fixed inset-x-0 bottom-0 z-30 flex border-t border-rule bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Main">
         {nav.filter((n) => n.href !== '/attestors').map((n) => (
           <Link
