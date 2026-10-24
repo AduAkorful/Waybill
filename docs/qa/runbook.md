@@ -22,6 +22,8 @@ Contract addresses (public, from `packages/network/src/networks.ts`):
 
 ## 2. Start the stack
 
+If the team has deployed the QA instance (Vercel, Render, Supabase; see `docs/deploy.md`), skip this section and use the URL you were given. The steps below run the same stack on your own machine.
+
 Prerequisites: Node 22+, bun, a Postgres 14+ database (TLS or `WAYBILL_DATABASE_SSL=false` for a local one), and a Privy app id for the web origin you will use.
 
 ```bash
