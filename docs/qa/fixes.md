@@ -38,6 +38,25 @@ These come up in retests. Each has a reason. If one of them is wrong *for a diff
 | Console lines `Privy logout 400` and `sessions 401` after Sign out (SF-15) | The browser reports a failed network call to the wallet library's own server (the session had already ended there). A page cannot hide a failed request from the console, and the person is signed out either way. | – |
 | NF-19 message seen with Rabby (SF-17) | See batch 13: the app now checks the balance first, so the wallet is not opened. | – |
 
+## Batch 17 — 2026-10-22 (open items revisited)
+
+Items earlier batches had left as "by design" or "not code" were looked at again; these were code after all. axe 0 on 8 pages at 320 and 1440; 133 tests pass.
+
+### Fixed
+- **Form after a full reload (SF-24):** the escrow's limits are kept for the browser tab (session storage), so a reload shows the form at once. A fresh read replaces them within a moment and every check re-runs against it; the send itself is still simulated against the chain before the wallet opens, so stale numbers can never cause a bad send. The very first visit of a tab still waits for one read (there are no numbers to show before it).
+- **404 inside the signed-in app (SF-30):** any unknown address under `/app` now ends in an app-shell 404 (app header, footer, "Back to your deals", New deal, Settings). `/app/fees` for a buyer is one of these.
+- **Empty role pages (SF-25, `/app/arbiter` and the others):** a wallet with no deals now sees three plain steps for its role (what a buyer, supplier, attestor or arbiter does next) instead of one line.
+- **`/d/<id>` slow after your own action (SF-23):** after a transaction the page re-reads at 2.6 s, then again at 7 s and 15 s, so it does not sit on an old state if the shared read cache answers late.
+
+### Still open, and why (nothing hidden)
+| Item | Why it is not fixed |
+|---|---|
+| MW-05 language toggle on public pages | Needs reviewed Chinese copy for every public page; the supplier page is the only one with it. Writing unreviewed legal and product copy in another language is a risk, so it waits for a translator. |
+| NF-24 Chinese preselected | Only a browser set to Chinese sees the banner; QA's browsers are not. |
+| SF-15 Privy logout 400 / sessions 401 in the console | The browser logs a failed call to the wallet library's own server; the page cannot hide it. The person is signed out either way. |
+| First open of a deal slow (SF-23, RT-05) | Cold read through the free tunnel and RPC. |
+| Emails, panel deals, deals 284/285/287 timers | Owner action or real deadlines (see the first section). |
+
 ## Batch 16 — 2026-10-22 (findings from the batch 15 retest, report §25)
 
 Web app rebuilt and restarted; no relayer or contract changes. axe 0 violations on 8 pages at 320 and 1440; no horizontal scroll; 133 tests pass. All findings were Low.

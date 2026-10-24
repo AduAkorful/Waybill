@@ -27,6 +27,35 @@ function useClient(): PublicClient {
 
 /** The limits read earlier in this visit, shown at once while a fresh read runs. Memory only. */
 let lastLimits: BuilderLimits | undefined
+const LIMITS_KEY = 'wb-builder-limits'
+
+/** Kept for the tab so a reload shows the form at once; a fresh read replaces it as soon as it arrives. */
+function rememberedLimits(): BuilderLimits | undefined {
+  if (lastLimits) return lastLimits
+  try {
+    const raw = sessionStorage.getItem(LIMITS_KEY)
+    if (!raw) return undefined
+    const p = JSON.parse(raw) as Record<string, string | boolean | number>
+    lastLimits = {
+      minFeeBps: Number(p.minFeeBps),
+      maxFeeBps: Number(p.maxFeeBps),
+      maxDealAmount: BigInt(p.maxDealAmount as string),
+      maxLocked: BigInt(p.maxLocked as string),
+      currentLocked: BigInt(p.currentLocked as string),
+      newDealsPaused: p.newDealsPaused === true,
+    }
+    return lastLimits
+  } catch {
+    return undefined
+  }
+}
+
+function rememberLimits(l: BuilderLimits) {
+  lastLimits = l
+  try {
+    sessionStorage.setItem(LIMITS_KEY, JSON.stringify({ ...l, maxDealAmount: String(l.maxDealAmount), maxLocked: String(l.maxLocked), currentLocked: String(l.currentLocked) }))
+  } catch {}
+}
 
 export type Read<T> = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; value: T }
 
@@ -34,7 +63,10 @@ export type Read<T> = { status: 'loading' } | { status: 'error'; message: string
 export function useBuilderLimits(): Read<BuilderLimits> {
   const client = useClient()
   const network = getBrowserNetwork()
-  const [read, setRead] = useState<Read<BuilderLimits>>(() => (lastLimits ? { status: 'ready', value: lastLimits } : { status: 'loading' }))
+  const [read, setRead] = useState<Read<BuilderLimits>>(() => {
+    const known = rememberedLimits()
+    return known ? { status: 'ready', value: known } : { status: 'loading' }
+  })
   useEffect(() => {
     let cancelled = false
     const address = network.contracts.escrow
@@ -42,7 +74,7 @@ export function useBuilderLimits(): Read<BuilderLimits> {
     Promise.all(['minFeeBps', 'maxFeeBps', 'maxDealAmount', 'maxLocked', 'currentLocked', 'newDealsPaused'].map((n) => call(n as never)))
       .then(([minFeeBps, maxFeeBps, maxDealAmount, maxLocked, currentLocked, newDealsPaused]) => {
         if (!cancelled) {
-          lastLimits = {
+          const fresh: BuilderLimits = {
               minFeeBps: Number(minFeeBps),
               maxFeeBps: Number(maxFeeBps),
               maxDealAmount: maxDealAmount as bigint,
@@ -50,7 +82,8 @@ export function useBuilderLimits(): Read<BuilderLimits> {
               currentLocked: currentLocked as bigint,
               newDealsPaused: newDealsPaused as boolean,
           }
-          setRead({ status: 'ready', value: lastLimits })
+          rememberLimits(fresh)
+          setRead({ status: 'ready', value: fresh })
         }
       })
       .catch((e) => !cancelled && setRead({ status: 'error', message: e instanceof Error ? e.message : String(e) }))

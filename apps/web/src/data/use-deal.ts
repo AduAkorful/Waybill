@@ -13,6 +13,8 @@ import type { DealView } from '@/view/types'
 const REREAD_MS = 30_000
 /** After a transaction the first read waits a moment so the shared read cache cannot hand back the old state. */
 const AFTER_TX_MS = 2_600
+/** and twice more, because the shared cache can still hold the old state on the first look */
+const AFTER_TX_AGAIN_MS = [7_000, 15_000]
 
 /** The last good read of each deal in this visit, shown at once while a fresh read runs. Memory only. */
 const lastRead = new Map<string, { deal: DealView; history: HistoryStatus }>()
@@ -94,6 +96,7 @@ export function useDeal(id: bigint | null, refreshKey = 0, initial?: DealView | 
 
     // the first read after a transaction (refreshKey above zero) waits a moment; later reads, and the first one, go at once
     const first = setTimeout(() => void run(), refreshKey > 0 ? AFTER_TX_MS : 0)
+    const again = refreshKey > 0 ? AFTER_TX_AGAIN_MS.map((ms) => setTimeout(() => void run(), ms)) : []
     // a hidden tab does not poll: nobody is looking, and the free RPC's limit is shared
     const timer = setInterval(() => {
       if (!document.hidden) void run()
@@ -101,6 +104,7 @@ export function useDeal(id: bigint | null, refreshKey = 0, initial?: DealView | 
     return () => {
       cancelled = true
       clearTimeout(first)
+      again.forEach(clearTimeout)
       clearInterval(timer)
     }
   }, [client, network, id, refreshKey])

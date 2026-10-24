@@ -32,6 +32,14 @@ const INTRO: Record<Shell, string | null> = {
     'You are asked to accept the role on each deal that names you; that only records that you agree and moves no money. After that, each dispute is one frozen part of one deal. You can release it to the supplier, refund it to the buyer, or split it. Nothing else, and never to yourself. If you miss the deadline, the default applies and your fee goes back to the buyer.',
 }
 
+/** What happens next for a wallet with no deals yet, in each role's own terms. */
+const NEXT_STEPS: Record<Shell, string[]> = {
+  buyer: ['Create a deal: name the supplier, the parts and who confirms each one.', 'The supplier and everyone named accept it. Nothing is locked until then.', 'You fund it, and each part is paid when its confirmation arrives.'],
+  supplier: ['A buyer names this wallet as the supplier when they create a deal, and sends you its link.', 'You read the terms on that page and accept them with this wallet.', 'Each part is paid to you as it is confirmed.'],
+  attestor: ['A buyer names this wallet to confirm one part of a deal.', 'The invitation appears here; accepting records that you agree and moves no money.', 'When the work is done you sign the fixed statement for that part.'],
+  arbiter: ['A buyer names this wallet as arbiter, and the wallet must be on the approved arbiter list.', 'The invitation appears here; accepting records that you agree and moves no money.', 'If a part is disputed it appears here with its deadlines, and you release it, refund it or split it.'],
+}
+
 function MiniLedger({ d }: { d: DealView }) {
   const unfunded = d.state === 'proposed' || d.state === 'accepted' || d.state === 'cancelled'
   return (
@@ -189,9 +197,17 @@ export function RoleHome() {
           {section('done', 'Settled', finished, 'No settled deals yet.')}
         </>
       ) : (
-        <p className="mt-8 rounded-md border border-dashed border-rule px-4 py-6 text-center text-[13px] text-graphite">
-          Deals appear here as soon as one names this wallet.
-        </p>
+        <section aria-label="What happens next" className="mt-8 rounded-md border border-dashed border-rule px-4 py-6">
+          <p className="text-[14px] font-semibold">Deals appear here as soon as one names this wallet.</p>
+          <ol className="mt-3 grid gap-4 text-[13px] text-graphite md:grid-cols-3">
+            {NEXT_STEPS[role].map((step, i) => (
+              <li key={step} className="flex gap-3">
+                <span className="mono text-graphite">{i + 1}</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
       )}
 
       {failed.length > 0 ? (
