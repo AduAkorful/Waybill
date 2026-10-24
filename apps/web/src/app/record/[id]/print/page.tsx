@@ -36,7 +36,7 @@ export default async function PrintRecord({ params }: { params: Promise<{ id: st
         <tbody>
           <Row k="Buyer" v={deal.buyer} />
           <Row k="Supplier" v={deal.supplier} />
-          <Row k="Arbiter" v={deal.arbiter} />
+          <Row k={deal.panel ? "Arbiter panel" : "Arbiter"} v={deal.panel ? deal.panel.members.join(", ") : deal.arbiter} />
           <Row k="Escrow contract" v={net.contracts.escrow} />
           <Row k="Total" v={`${formatAmount(deal.totalAmount)} USDC`} />
           <Row k="Locked at funding" v={`${formatAmount(fundingTotal(deal))} USDC`} />

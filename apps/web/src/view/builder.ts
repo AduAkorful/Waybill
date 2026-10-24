@@ -23,6 +23,8 @@ export interface BuilderForm {
   supplier: string
   refund: string
   arbiter: string
+  /** Three arbiter wallets for a panel deal (any two who agree decide); empty for a single arbiter */
+  panel: string[]
   total: string
   feeBps: string
   feePayer: FeePayer
@@ -95,6 +97,7 @@ export function emptyForm(buyer: string, feeBps: number, template: Template = TE
     supplier: '',
     refund: buyer,
     arbiter: '',
+    panel: [],
     total: '',
     feeBps: String(feeBps),
     feePayer: 0,
@@ -130,6 +133,8 @@ export interface BuiltDeal {
   supplier: Address
   buyerRefund: Address
   arbiter: Address
+  /** The three panel members, when the deal uses a panel; the first is also `arbiter` */
+  panel: Address[] | null
   totalAmount: bigint
   feeBps: number
   acceptanceDeadlineTs: bigint
@@ -146,7 +151,16 @@ export type BuildResult = { ok: true; deal: BuiltDeal; fee: bigint } | { ok: fal
 export const feeFor = (total: bigint, feeBps: number): bigint => (total * BigInt(feeBps) + 9_999n) / 10_000n
 
 /** Checks every rule the escrow checks that can be known before signing, and builds the exact createDeal arguments. */
-export function buildDeal(form: BuilderForm, buyer: string, limits: BuilderLimits, arbiter: ArbiterCheck | null, nowSeconds: number): BuildResult {
+export function buildDeal(
+  form: BuilderForm,
+  buyer: string,
+  limits: BuilderLimits,
+  arbiter: ArbiterCheck | null,
+  nowSeconds: number,
+  /** List checks for the three panel wallets, in order; used only when the form has a panel */
+  panelChecks: readonly (ArbiterCheck | null)[] = [],
+): BuildResult {
+  const isPanel = form.panel.length > 0
   const errors: string[] = []
   const addr = (value: string, what: string): Address | null => {
     if (!isAddress(value.trim(), { strict: false })) {
@@ -160,12 +174,33 @@ export function buildDeal(form: BuilderForm, buyer: string, limits: BuilderLimit
 
   const supplier = addr(form.supplier, 'The supplier')
   const refund = addr(form.refund, 'The refund address')
-  const arb = addr(form.arbiter, 'The arbiter')
+  let arb: Address | null = null
+  let panel: Address[] | null = null
   if (supplier && same(supplier, buyer)) errors.push('The supplier cannot be your own wallet.')
-  if (arb && same(arb, buyer)) errors.push('You cannot be the arbiter of your own deal.')
-  if (arb && supplier && same(arb, supplier)) errors.push('The supplier cannot be the arbiter.')
-  if (arb && arbiter && !arbiter.allowed) errors.push('That arbiter is not on the approved list.')
-  if (arb && !arbiter) errors.push('The arbiter has not been checked against the approved list yet.')
+  if (isPanel) {
+    if (form.panel.length !== 3) errors.push('A panel has exactly three arbiters.')
+    const members = form.panel.map((m, i) => addr(m, `Panel arbiter ${i + 1}`))
+    if (members.every((m): m is Address => m !== null) && members.length === 3) {
+      panel = members
+      arb = members[0]!
+      if (new Set(members.map((m) => m.toLowerCase())).size !== 3) errors.push('The three panel arbiters must be different wallets.')
+      members.forEach((m, i) => {
+        if (same(m, buyer)) errors.push(`Panel arbiter ${i + 1} is your own wallet.`)
+        if (supplier && same(m, supplier)) errors.push(`Panel arbiter ${i + 1} is the supplier.`)
+        const check = panelChecks[i] ?? null
+        if (!check) errors.push(`Panel arbiter ${i + 1} has not been checked against the approved list yet.`)
+        else if (!check.allowed) errors.push(`Panel arbiter ${i + 1} is not on the approved list.`)
+      })
+    }
+  } else {
+    arb = addr(form.arbiter, 'The arbiter')
+    if (arb && same(arb, buyer)) errors.push('You cannot be the arbiter of your own deal.')
+    if (arb && supplier && same(arb, supplier)) errors.push('The supplier cannot be the arbiter.')
+    if (arb && arbiter && !arbiter.allowed) errors.push('That arbiter is not on the approved list.')
+    if (arb && !arbiter) errors.push('The arbiter has not been checked against the approved list yet.')
+  }
+  // the fee the escrow credits: the single arbiter's, or the first panel member's
+  const leader = isPanel ? (panelChecks[0] ?? null) : arbiter
 
   const total = parseAmount(form.total)
   if (total === null || total === 0n) errors.push('Enter the total in USDC, with up to six decimals.')
@@ -206,7 +241,7 @@ export function buildDeal(form: BuilderForm, buyer: string, limits: BuilderLimit
         named.push(a.toLowerCase())
         if (same(a, buyer)) errors.push(`${label}: you cannot confirm your own deal.`)
         if (supplier && same(a, supplier)) errors.push(`${label}: the supplier cannot be an attestor.`)
-        if (arb && same(a, arb)) errors.push(`${label}: the arbiter cannot be an attestor.`)
+        if (isPanel ? panel?.some((m) => same(m, a)) : arb && same(a, arb)) errors.push(`${label}: ${isPanel ? 'a panel arbiter' : 'the arbiter'} cannot be an attestor.`)
       }
     }
     if (bps !== null && due !== null && grace !== null && review !== null) {
@@ -224,9 +259,9 @@ export function buildDeal(form: BuilderForm, buyer: string, limits: BuilderLimit
   })
   if (form.parts.length > 0 && bpsTotal !== 10_000) errors.push(`The parts add up to ${(bpsTotal / 100).toFixed(2)}%, not 100%.`)
 
-  if (supplier && refund && arb && total !== null && total > 0n && feeBps !== null && acceptDays !== null && decisionHours !== null && errors.length === 0 && arbiter) {
+  if (supplier && refund && arb && total !== null && total > 0n && feeBps !== null && acceptDays !== null && decisionHours !== null && errors.length === 0 && leader) {
     const fee = feeFor(total, feeBps)
-    if (limits.currentLocked + total + fee + arbiter.fee > limits.maxLocked) {
+    if (limits.currentLocked + total + fee + leader.fee > limits.maxLocked) {
       return { ok: false, errors: ['The early-access cap on money held in escrow would be exceeded. Try a smaller amount or wait for other deals to settle.'] }
     }
     return {
@@ -236,13 +271,14 @@ export function buildDeal(form: BuilderForm, buyer: string, limits: BuilderLimit
         supplier,
         buyerRefund: refund,
         arbiter: arb,
+        panel,
         totalAmount: total,
         feeBps,
         acceptanceDeadlineTs: BigInt(nowSeconds + acceptDays * DAY),
         arbiterDeadlineHours: decisionHours,
         milestoneInputs: inputs,
         fundFirst: false,
-        arbiterFee: arbiter.fee,
+        arbiterFee: leader.fee,
         feePayer: form.feePayer,
       },
     }

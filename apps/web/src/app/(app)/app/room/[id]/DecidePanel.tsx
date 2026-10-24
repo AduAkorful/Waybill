@@ -6,6 +6,7 @@ import { encodeCurrentEscrowAction } from '@/integration/current-actions'
 import { describeUploadError, sha256Hex, uploadEvidence } from '@/integration/evidence'
 import { TxFlow } from '@/ui/TxFlow'
 import { formatAmount } from '@/view/format'
+import { describeVote, encodeVote, panelStanding } from '@/view/panel'
 import { MIN_REASONING, percentToSplitBps, splitPrincipal } from '@/view/room'
 import type { DealView, Tranche } from '@/view/types'
 
@@ -15,9 +16,12 @@ type Stage = { kind: 'form' } | { kind: 'working' } | { kind: 'ready'; choice: C
 /**
  * The arbiter's decision on one disputed part. The written reasoning is stored with the dispute's other files first,
  * where both sides can read it; the decision is sent only after it is stored. The contract takes the decision alone.
+ * On a panel deal the same form casts this member's vote: any two matching votes decide the part.
  */
 export function DecidePanel({ deal, part, owner, onDone }: { deal: DealView; part: Tranche; owner: `0x${string}`; onDone: () => void }) {
   const { signMessageAsync } = useSignMessage()
+  const isPanel = deal.panel !== null
+  const mine = isPanel ? panelStanding(deal, part).find((s) => s.member.toLowerCase() === owner.toLowerCase()) : undefined
   const [choice, setChoice] = useState<Choice | null>(null)
   const [split, setSplit] = useState('50')
   const [reasoning, setReasoning] = useState('')
@@ -47,15 +51,30 @@ export function DecidePanel({ deal, part, owner, onDone }: { deal: DealView; par
     }
   }
 
+  if (mine && mine.vote !== 0) {
+    return (
+      <div role="status" className="rounded-md border border-rule bg-sheet p-4 text-[13.5px]">
+        <p className="font-semibold">You voted: {describeVote(mine.vote)}</p>
+        <p className="mt-1 text-graphite">A vote cannot be changed. The part is decided as soon as a second member casts the same vote.</p>
+      </div>
+    )
+  }
+
   if (stage.kind === 'ready') {
-    const action =
-      stage.choice === 'split'
+    const action = isPanel
+      ? encodeCurrentEscrowAction({
+          kind: 'castPanelVote',
+          dealId: deal.id,
+          milestoneIndex: part.position,
+          vote: encodeVote(stage.choice === 'split' ? { kind: 'split', supplierBps: stage.bps } : { kind: stage.choice }),
+        })
+      : stage.choice === 'split'
         ? encodeCurrentEscrowAction({ kind: 'resolveSplit', dealId: deal.id, milestoneIndex: part.position, supplierBps: stage.bps })
         : encodeCurrentEscrowAction({ kind: 'resolve', dealId: deal.id, milestoneIndex: part.position, toSupplier: stage.choice === 'supplier' })
     return (
       <div className="rounded-md border border-rule bg-sheet p-4">
-        <p className="mb-3 rounded-md border border-released/40 bg-released-wash px-3 py-2 text-[13px]">Your reasoning is stored where both sides can read it. Now record the decision; it cannot be changed.</p>
-        <TxFlow confirmLabel="Record my decision" tone="hold" steps={[{ label: 'Record the decision', action }]} onCancel={() => setStage({ kind: 'form' })} onDone={() => onDone()} />
+        <p className="mb-3 rounded-md border border-released/40 bg-released-wash px-3 py-2 text-[13px]">Your reasoning is stored where both sides can read it. Now record {isPanel ? 'your vote' : 'the decision'}; it cannot be changed.</p>
+        <TxFlow confirmLabel={isPanel ? 'Record my vote' : 'Record my decision'} tone="hold" steps={[{ label: isPanel ? 'Record the vote' : 'Record the decision', action }]} onCancel={() => setStage({ kind: 'form' })} onDone={() => onDone()} />
       </div>
     )
   }
@@ -73,7 +92,8 @@ export function DecidePanel({ deal, part, owner, onDone }: { deal: DealView; par
 
   return (
     <div className="rounded-md border border-rule bg-sheet p-4">
-      <p className="text-[15px] font-semibold">Your decision</p>
+      <p className="text-[15px] font-semibold">{isPanel ? 'Your vote' : 'Your decision'}</p>
+      {isPanel ? <p className="mt-1 text-[12.5px] text-graphite">Three arbiters vote. When two of you choose the same outcome, the part is decided at once. A split counts only if the supplier&apos;s share matches exactly.</p> : null}
       <div className="mt-3 space-y-2">
         {option('supplier', 'Release to the supplier', `The supplier is paid ${formatAmount(part.amount)} USDC.`)}
         {option('buyer', 'Refund to the buyer', `The buyer gets ${formatAmount(part.amount)} USDC back.`)}

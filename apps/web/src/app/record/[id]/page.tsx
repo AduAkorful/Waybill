@@ -122,8 +122,8 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
             <dd>{shortAddress(deal.buyer)}</dd>
             <dt>Supplier</dt>
             <dd>{shortAddress(deal.supplier)}</dd>
-            <dt>Arbiter</dt>
-            <dd>{shortAddress(deal.arbiter)}</dd>
+            <dt>{deal.panel ? 'Arbiter panel' : 'Arbiter'}</dt>
+            <dd>{deal.panel ? deal.panel.members.map(shortAddress).join(', ') : shortAddress(deal.arbiter)}</dd>
             <dt>Escrow contract</dt>
             <dd>
               <a className="underline" href={`${explorer}/address/${getBrowserNetwork().contracts.escrow}`} target="_blank" rel="noreferrer">

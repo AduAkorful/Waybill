@@ -160,8 +160,8 @@ export function Waybill({
               </div>
               <p className="border-t border-rule px-3.5 py-2.5 text-[12.5px] text-graphite">
                 <span className="label mr-2">Terms</span>
-                {terms?.template ? `${terms.template} · ` : ""}fee {deal.feeBps / 100}% ({formatAmount(feeTotal)}) · {feeWording[deal.feePayer].toLowerCase()} · arbiter{" "}
-                <span className="mono text-[11.5px]">{shortAddress(deal.arbiter)}</span>, {formatAmount(deal.arbiterFee)}
+                {terms?.template ? `${terms.template} · ` : ""}fee {deal.feeBps / 100}% ({formatAmount(feeTotal)}) · {feeWording[deal.feePayer].toLowerCase()} · {deal.panel ? "panel of three" : "arbiter"}{" "}
+                <span className="mono text-[11.5px]">{deal.panel ? deal.panel.members.map(shortAddress).join(", ") : shortAddress(deal.arbiter)}</span>, {formatAmount(deal.arbiterFee)}
               </p>
             </>
           ) : (
@@ -195,8 +195,8 @@ export function Waybill({
                 </span>
                 <span className="block text-graphite">{feeWording[deal.feePayer]}</span>
               </Box>
-              <Box n="06" label="Arbiter">
-                <span className="mono text-[12.5px]">{shortAddress(deal.arbiter)}</span>
+              <Box n="06" label={deal.panel ? "Arbiter panel" : "Arbiter"}>
+                <span className="mono text-[12.5px]">{deal.panel ? deal.panel.members.map(shortAddress).join(", ") : shortAddress(deal.arbiter)}</span>
                 <span className="mono block text-[12px] text-graphite">fee {formatAmount(deal.arbiterFee)} · prepaid by buyer</span>
               </Box>
               {terms?.template ? (

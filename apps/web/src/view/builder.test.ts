@@ -93,3 +93,36 @@ describe('building a deal', () => {
     if (!r.ok) expect(r.errors.join(' ')).toContain('not been checked')
   })
 })
+
+describe('a deal with a three-member panel', () => {
+  const p1 = '0x00000000000000000000000000000000000000f1'
+  const p2 = '0x00000000000000000000000000000000000000f2'
+  const p3 = '0x00000000000000000000000000000000000000f3'
+  const ok = { allowed: true, fee: 2_000_000n }
+  const panelForm = (members: string[]) => form({ arbiter: '', panel: members })
+  const build = (members: string[], checks = [ok, ok, ok] as ({ allowed: boolean; fee: bigint } | null)[], f = panelForm(members)) => buildDeal(f, buyer, limits, null, NOW, checks)
+
+  test('builds the panel arguments, and the first member is the arbiter whose fee applies', () => {
+    const r = build([p1, p2, p3], [ok, { allowed: true, fee: 9n }, { allowed: true, fee: 9n }])
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.deal.panel).toEqual([p1, p2, p3])
+      expect(r.deal.arbiter).toBe(p1)
+      expect(r.deal.arbiterFee).toBe(2_000_000n)
+    }
+  })
+  test('refuses duplicates, the buyer or supplier on the panel, and an attestor who sits on it', () => {
+    for (const members of [[p1, p1, p3], [buyer, p2, p3], [p1, supplier, p3]]) expect(build(members).ok).toBe(false)
+    const f = panelForm([p1, p2, p3])
+    f.parts[1]!.attestors = [p2]
+    expect(build([p1, p2, p3], undefined, f).ok).toBe(false)
+  })
+  test('every member must be on the approved list, and be checked first', () => {
+    expect(build([p1, p2, p3], [ok, { allowed: false, fee: 0n }, ok]).ok).toBe(false)
+    expect(build([p1, p2, p3], [ok, null, ok]).ok).toBe(false)
+  })
+  test('a single-arbiter deal carries no panel', () => {
+    const r = buildDeal(form(), buyer, limits, { allowed: true, fee: 0n }, NOW)
+    expect(r.ok && r.deal.panel).toBe(null)
+  })
+})

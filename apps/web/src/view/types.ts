@@ -104,6 +104,13 @@ export interface PendingChange {
   eta: bigint
 }
 
+/** A deal decided by three arbiters: any two who agree decide a disputed part. */
+export interface PanelView {
+  members: Address[]
+  /** Encoded votes by part position, then member (lowercase address). 0 or absent: not voted. */
+  votes: Record<number, Record<string, number>>
+}
+
 export interface DealView {
   id: bigint
   buyer: Address
@@ -111,7 +118,10 @@ export interface DealView {
   /** Zero until the supplier accepts */
   supplierPayout: Address | null
   buyerRefund: Address
+  /** The single arbiter, or the first panel member on a panel deal */
   arbiter: Address
+  /** Present only when the deal has a three-member panel */
+  panel: PanelView | null
   state: DealState
   totalAmount: bigint
   /** What the buyer deposits toward fees at funding (depends on who pays) */

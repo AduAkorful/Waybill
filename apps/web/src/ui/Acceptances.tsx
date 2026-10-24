@@ -1,5 +1,6 @@
 import { shortAddress } from "@/view/format";
 import type { DealView } from "@/view/types";
+import { panelAccepted } from "@/view/panel";
 import { Tick } from "./Sheet";
 
 interface Row {
@@ -17,7 +18,12 @@ export function acceptanceRows(deal: DealView): Row[] {
       rows.push({ key: `attestor-${t.index}`, role: `Attestor · stub ${t.index}`, who: shortAddress(t.attestor), done: t.attestorAccepted });
     }
   }
-  rows.push({ key: "arbiter", role: "Arbiter", who: shortAddress(deal.arbiter), done: deal.arbiterAccepted });
+  if (deal.panel) {
+    const accepted = panelAccepted(deal);
+    deal.panel.members.forEach((m, i) => rows.push({ key: `panel-${i}`, role: `Panel · arbiter ${i + 1}`, who: shortAddress(m), done: deal.arbiterAccepted || accepted?.[m.toLowerCase()] === true }));
+  } else {
+    rows.push({ key: "arbiter", role: "Arbiter", who: shortAddress(deal.arbiter), done: deal.arbiterAccepted });
+  }
   return rows;
 }
 

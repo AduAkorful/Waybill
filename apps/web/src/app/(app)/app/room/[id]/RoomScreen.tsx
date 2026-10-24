@@ -12,6 +12,7 @@ import { EvidenceList } from '@/ui/EvidenceList'
 import { Modal } from '@/ui/Modal'
 import { TxFlow } from '@/ui/TxFlow'
 import { formatAmount, formatDateTime, shortAddress, shortHash } from '@/view/format'
+import { describeVote, isArbiterOf, panelAccepted, panelOutcome, panelStanding } from '@/view/panel'
 import { disputeStage } from '@/view/room'
 import { describeEvent } from '@/view/timeline'
 import type { DealView, Tranche } from '@/view/types'
@@ -39,11 +40,13 @@ export function RoomScreen({ idText }: { idText: string }) {
 
   const d = read.deal
   const me = address.toLowerCase()
-  const who: Who = me === d.buyer.toLowerCase() ? 'buyer' : me === d.supplier.toLowerCase() ? 'supplier' : me === d.arbiter.toLowerCase() ? 'arbiter' : null
+  const who: Who = me === d.buyer.toLowerCase() ? 'buyer' : me === d.supplier.toLowerCase() ? 'supplier' : isArbiterOf(d, me) ? 'arbiter' : null
   if (who === null) return <Notice title="This wallet is not named in the deal" detail={`Signed in as ${shortAddress(address)}.`} />
 
   const decided = d.tranches.filter((t) => t.state === 'resolved' || t.state === 'disputed')
-  const needsAccept = who === 'arbiter' && d.state === 'proposed' && !d.arbiterAccepted
+  const accepted = panelAccepted(d)
+  // a panel member already counted as accepted is not asked again; without the history the escrow itself refuses a repeat
+  const needsAccept = who === 'arbiter' && d.state === 'proposed' && !d.arbiterAccepted && accepted?.[me] !== true
 
   return (
     <main className="mx-auto max-w-4xl px-4 pt-6 pb-24 md:px-8 md:pt-10">
@@ -53,13 +56,13 @@ export function RoomScreen({ idText }: { idText: string }) {
         {decided.length === 0 ? 'Nothing is disputed' : `${decided.filter((t) => t.state === 'disputed').length} open, ${decided.filter((t) => t.state === 'resolved').length} decided`}
       </h1>
       <p className="mt-1 text-[13.5px] text-graphite">
-        You are the {who}. Buyer <span className="mono">{shortAddress(d.buyer)}</span> · supplier <span className="mono">{shortAddress(d.supplier)}</span> · arbiter <span className="mono">{shortAddress(d.arbiter)}</span>
+        You are {who === 'arbiter' && d.panel ? 'on the panel' : `the ${who}`}. Buyer <span className="mono">{shortAddress(d.buyer)}</span> · supplier <span className="mono">{shortAddress(d.supplier)}</span> · {d.panel ? 'panel' : 'arbiter'} <span className="mono">{d.panel ? d.panel.members.map(shortAddress).join(', ') : shortAddress(d.arbiter)}</span>
       </p>
 
       {needsAccept ? (
         <div className="mt-6 rounded-md border border-rule bg-sheet p-4">
-          <p className="text-[15px] font-semibold">You are named as the arbiter of this deal</p>
-          <p className="mt-1 text-[13.5px] text-graphite">Accepting records only that you accept. You decide disputes on this deal, release, refund or split, and are paid your fee only if you decide in time. You can never send money to yourself.</p>
+          <p className="text-[15px] font-semibold">{d.panel ? 'You are named on the three-member panel of this deal' : 'You are named as the arbiter of this deal'}</p>
+          <p className="mt-1 text-[13.5px] text-graphite">Accepting records only that you accept. {d.panel ? 'With two other arbiters you decide disputes on this deal: when two of you vote the same way, that outcome applies. The arbiter fee is credited to the first member on the panel. ' : 'You decide disputes on this deal, release, refund or split, and are paid your fee only if you decide in time. '}You can never send money to yourself.</p>
           <button type="button" onClick={() => setDialog({ kind: 'accept' })} className="mt-3 rounded-md bg-held px-4 py-2.5 text-[14px] font-semibold text-sheet">Accept this role</button>
         </div>
       ) : null}
@@ -127,6 +130,8 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
           </dl>
         ) : null}
 
+        {deal.panel ? <PanelVotes deal={deal} part={part} /> : null}
+
         <div>
           <h2 className="label mb-2">Files and notes</h2>
           <EvidenceList dealId={deal.id} owner={owner} part={part.position} />
@@ -181,6 +186,26 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
         )}
       </aside>
     </section>
+  )
+}
+
+function PanelVotes({ deal, part }: { deal: DealView; part: Tranche }) {
+  const standing = panelStanding(deal, part)
+  const accepted = panelAccepted(deal)
+  return (
+    <div>
+      <h2 className="label mb-2">Panel votes · {panelOutcome(standing) === 'decided' ? 'decided' : 'two matching votes decide'}</h2>
+      <ul className="grid gap-px overflow-hidden rounded-md border border-rule bg-rule text-[13px]">
+        {standing.map((s) => (
+          <li key={s.member} className="flex flex-wrap items-baseline justify-between gap-2 bg-sheet px-3 py-2.5">
+            <span className="mono text-[12.5px]">{shortAddress(s.member)}</span>
+            <span className={s.vote === 0 ? 'text-graphite' : 'font-semibold'}>
+              {s.vote === 0 ? (accepted?.[s.member.toLowerCase()] === false ? 'Has not accepted the role' : 'Not voted') : describeVote(s.vote)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

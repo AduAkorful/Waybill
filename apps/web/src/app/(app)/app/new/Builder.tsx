@@ -43,13 +43,18 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   const [template, setTemplate] = useState<Template>(TEMPLATES[1]!)
   const [form, setForm] = useState<BuilderForm>(() => emptyForm(buyer, limits.minFeeBps, TEMPLATES[1]!))
   const arbiter = useArbiterCheck(form.arbiter)
+  const panelRead = [useArbiterCheck(form.panel[0] ?? ''), useArbiterCheck(form.panel[1] ?? ''), useArbiterCheck(form.panel[2] ?? '')]
+  const panelChecks = panelRead.map((r) => (r?.status === 'ready' ? r.value : null))
   const [signing, setSigning] = useState(false)
   const [created, setCreated] = useState<bigint | null>(null)
   const [lookup, setLookup] = useState('')
   const [now] = useState(() => Math.floor(Date.now() / 1000))
 
   const checked = arbiter?.status === 'ready' ? arbiter.value : null
-  const built = useMemo(() => buildDeal(form, buyer, limits, checked, Math.floor(Date.now() / 1000)), [form, buyer, limits, checked])
+  // the checks are new objects on every render, so key the memo on what they say
+  const checksKey = JSON.stringify(panelChecks.map((c) => (c ? [c.allowed, String(c.fee)] : null)))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const built = useMemo(() => buildDeal(form, buyer, limits, checked, Math.floor(Date.now() / 1000), panelChecks), [form, buyer, limits, checked, checksKey])
   const set = (patch: Partial<BuilderForm>) => setForm((f) => ({ ...f, ...patch }))
   const setPart = (i: number, patch: Partial<PartForm>) => setForm((f) => ({ ...f, parts: f.parts.map((p, j) => (j === i ? { ...p, ...patch } : p)) }))
   const pick = (t: Template) => {
@@ -60,8 +65,10 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   if (created !== null) return <ShareDeal dealId={created} supplier={form.supplier} />
 
   const total = built.ok ? built.deal.totalAmount : null
-  const arbiterFee = checked?.allowed ? checked.fee : 0n
-  const showErrors = form.total !== '' || form.supplier !== '' || form.arbiter !== ''
+  const isPanel = form.panel.length > 0
+  const leader = isPanel ? panelChecks[0] : checked
+  const arbiterFee = leader?.allowed ? leader.fee : 0n
+  const showErrors = form.total !== '' || form.supplier !== '' || form.arbiter !== '' || form.panel.some((m) => m !== '')
 
   return (
     <main className="mx-auto grid max-w-6xl gap-8 px-4 pt-6 pb-20 md:px-8 md:pt-10 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -99,24 +106,33 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
             <input id="refund" className={`${input} mono`} value={form.refund} onChange={(e) => set({ refund: e.target.value })} spellCheck={false} />
           </div>
           <div className="sm:col-span-2">
-            <label className="label block" htmlFor="arbiter">Arbiter&apos;s wallet</label>
-            {arbiters.arbiters.length > 0 ? (
-              <select aria-label="Choose an approved arbiter" className={`${input} mb-2`} value="" onChange={(e) => e.target.value && set({ arbiter: e.target.value })}>
-                <option value="">Choose from the approved list…</option>
-                {arbiters.arbiters.map((a) => (
-                  <option key={a.address} value={a.address}>{shortAddress(a.address)} · fee {formatAmount(a.fee)} USDC</option>
+            <fieldset>
+              <legend className="label">Who decides disputes</legend>
+              <div className="mt-1.5 flex flex-wrap gap-4 text-[13.5px]">
+                <label className="flex items-center gap-2"><input type="radio" name="arbiter-mode" checked={!isPanel} onChange={() => set({ panel: [] })} /> One arbiter</label>
+                <label className="flex items-center gap-2"><input type="radio" name="arbiter-mode" checked={isPanel} onChange={() => set({ panel: ['', '', ''] })} /> A panel of three (any two who agree decide)</label>
+              </div>
+            </fieldset>
+            {!isPanel ? (
+              <div className="mt-3">
+                <ArbiterField id="arbiter" label="Arbiter's wallet" value={form.arbiter} onChange={(v) => set({ arbiter: v })} check={arbiter} choices={arbiters} />
+              </div>
+            ) : (
+              <div className="mt-3 space-y-4">
+                {[0, 1, 2].map((i) => (
+                  <ArbiterField
+                    key={i}
+                    id={`panel-${i}`}
+                    label={i === 0 ? 'Panel arbiter 1 (receives the arbiter fee)' : `Panel arbiter ${i + 1}`}
+                    value={form.panel[i] ?? ''}
+                    onChange={(v) => set({ panel: form.panel.map((m, j) => (j === i ? v : m)) })}
+                    check={panelRead[i] ?? null}
+                    choices={arbiters}
+                  />
                 ))}
-              </select>
-            ) : null}
-            {arbiters.note ? <p className="mb-1 text-[12px] text-graphite">{arbiters.note}</p> : null}
-            <input id="arbiter" className={`${input} mono`} value={form.arbiter} onChange={(e) => set({ arbiter: e.target.value })} placeholder="0x… from the approved list" spellCheck={false} />
-            <p className="mt-1 text-[12px]" role="status">
-              {arbiter === null ? <span className="text-graphite">Decides disputes. Must be on the approved list.</span> : null}
-              {arbiter?.status === 'loading' ? <span className="text-graphite">Checking the approved list…</span> : null}
-              {arbiter?.status === 'error' ? <span className="text-hold">Could not check the list: {arbiter.message}</span> : null}
-              {arbiter?.status === 'ready' && arbiter.value.allowed ? <span className="text-released">On the approved list · fee {formatAmount(arbiter.value.fee)} USDC, paid only if they decide in time</span> : null}
-              {arbiter?.status === 'ready' && !arbiter.value.allowed ? <span className="text-hold">Not on the approved list.</span> : null}
-            </p>
+                <p className="text-[12px] text-graphite">All three must be on the approved list and must accept before you can fund. They vote on a disputed part; when two vote the same way it is decided at once.</p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -235,7 +251,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
             <p className="mt-2 mb-4 text-[13.5px] leading-relaxed">This records the terms on Arc. No money moves yet. You fund it once everyone has accepted.</p>
             <TxFlow
               confirmLabel="Create deal"
-              steps={[{ label: 'Create the deal', action: encodeCurrentEscrowAction({ kind: 'createDeal', ...built.deal }, getBrowserNetwork()) }]}
+              steps={[{ label: 'Create the deal', action: encodeCurrentEscrowAction(built.deal.panel ? { kind: 'createDealWithPanel', ...built.deal, panel: built.deal.panel } : { kind: 'createDeal', ...built.deal }, getBrowserNetwork()) }]}
               onCancel={() => setSigning(false)}
               onDone={async (hashes: Hex[]) => {
                 const hash = hashes[hashes.length - 1]!
@@ -265,6 +281,34 @@ function Small({ label, value, onChange }: { label: string; value: string; onCha
       <label className="label block">{label}
         <input className={`${input} mono`} inputMode="numeric" value={value} onChange={(e) => onChange(e.target.value)} />
       </label>
+    </div>
+  )
+}
+
+type ArbiterChoices = ReturnType<typeof useArbiterChoices>
+
+/** One arbiter wallet: a pick from the approved list or a pasted address, checked against the list contract. */
+function ArbiterField({ id, label, value, onChange, check, choices }: { id: string; label: string; value: string; onChange: (v: string) => void; check: ReturnType<typeof useArbiterCheck>; choices: ArbiterChoices }) {
+  return (
+    <div>
+      <label className="label block" htmlFor={id}>{label}</label>
+      {choices.arbiters.length > 0 ? (
+        <select aria-label={`Choose an approved arbiter for ${label}`} className={`${input} mb-2`} value="" onChange={(e) => e.target.value && onChange(e.target.value)}>
+          <option value="">Choose from the approved list…</option>
+          {choices.arbiters.map((a) => (
+            <option key={a.address} value={a.address}>{shortAddress(a.address)} · fee {formatAmount(a.fee)} USDC</option>
+          ))}
+        </select>
+      ) : null}
+      {choices.note ? <p className="mb-1 text-[12px] text-graphite">{choices.note}</p> : null}
+      <input id={id} className={`${input} mono`} value={value} onChange={(e) => onChange(e.target.value)} placeholder="0x… from the approved list" spellCheck={false} />
+      <p className="mt-1 text-[12px]" role="status">
+        {check === null ? <span className="text-graphite">Decides disputes. Must be on the approved list.</span> : null}
+        {check?.status === 'loading' ? <span className="text-graphite">Checking the approved list…</span> : null}
+        {check?.status === 'error' ? <span className="text-hold">Could not check the list: {check.message}</span> : null}
+        {check?.status === 'ready' && check.value.allowed ? <span className="text-released">On the approved list · fee {formatAmount(check.value.fee)} USDC, paid only if they decide in time</span> : null}
+        {check?.status === 'ready' && !check.value.allowed ? <span className="text-hold">Not on the approved list.</span> : null}
+      </p>
     </div>
   )
 }

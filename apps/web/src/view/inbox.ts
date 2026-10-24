@@ -1,6 +1,7 @@
 import type { Address } from 'viem'
 import { formatAmount } from './format'
 import { isClosed } from './derive'
+import { isArbiterOf, panelAccepted, panelStanding } from './panel'
 import type { DealView, Tranche } from './types'
 import type { Shell } from './wallet'
 
@@ -28,8 +29,11 @@ export function needsFrom(shell: Shell, d: DealView, wallet: Address): string | 
       return null
     }
     case 'arbiter':
-      if (d.state === 'proposed' && same(d.arbiter, wallet) && !d.arbiterAccepted) return 'Accept'
-      if (same(d.arbiter, wallet) && d.tranches.some((t) => t.state === 'disputed' && d.chainTime > t.responseDeadline && d.chainTime <= t.arbiterDeadline)) return 'Decide'
+      if (!isArbiterOf(d, wallet)) return null
+      if (d.state === 'proposed' && !d.arbiterAccepted && panelAccepted(d)?.[wallet.toLowerCase()] !== true) return 'Accept'
+      // a panel member who has already voted on a part has nothing left to do on it
+      const voted = (t: Tranche) => panelStanding(d, t).some((s) => same(s.member, wallet) && s.vote !== 0)
+      if (d.tranches.some((t) => t.state === 'disputed' && d.chainTime > t.responseDeadline && d.chainTime <= t.arbiterDeadline && !voted(t))) return 'Decide'
       return null
   }
 }

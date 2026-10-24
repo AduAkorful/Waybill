@@ -106,6 +106,24 @@ export const WAYBILL_ESCROW_ABI = [
   },
   {
     type: 'function',
+    name: 'getPanelMembers',
+    stateMutability: 'view',
+    inputs: [{ name: 'dealId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'address[3]' }],
+  },
+  {
+    type: 'function',
+    name: 'getPanelVote',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'dealId', type: 'uint256' },
+      { name: 'milestoneIndex', type: 'uint8' },
+      { name: 'member', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'uint32' }],
+  },
+  {
+    type: 'function',
     name: 'arbiterFeeBalance',
     stateMutability: 'view',
     inputs: [{ name: 'arbiter', type: 'address' }],
@@ -400,6 +418,38 @@ export function readMilestone(
     functionName: 'getMilestone',
     args: [dealId, milestoneIndex],
   })
+}
+
+/** The three panel members of a deal, or null for a single-arbiter deal (the escrow returns three zero addresses). */
+export async function readPanelMembers(
+  publicClient: PublicClient,
+  dealId: bigint,
+  network: WaybillNetworkManifest = getBrowserNetwork(),
+): Promise<readonly `0x${string}`[] | null> {
+  const members = (await publicClient.readContract({
+    address: network.contracts.escrow,
+    abi: WAYBILL_ESCROW_ABI,
+    functionName: 'getPanelMembers',
+    args: [dealId],
+  })) as readonly `0x${string}`[]
+  return members.every((m) => m.toLowerCase() === '0x0000000000000000000000000000000000000000') ? null : members
+}
+
+/** The encoded vote one panel member cast on one part; 0 means none yet. */
+export function readPanelVote(
+  publicClient: PublicClient,
+  dealId: bigint,
+  milestoneIndex: number,
+  member: `0x${string}`,
+  network: WaybillNetworkManifest = getBrowserNetwork(),
+) {
+  assertMilestoneIndex(milestoneIndex)
+  return publicClient.readContract({
+    address: network.contracts.escrow,
+    abi: WAYBILL_ESCROW_ABI,
+    functionName: 'getPanelVote',
+    args: [dealId, milestoneIndex, member],
+  }) as Promise<number>
 }
 
 /** The wallets named to confirm one part. */

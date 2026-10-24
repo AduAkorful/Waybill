@@ -1,6 +1,6 @@
 import type { Address, PublicClient } from 'viem'
 import type { WaybillNetworkManifest } from '@waybill/network/networks'
-import { readDeal, readMilestone, readPartAttestors, readPendingChange, readTrancheFee } from '@/integration/escrow'
+import { readDeal, readMilestone, readPanelMembers, readPanelVote, readPartAttestors, readPendingChange, readTrancheFee } from '@/integration/escrow'
 import {
   CONDITIONS,
   DEAL_STATES,
@@ -8,6 +8,7 @@ import {
   MILESTONE_STATES,
   type DealTerms,
   type DealView,
+  type PanelView,
   type PendingChange,
   type Tranche,
 } from './types'
@@ -55,6 +56,7 @@ export function toDealView(
   terms?: DealTerms,
   pending: { payout: PendingChange | null; refund: PendingChange | null } = { payout: null, refund: null },
   attestors: readonly (readonly Address[])[] = [],
+  panel: PanelView | null = null,
 ): DealView {
   if (milestones.length !== deal.milestoneCount || fees.length !== deal.milestoneCount) {
     throw new Error(`Deal ${id}: expected ${deal.milestoneCount} milestones, read ${milestones.length}`)
@@ -98,6 +100,7 @@ export function toDealView(
     supplierPayout: addressOrNull(deal.supplierPayout),
     buyerRefund: deal.buyerRefund,
     arbiter: deal.arbiter,
+    panel,
     state: word(DEAL_STATES, deal.state, 'deal state'),
     totalAmount: deal.totalAmount,
     prepaidFee: deal.prepaidFee,
@@ -126,13 +129,35 @@ export async function loadDealView(
 ): Promise<DealView> {
   const [deal, block] = await Promise.all([readDeal(client, id, network), client.getBlock()])
   const positions = Array.from({ length: deal.milestoneCount }, (_, i) => i)
-  const [milestones, fees, payout, refund, listed] = await Promise.all([
+  const [milestones, fees, payout, refund, listed, members] = await Promise.all([
     Promise.all(positions.map((i) => readMilestone(client, id, i, network))),
     Promise.all(positions.map((i) => readTrancheFee(client, id, i, network))),
     readPendingChange(client, id, 'payout', network),
     readPendingChange(client, id, 'refund', network),
     Promise.all(positions.map((i) => readPartAttestors(client, id, i, network))),
+    readPanelMembers(client, id, network),
   ])
+  const panel = members ? await loadPanel(client, network, id, members, milestones) : null
   const waiting = (c: { proposed: `0x${string}`; eta: bigint }): PendingChange | null => (c.proposed.toLowerCase() === ZERO ? null : c)
-  return toDealView(id, deal, milestones, fees, block.timestamp, terms, { payout: waiting(payout), refund: waiting(refund) }, listed)
+  return toDealView(id, deal, milestones, fees, block.timestamp, terms, { payout: waiting(payout), refund: waiting(refund) }, listed, panel)
+}
+
+/** Votes are read only for parts that are, or were, in dispute: nobody can vote on any other part. */
+async function loadPanel(
+  client: PublicClient,
+  network: WaybillNetworkManifest,
+  id: bigint,
+  members: readonly Address[],
+  milestones: readonly ChainMilestone[],
+): Promise<PanelView> {
+  const votes: PanelView['votes'] = {}
+  await Promise.all(
+    milestones.map(async (m, i) => {
+      const state = MILESTONE_STATES[m.state]
+      if (state !== 'disputed' && state !== 'resolved') return
+      const cast = await Promise.all(members.map((member) => readPanelVote(client, id, i, member, network)))
+      votes[i] = Object.fromEntries(members.map((member, k) => [member.toLowerCase(), cast[k]!]))
+    }),
+  )
+  return { members: [...members], votes }
 }
