@@ -237,11 +237,17 @@ describe('dispute room', () => {
       expect(disputeStage(p, 201n, early)).toBe('deadline_passed')
     }
   })
-  test('with the early rule, a response opens decisions straight away, up to the reset arbiter deadline', () => {
-    const r = { responseDeadline: 100n, arbiterDeadline: 150n, responseSubmitted: true }
-    expect(disputeStage(r, 1n, true)).toBe('decision_open')
+  test('with the early rule, a response opens decisions at decisionOpensAt (after the rebuttal day), up to the reset deadline', () => {
+    const r = { responseDeadline: 100n, arbiterDeadline: 150n, responseSubmitted: true, decisionOpensAt: 40n }
+    expect(disputeStage(r, 1n, true)).toBe('rebuttal_open')
+    expect(disputeStage(r, 39n, true)).toBe('rebuttal_open')
+    expect(disputeStage(r, 40n, true)).toBe('decision_open')
     expect(disputeStage(r, 150n, true)).toBe('decision_open')
     expect(disputeStage(r, 151n, true)).toBe('deadline_passed')
+  })
+  test('with the early rule, a responded part whose opening time was not read is never offered a decision', () => {
+    const r = { responseDeadline: 100n, arbiterDeadline: 150n, responseSubmitted: true }
+    expect(disputeStage(r, 120n, true)).toBe('rebuttal_open')
   })
   test('without the early rule (the current testnet escrow), a response does not open decisions before the window ends', () => {
     const r = { responseDeadline: 100n, arbiterDeadline: 200n, responseSubmitted: true }

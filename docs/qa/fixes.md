@@ -38,6 +38,25 @@ These come up in retests. Each has a reason. If one of them is wrong *for a diff
 | Console lines `Privy logout 400` and `sessions 401` after Sign out (SF-15) | The browser reports a failed network call to the wallet library's own server (the session had already ended there). A page cannot hide a failed request from the console, and the person is signed out either way. | – |
 | NF-19 message seen with Rabby (SF-17) | See batch 13: the app now checks the balance first, so the wallet is not opened. | – |
 
+## Batch 21 — 2026-10-24 (rebuttal day for disputes; terms checkbox)
+
+### The rule (product decision, in the contract)
+After the other side responds to a dispute, **the side who raised it has 24 hours to read and answer the response** before the arbiter (or panel) can decide. They can end that time early with **"I have nothing to add: let them decide now"**, which calls `waiveRebuttal`. Only the raiser can do this. The arbiter's full decision window then runs from when deciding opens. With no response, nothing changed: the arbiter decides after the 72-hour response window. A last-minute response can add at most one day to the whole dispute.
+
+- Contract: `waiveRebuttal(dealId, part)`, `getDecisionOpensAt(dealId, part)`, events `DecisionWindowSet` and `RebuttalWaived`, errors `RebuttalWindowOpen`, `NotDisputeRaiser`, `NoResponseYet` and `RebuttalAlreadyOver`. `getMilestone` is unchanged, so the app still reads the current testnet escrow. Full forge suite: 330 pass. Escrow runtime: 18,031 bytes.
+- **Not on testnet `0xcf08…`.** It needs a fresh deploy. On testnet the app keeps the old wording: the arbiter decides after the 72-hour window. On the fork (after redeploying it with this code) the app shows the rebuttal day.
+
+### What QA will see (on an escrow with the rule)
+- **Dispute room, raiser:** "The other side has responded. You have until … to read it and add anything", with **Answer with evidence** and **I have nothing to add: let them decide now** (a confirm dialog, one transaction, no money moves). Their inbox shows **Answer** while the day runs.
+- **Dispute room, responder:** "You have responded. The buyer/supplier may answer until …; then the arbiter decides."
+- **Arbiter:** "The other side has responded. The … may answer until …. You can decide then, or sooner if they say they have nothing to add." The decide panel appears when the time ends or when the raiser waives.
+- **History:** "Decisions on part N open …; the arbiter decides by …" and "The side who raised the dispute … has nothing to add".
+- **Email:** the arbiter gets "You can decide the dispute on deal N" when the raiser waives.
+
+### Terms
+- `/legal` has a new **How disputes work** section. It only describes what the escrow enforces: who can dispute and when, 72 hours to respond, the rebuttal rule where it applies, evidence, decisions and splits, the default outcome, and withdrawal. It is still a draft for counsel; there are no full terms and conditions yet.
+- **Create deal** now asks you to tick "I am using Waybill for business, and I have read the terms…" before the wallet opens. The page already said creating a deal confirms business use; now it does. Once ticked, the box stays ticked, so a transaction already in the wallet is never interrupted.
+
 ## Batch 20 — 2026-10-24 (report §31–§32: retest of batch 19, deal 285, operator, fork work audit)
 
 The fork-session work from §31.9–§32.9 was audited and is now committed, along with the fixes below.

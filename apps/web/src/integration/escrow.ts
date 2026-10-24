@@ -113,6 +113,16 @@ export const WAYBILL_ESCROW_ABI = [
   },
   {
     type: 'function',
+    name: 'getDecisionOpensAt',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'dealId', type: 'uint256' },
+      { name: 'milestoneIndex', type: 'uint8' },
+    ],
+    outputs: [{ name: '', type: 'uint64' }],
+  },
+  {
+    type: 'function',
     name: 'getPanelVote',
     stateMutability: 'view',
     inputs: [
@@ -450,6 +460,25 @@ export function readPanelVote(
     functionName: 'getPanelVote',
     args: [dealId, milestoneIndex, member],
   }) as Promise<number>
+}
+
+/**
+ * When decisions open on a responded dispute (0 while there is no response). Only an escrow deployed with the
+ * rebuttal rule has this function; call it only where the network manifest says `earlyResolve`.
+ */
+export function readDecisionOpensAt(
+  publicClient: PublicClient,
+  dealId: bigint,
+  milestoneIndex: number,
+  network: WaybillNetworkManifest = getBrowserNetwork(),
+) {
+  assertMilestoneIndex(milestoneIndex)
+  return publicClient.readContract({
+    address: network.contracts.escrow,
+    abi: WAYBILL_ESCROW_ABI,
+    functionName: 'getDecisionOpensAt',
+    args: [dealId, milestoneIndex],
+  }) as Promise<bigint>
 }
 
 /** The wallets named to confirm one part. */

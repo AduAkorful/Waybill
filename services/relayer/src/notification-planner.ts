@@ -92,6 +92,9 @@ export function planNotifications(event: PlannedEvent, parties: readonly Planned
       tell([...buyer, ...supplier], lower(event.payload.responder) === supplier[0] ? 'buyer' : 'supplier', 'dispute_response', {}, undefined, [actor])
       tell(arbiters, 'arbiter', 'dispute_response')
       break
+    case 'RebuttalWaived':
+      tell(arbiters, 'arbiter', 'rebuttal_waived')
+      break
     case 'DisputeWithdrawn':
       tell(supplier, 'supplier', 'dispute_withdrawn')
       tell(arbiters, 'arbiter', 'dispute_withdrawn')

@@ -13,10 +13,15 @@ const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 const awaitsBuyerConfirm = (t: Tranche) => t.state === 'waiting' && t.condition === 'buyer_approval'
 
 /** What this wallet has to do next on a deal, in one word, or null when nothing is waiting on it. Read from the escrow only. */
+/** The wallet raised this dispute, the other side responded, and its day to answer is still running. */
+const answerDue = (t: Tranche, d: DealView, wallet: Address) =>
+  t.state === 'disputed' && t.disputeRaiser !== null && same(t.disputeRaiser, wallet) && disputeStage(t, d.chainTime, earlyResolve()) === 'rebuttal_open'
+
 export function needsFrom(shell: Shell, d: DealView, wallet: Address): string | null {
   if (d.state === 'settled' || d.state === 'cancelled') return null
   switch (shell) {
     case 'buyer':
+      if (d.tranches.some((t) => answerDue(t, d, wallet))) return 'Answer'
       if (d.tranches.some((t) => t.state === 'in_review')) return 'Review'
       if (d.state === 'accepted') return 'Fund'
       if (d.tranches.some((t) => t.state === 'refundable')) return 'Refund'
@@ -27,6 +32,7 @@ export function needsFrom(shell: Shell, d: DealView, wallet: Address): string | 
       if (d.tranches.some((t) => t.state === 'disputed' && !t.responseSubmitted && t.disputeRaiser !== null && !same(t.disputeRaiser, wallet))) {
         return 'Respond'
       }
+      if (d.tranches.some((t) => answerDue(t, d, wallet))) return 'Answer'
       return null
     case 'attestor': {
       const mine = d.tranches.filter((t) => t.attestors.some((a) => same(a, wallet)))

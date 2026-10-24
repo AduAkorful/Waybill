@@ -34,6 +34,12 @@ describe('who is told', () => {
     const panel: PlannedParty[] = [...parties, { address: A(5), role: 'panel', milestoneIndex: null }, { address: A(3), role: 'panel', milestoneIndex: null }]
     expect(who('DealFunded', {}, undefined, panel)).toEqual(['2:supplier:funded', '3:arbiter:funded', '4:attestor:funded', '5:arbiter:funded'])
   })
+  test('a raiser waiving their rebuttal tells only the arbiter, who can now decide', () => {
+    expect(who('RebuttalWaived', { raiser: A(1) }, 0)).toEqual(['3:arbiter:rebuttal_waived'])
+    const mail = renderEmail('rebuttal_waived', { deal: '7', part: '1', role: 'arbiter' }, 'https://app.example')!
+    expect(mail.subject).toBe('You can decide the dispute on deal 7 part 1')
+    expect(mail.text).toContain('/app/room/7')
+  })
   test('unrelated events tell nobody', () => {
     expect(who('FeesWithdrawn')).toEqual([])
     expect(who('NewDealsPaused')).toEqual([])

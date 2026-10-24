@@ -1,6 +1,6 @@
 import type { Address, PublicClient } from 'viem'
 import type { WaybillNetworkManifest } from '@waybill/network/networks'
-import { readDeal, readMilestone, readPanelMembers, readPanelVote, readPartAttestors, readPendingChange, readTrancheFee } from '@/integration/escrow'
+import { readDecisionOpensAt, readDeal, readMilestone, readPanelMembers, readPanelVote, readPartAttestors, readPendingChange, readTrancheFee } from '@/integration/escrow'
 import {
   CONDITIONS,
   DEAL_STATES,
@@ -140,7 +140,13 @@ export async function loadDealView(
   ])
   const panel = members ? await loadPanel(client, network, id, members, milestones) : null
   const waiting = (c: { proposed: `0x${string}`; eta: bigint }): PendingChange | null => (c.proposed.toLowerCase() === ZERO ? null : c)
-  return toDealView(id, deal, milestones, fees, block.timestamp, await terms, { payout: waiting(payout), refund: waiting(refund) }, listed, panel)
+  const view = toDealView(id, deal, milestones, fees, block.timestamp, await terms, { payout: waiting(payout), refund: waiting(refund) }, listed, panel)
+  if (!network.earlyResolve) return view
+  // only an escrow with the rebuttal rule can say when decisions open; read it for responded disputes only
+  const opens = await Promise.all(
+    view.tranches.map((t) => (t.state === 'disputed' && t.responseSubmitted ? readDecisionOpensAt(client, id, t.position, network) : Promise.resolve(null))),
+  )
+  return { ...view, tranches: view.tranches.map((t, i) => (opens[i] === null ? t : { ...t, decisionOpensAt: opens[i]! })) }
 }
 
 /** Votes are read only for parts that are, or were, in dispute: nobody can vote on any other part. */

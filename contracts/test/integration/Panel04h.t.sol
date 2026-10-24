@@ -865,14 +865,18 @@ contract Panel04h is Test {
     }
 
     // =========================================================================
-    // 31.7 Early resolve on panel deals
+    // 31.7 + 33: on panel deals a response opens voting after the raiser's rebuttal day, or at once on a waiver
     // =========================================================================
 
-    function testEarly_Panel_TwoOfThreeImmediatelyAfterResponse() public {
+    function testRebuttal_Panel_TwoOfThreeAfterTheRebuttalDay() public {
         uint256 dealId = _createPanelDeal();
         _acceptAndFund(dealId);
         vm.prank(buyer); escrow.dispute(dealId, 0, keccak256("ev"));
         vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("resp"));
+        vm.prank(p0);
+        vm.expectRevert(IWaybillEscrow.RebuttalWindowOpen.selector);
+        escrow.castPanelVote(dealId, 0, VOTE_SUPPLIER);
+        vm.warp(escrow.getDecisionOpensAt(dealId, 0));
         uint256 supBefore = usdc.balanceOf(supplierPay);
         vm.prank(p0); escrow.castPanelVote(dealId, 0, VOTE_SUPPLIER);
         vm.prank(p2); escrow.castPanelVote(dealId, 0, VOTE_SUPPLIER);
@@ -880,11 +884,12 @@ contract Panel04h is Test {
         assertEq(usdc.balanceOf(supplierPay) - supBefore, TOTAL);
     }
 
-    function testEarly_Panel_SplitDisagreeThenMatch_AfterResponse() public {
+    function testRebuttal_Panel_SplitDisagreeThenMatch_AfterWaiver() public {
         uint256 dealId = _createPanelDeal();
         _acceptAndFund(dealId);
         vm.prank(buyer); escrow.dispute(dealId, 0, keccak256("ev"));
         vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("resp"));
+        vm.prank(buyer); escrow.waiveRebuttal(dealId, 0);
         vm.prank(p0); escrow.castPanelVote(dealId, 0, VOTE_BUYER);
         vm.prank(p1); escrow.castPanelVote(dealId, 0, voteSplit(6_000));
         assertEq(uint8(escrow.getMilestone(dealId, 0).state), uint8(IWaybillEscrow.MilestoneState.DISPUTED));

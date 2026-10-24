@@ -261,6 +261,10 @@ contract WaybillEscrow is IWaybillEscrow, WaybillStorage, EIP712, ReentrancyGuar
         DisputeLogic.executeWithdrawDispute(dealId, milestoneIndex);
     }
 
+    function waiveRebuttal(uint256 dealId, uint8 milestoneIndex) external override {
+        DisputeLogic.executeWaiveRebuttal(dealId, milestoneIndex);
+    }
+
     function resolve(uint256 dealId, uint8 milestoneIndex, bool toSupplier) external override nonReentrant {
         DisputeLogic.executeResolve(address(usdc), address(_registryContract), dealId, milestoneIndex, toSupplier);
     }
@@ -422,6 +426,11 @@ contract WaybillEscrow is IWaybillEscrow, WaybillStorage, EIP712, ReentrancyGuar
     /// @notice (04h) Returns the encoded vote for a panel member on a given milestone (0 = not voted).
     function getPanelVote(uint256 dealId, uint8 milestoneIndex, address member) external view override returns (uint32) {
         return _layout().panelVotes[dealId][milestoneIndex][member];
+    }
+
+    /// @inheritdoc IWaybillEscrow
+    function getDecisionOpensAt(uint256 dealId, uint8 milestoneIndex) external view override returns (uint64) {
+        return _layout().decisionOpensAt[dealId][milestoneIndex];
     }
 
     /// @notice (04h) True if this deal uses a 3-member panel.

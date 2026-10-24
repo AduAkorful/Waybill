@@ -65,6 +65,10 @@ export const CURRENT_ESCROW_ACTION_ABI = ([
       { name: 'dealId', type: 'uint256' },
       { name: 'milestoneIndex', type: 'uint8' },
     ]],
+    ['waiveRebuttal', [
+      { name: 'dealId', type: 'uint256' },
+      { name: 'milestoneIndex', type: 'uint8' },
+    ]],
     ['retryArbiterFeeRefund', [{ name: 'dealId', type: 'uint256' }]],
     ['withdrawArbiterFee', [{ name: 'dealId', type: 'uint256' }]],
     ['rejectPayoutChange', [{ name: 'dealId', type: 'uint256' }]],
@@ -215,6 +219,7 @@ export type CurrentEscrowAction =
   | { kind: 'respondToDispute'; evidenceHash: Hex } & MilestoneAction
   | { kind: 'appendDisputeEvidence'; evidenceHash: Hex } & MilestoneAction
   | { kind: 'withdrawDispute' } & MilestoneAction
+  | { kind: 'waiveRebuttal' } & MilestoneAction
   | { kind: 'resolve'; toSupplier: boolean } & MilestoneAction
   | { kind: 'resolveSplit'; supplierBps: number } & MilestoneAction
   | { kind: 'castPanelVote'; vote: number } & MilestoneAction
@@ -384,6 +389,9 @@ export function encodeCurrentEscrowAction(
     case 'withdrawDispute':
       assertMilestoneAction(action)
       return encode('withdrawDispute', [action.dealId, action.milestoneIndex], network)
+    case 'waiveRebuttal':
+      assertMilestoneAction(action)
+      return encode('waiveRebuttal', [action.dealId, action.milestoneIndex], network)
     case 'resolve':
       assertMilestoneAction(action)
       return encode('resolve', [action.dealId, action.milestoneIndex, action.toSupplier], network)

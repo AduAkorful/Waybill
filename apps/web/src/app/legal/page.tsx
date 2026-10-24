@@ -1,3 +1,4 @@
+import { earlyResolve } from '@/integration/network'
 import type { Metadata } from 'next'
 import { PublicShell } from '@/ui/PublicShell'
 
@@ -10,6 +11,19 @@ export const metadata: Metadata = {
  * Plain statements of how the product behaves today. They promise nothing the software does not do: where a policy
  * (retention periods, a security contact) is not decided yet, the text says so instead of inventing one.
  */
+/** What happens after a response depends on the escrow this site uses; say only what that escrow enforces. */
+function afterResponse(): string {
+  let early = false
+  try {
+    early = earlyResolve()
+  } catch {
+    // no network configured at build: describe the rule of the current testnet escrow
+  }
+  return early
+    ? 'After a response, the side who raised the dispute has 24 hours to answer it, and the arbiter can decide once that time ends, or sooner if they say they have nothing to add. With no response, the arbiter decides after the response time ends.'
+    : 'The arbiter can decide once that time has ended, whether or not a response was filed.'
+}
+
 const sections = [
   {
     id: 'terms',
@@ -21,6 +35,18 @@ const sections = [
       'Attestors sign narrow, templated statements. Waybill does not inspect goods and does not guarantee what an attestor confirms.',
       'Early-access limits on deal size and on the total held in escrow apply and are shown in the product. This service may currently run on a test network with test money.',
       'The details a buyer records about goods and people are kept by Waybill, not by the contract, and the contract does not enforce them.',
+    ],
+  },
+  {
+    id: 'disputes',
+    title: 'How disputes work',
+    points: [
+      'A buyer can dispute a part while it is in review. A supplier can dispute a part that is overdue, during its grace period. A dispute freezes only that part; the others carry on.',
+      `The other side has 72 hours to respond with their side and files. ${afterResponse()}`,
+      'Both sides can add evidence until the decision. Files are encrypted, and only the people named in the deal and the arbiter can read them.',
+      'The arbiter, or any two of a three-member panel who agree, decides the frozen part: pay the supplier, refund the buyer, or split it. The written reasoning is stored with the dispute files for both sides to read.',
+      'If no decision is made by the deadline shown on the deal, a default applies: a dispute the buyer raised is refunded to the buyer, and one the supplier raised is paid to the supplier. The arbiter fee then goes back to the buyer.',
+      'The buyer can withdraw a dispute they raised at any time before it is decided.',
     ],
   },
   {

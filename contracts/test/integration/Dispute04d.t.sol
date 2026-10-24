@@ -564,23 +564,76 @@ contract Dispute04d is Test {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 31.7 Early resolve: arbiter may decide as soon as the counterparty responds
+    // 31.7 + 33: a response opens decisions after the raiser's 24h rebuttal (or at once if the raiser waives it)
     // ─────────────────────────────────────────────────────────────────────────
 
-    function testEarly_resolveImmediatelyAfterResponse() public {
+    uint64 internal constant REBUTTAL = 24 hours;
+
+    function testRebuttal_responseOpensDecisionsAfterOneDay() public {
         (uint256 dealId,) = _setup_buyerDispute();
         vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("sup-resp"));
+        uint64 opens = escrow.getDecisionOpensAt(dealId, 0);
+        assertEq(opens, uint64(block.timestamp) + REBUTTAL, "opens a day after the response");
+        vm.prank(arbiter);
+        vm.expectRevert(IWaybillEscrow.RebuttalWindowOpen.selector);
+        escrow.resolve(dealId, 0, true);
+        vm.warp(uint256(opens) - 1);
+        vm.prank(arbiter);
+        vm.expectRevert(IWaybillEscrow.RebuttalWindowOpen.selector);
+        escrow.resolve(dealId, 0, true);
+        vm.warp(opens);
         uint256 supBefore = usdc.balanceOf(supPay);
         vm.prank(arbiter); escrow.resolve(dealId, 0, true);
         assertGt(usdc.balanceOf(supPay) - supBefore, 0, "supplier paid");
         assertEq(uint8(escrow.getDeal(dealId).state), uint8(IWaybillEscrow.DealState.SETTLED), "settled");
     }
 
-    function testEarly_resolveSplitImmediatelyAfterResponse_supplierRaised() public {
+    function testRebuttal_waiverLetsTheArbiterDecideAtOnce() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("sup-resp"));
+        vm.expectEmit(true, true, false, true, address(escrow));
+        emit IWaybillEscrow.RebuttalWaived(dealId, 0, buyer);
+        vm.expectEmit(true, true, false, true, address(escrow));
+        emit IWaybillEscrow.DecisionWindowSet(dealId, 0, uint64(block.timestamp), uint64(block.timestamp) + uint64(ARB_HOURS) * 1 hours);
+        vm.prank(buyer); escrow.waiveRebuttal(dealId, 0);
+        assertEq(escrow.getDecisionOpensAt(dealId, 0), uint64(block.timestamp));
+        assertEq(escrow.getMilestone(dealId, 0).arbiterDeadline, uint64(block.timestamp) + uint64(ARB_HOURS) * 1 hours, "full window from now");
+        vm.prank(arbiter); escrow.resolve(dealId, 0, true);
+        assertEq(uint8(escrow.getMilestone(dealId, 0).state), uint8(IWaybillEscrow.MilestoneState.RESOLVED));
+    }
+
+    function testRebuttal_supplierRaised_supplierWaivesThenSplit() public {
         uint256 dealId = _setup_supplierDispute();
         vm.prank(buyer); escrow.respondToDispute(dealId, 0, keccak256("buy-resp"));
+        vm.prank(arbiter);
+        vm.expectRevert(IWaybillEscrow.RebuttalWindowOpen.selector);
+        escrow.resolveSplit(dealId, 0, 4_000);
+        vm.prank(supplier); escrow.waiveRebuttal(dealId, 0);
         vm.prank(arbiter); escrow.resolveSplit(dealId, 0, 4_000);
         assertEq(uint8(escrow.getMilestone(dealId, 0).state), uint8(IWaybillEscrow.MilestoneState.RESOLVED));
+    }
+
+    function testRebuttal_onlyTheRaiserMayWaive() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
+        address[3] memory others = [supplier, arbiter, stranger];
+        for (uint256 i; i < 3; i++) {
+            vm.prank(others[i]);
+            vm.expectRevert(IWaybillEscrow.NotDisputeRaiser.selector);
+            escrow.waiveRebuttal(dealId, 0);
+        }
+    }
+
+    function testRebuttal_waiveNeedsAResponseAndOpenRebuttal() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        vm.prank(buyer);
+        vm.expectRevert(IWaybillEscrow.NoResponseYet.selector);
+        escrow.waiveRebuttal(dealId, 0);
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
+        vm.warp(escrow.getDecisionOpensAt(dealId, 0));
+        vm.prank(buyer);
+        vm.expectRevert(IWaybillEscrow.RebuttalAlreadyOver.selector);
+        escrow.waiveRebuttal(dealId, 0);
     }
 
     function testEarly_blockedWithoutResponseInsideWindow() public {
@@ -595,6 +648,7 @@ contract Dispute04d is Test {
         (uint256 dealId,) = _setup_buyerDispute();
         IWaybillEscrow.Milestone memory m = escrow.getMilestone(dealId, 0);
         assertFalse(m.responseSubmitted);
+        assertEq(escrow.getDecisionOpensAt(dealId, 0), 0, "no response, no rebuttal time");
         vm.warp(uint256(m.responseDeadline) + 1);
         vm.prank(arbiter); escrow.resolve(dealId, 0, false);
         assertEq(uint8(escrow.getMilestone(dealId, 0).state), uint8(IWaybillEscrow.MilestoneState.RESOLVED));
@@ -613,16 +667,16 @@ contract Dispute04d is Test {
         escrow.resolve(dealId, 0, true);
     }
 
-    function testEarly_arbiterDeadlineReanchoredOnResponse() public {
+    function testRebuttal_arbiterDeadlineRunsFromWhenDecisionsOpen() public {
         (uint256 dealId,) = _setup_buyerDispute();
         vm.warp(block.timestamp + 10 hours);
+        uint64 opens = uint64(block.timestamp) + REBUTTAL;
         vm.expectEmit(true, true, false, true, address(escrow));
-        emit IWaybillEscrow.ArbiterDeadlineReset(dealId, 0, uint64(block.timestamp) + uint64(ARB_HOURS) * 1 hours);
+        emit IWaybillEscrow.DecisionWindowSet(dealId, 0, opens, opens + uint64(ARB_HOURS) * 1 hours);
         vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
         IWaybillEscrow.Milestone memory m = escrow.getMilestone(dealId, 0);
-        assertEq(m.arbiterDeadline, uint64(block.timestamp) + uint64(ARB_HOURS) * 1 hours, "re-anchored");
-        assertLt(m.arbiterDeadline, m.responseDeadline + uint64(ARB_HOURS) * 1 hours, "never extended");
-        // default blocked until new deadline, then allowed; arbiter blocked after it
+        assertEq(m.arbiterDeadline, opens + uint64(ARB_HOURS) * 1 hours, "full arbiter window after the rebuttal");
+        // default blocked until the deadline, then allowed; arbiter blocked after it
         vm.warp(m.arbiterDeadline);
         vm.expectRevert(IWaybillEscrow.ArbiterDeadlineActive.selector);
         escrow.applyDefault(dealId, 0);
@@ -632,6 +686,14 @@ contract Dispute04d is Test {
         escrow.resolve(dealId, 0, true);
         escrow.applyDefault(dealId, 0);
         assertEq(uint8(escrow.getMilestone(dealId, 0).state), uint8(IWaybillEscrow.MilestoneState.RESOLVED));
+    }
+
+    function testRebuttal_lastMinuteResponseExtendsByAtMostTheRebuttal() public {
+        (uint256 dealId,) = _setup_buyerDispute();
+        IWaybillEscrow.Milestone memory before = escrow.getMilestone(dealId, 0);
+        vm.warp(before.responseDeadline);
+        vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("late"));
+        assertEq(escrow.getMilestone(dealId, 0).arbiterDeadline, before.arbiterDeadline + REBUTTAL, "at most one extra day");
     }
 
     function testEarly_noResponseDeadlineUnchanged_defaultPath() public {
@@ -648,26 +710,30 @@ contract Dispute04d is Test {
         vm.prank(buyer); escrow.withdrawDispute(dealId, 0);
         IWaybillEscrow.Milestone memory m = escrow.getMilestone(dealId, 0);
         assertFalse(m.responseSubmitted, "reset on withdraw");
+        assertEq(escrow.getDecisionOpensAt(dealId, 0), 0, "rebuttal reset on withdraw");
         // after withdraw the milestone is no longer disputed; arbiter cannot act
         vm.prank(arbiter);
         vm.expectRevert(IWaybillEscrow.NotDisputed.selector);
         escrow.resolve(dealId, 0, true);
     }
 
-    function testFuzz_Early_gateMatchesResponseOrWindow(uint32 dt, bool respond) public {
+    function testFuzz_Rebuttal_gateMatchesResponseRebuttalOrWindow(uint32 dt, uint32 later, bool respond, bool waive) public {
         (uint256 dealId,) = _setup_buyerDispute();
         IWaybillEscrow.Milestone memory m = escrow.getMilestone(dealId, 0);
         uint256 span = uint256(m.responseDeadline) - block.timestamp;
         dt = uint32(bound(dt, 0, span + 1 hours));
+        later = uint32(bound(later, 0, 30 hours));
         if (respond) {
             vm.warp(block.timestamp + (dt > span ? span : dt));
             vm.prank(supplier); escrow.respondToDispute(dealId, 0, keccak256("r"));
+            if (waive) { vm.prank(buyer); escrow.waiveRebuttal(dealId, 0); }
+            vm.warp(block.timestamp + later);
         } else {
             vm.warp(block.timestamp + dt);
         }
-        bool expectOk = respond || block.timestamp > m.responseDeadline;
+        bool ok = respond ? block.timestamp >= escrow.getDecisionOpensAt(dealId, 0) : block.timestamp > m.responseDeadline;
         vm.prank(arbiter);
-        if (!expectOk) vm.expectRevert(IWaybillEscrow.ResponseWindowOpen.selector);
+        if (!ok) vm.expectRevert(respond ? IWaybillEscrow.RebuttalWindowOpen.selector : IWaybillEscrow.ResponseWindowOpen.selector);
         escrow.resolve(dealId, 0, true);
     }
 }

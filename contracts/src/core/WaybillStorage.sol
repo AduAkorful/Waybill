@@ -101,6 +101,11 @@ abstract contract WaybillStorage {
         mapping(uint256 => mapping(address => bool))                      panelMemberAccepted;
         mapping(uint256 => uint8)                                         panelAcceptCount;
         mapping(uint256 => mapping(uint8 => mapping(address => uint32))) panelVotes;
+
+        // ── (33) Rebuttal window ──────────────────────────────────────────────
+        // decisionOpensAt[dealId][milestoneIndex] — once the other side responds, the earliest time the arbiter or
+        // panel may decide (response + REBUTTAL_PERIOD, or earlier if the raiser waives). 0 while no response.
+        mapping(uint256 => mapping(uint8 => uint64))                      decisionOpensAt;
     }
 
     // ── timelock structs (kept here so Layout compiles) ──────────────────────

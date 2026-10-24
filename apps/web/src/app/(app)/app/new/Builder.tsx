@@ -69,8 +69,13 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   // a click on Create while something is still wrong must answer, not do nothing
   const [attempted, setAttempted] = useState(false)
   const [flash, setFlash] = useState(false)
+  // the terms page says creating a deal confirms business use; this is where that is confirmed
+  const [agreed, setAgreed] = useState(false)
   const tryCreate = () => {
-    if (built.ok) return setFrozen(built)
+    if (built.ok) {
+      setAgreed(false)
+      return setFrozen(built)
+    }
     setAttempted(true)
     requestAnimationFrame(() => {
       const list = document.getElementById('build-problems')
@@ -349,6 +354,19 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
           <>
             <h2 className="text-[19px] font-semibold">Create this deal</h2>
             <p className="mt-2 mb-4 text-[13.5px] leading-relaxed">This records the terms on Arc. No money moves yet. You fund it once everyone has accepted.</p>
+            <label className="mb-4 flex items-start gap-2.5 text-[13.5px]">
+              <input type="checkbox" className="mt-1 h-4 w-4 shrink-0" checked={agreed} disabled={agreed} onChange={(e) => setAgreed(e.target.checked)} aria-describedby={agreed ? undefined : "agree-help"} />
+              <span>
+                I am using Waybill for business, and I have read the{' '}
+                <Link href="/legal" target="_blank" className="underline">terms, privacy and security</Link> page, including how disputes are decided.
+              </span>
+            </label>
+            {!agreed ? (
+              <>
+                <p id="agree-help" className="text-[12.5px] text-graphite">Tick the box to continue.</p>
+                <button type="button" onClick={() => setFrozen(null)} className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-rule text-[13.5px] font-semibold text-ink hover:bg-paper">Cancel</button>
+              </>
+            ) : (
             <TxFlow
               confirmLabel="Create deal"
               steps={[{ label: 'Create the deal', action: encodeCurrentEscrowAction(frozen.deal.panel ? { kind: 'createDealWithPanel', ...frozen.deal, panel: frozen.deal.panel } : { kind: 'createDeal', ...frozen.deal }, getBrowserNetwork()) }]}
@@ -368,6 +386,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                 }
               }}
             />
+            )}
           </>
         ) : null}
       </Modal>

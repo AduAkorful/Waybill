@@ -91,10 +91,12 @@ export function DealScreen({ idText }: { idText: string }) {
             <p className="font-semibold text-hold">{t.buyerRaisedDispute ? 'You disputed this part.' : 'The supplier disputed this part.'}</p>
             <p className="mt-1 text-[12.5px] text-graphite">
               {t.responseSubmitted
-                ? earlyResolve()
-                  ? 'The other side has responded, so the arbiter can decide now. Other parts are not affected.'
-                  : <>The other side has responded. The arbiter can decide after {formatUntil(t.responseDeadline, d.chainTime)}. Other parts are not affected.</>
-                : <>{t.buyerRaisedDispute ? 'The supplier' : 'You'} can respond until {formatUntil(t.responseDeadline, d.chainTime)}. The arbiter can decide after that{earlyResolve() ? '; a response lets them decide straight away' : ''}. Other parts are not affected.</>}
+                ? disputeStage(t, d.chainTime, earlyResolve()) === 'rebuttal_open'
+                  ? <>The other side has responded. {t.buyerRaisedDispute ? 'You' : 'The supplier'} may answer{t.decisionOpensAt !== undefined ? ` until ${formatUntil(t.decisionOpensAt, d.chainTime)}` : ''}; then the arbiter decides. Other parts are not affected.</>
+                  : earlyResolve()
+                    ? 'The other side has responded, so the arbiter can decide now. Other parts are not affected.'
+                    : <>The other side has responded. The arbiter can decide after {formatUntil(t.responseDeadline, d.chainTime)}. Other parts are not affected.</>
+                : <>{t.buyerRaisedDispute ? 'The supplier' : 'You'} can respond until {formatUntil(t.responseDeadline, d.chainTime)}. The arbiter can decide after that{earlyResolve() ? '; after a response, the side who raised it gets a day to answer first' : ''}. Other parts are not affected.</>}
             </p>
             <div className="mt-2.5 flex flex-wrap gap-2">
               <Link href={`/app/room/${d.id}`} className="inline-flex min-h-11 items-center rounded-md border border-rule px-3 text-[12.5px] font-semibold md:min-h-0 md:py-1.5">Open dispute room</Link>
@@ -205,9 +207,11 @@ export function DealScreen({ idText }: { idText: string }) {
             {judges
               ? disputeStage(t, d.chainTime, earlyResolve()) === 'decision_open'
                 ? t.responseSubmitted ? 'The other side has responded, so you can decide now.' : 'The window to respond has closed, so you can decide now.'
-                : earlyResolve()
-                  ? <>You can decide after {formatDateTime(t.responseDeadline)}, or straight away if the other side responds sooner.</>
-                  : <>You can decide after {formatDateTime(t.responseDeadline)}, when the window to respond ends.</>
+                : disputeStage(t, d.chainTime, earlyResolve()) === 'rebuttal_open'
+                  ? <>The other side has responded. You can decide {t.decisionOpensAt !== undefined ? `from ${formatDateTime(t.decisionOpensAt)}` : 'after the rebuttal day'}, or sooner if the side who raised it has nothing to add.</>
+                  : earlyResolve()
+                    ? <>You can decide after {formatDateTime(t.responseDeadline)}, or a day after a response if the other side responds sooner.</>
+                    : <>You can decide after {formatDateTime(t.responseDeadline)}, when the window to respond ends.</>
               : 'Files, responses and the decision are in the dispute room.'}
           </p>
           <Link href={`/app/room/${d.id}`} className="mt-2.5 inline-flex min-h-11 items-center rounded-md border border-rule px-3 text-[12.5px] font-semibold md:min-h-0 md:py-1.5">{judges ? 'Open the dispute room to decide' : 'Open dispute room'}</Link>

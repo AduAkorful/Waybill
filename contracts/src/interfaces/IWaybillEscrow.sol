@@ -213,6 +213,10 @@ interface IWaybillEscrow {
     error InvalidSplitBps();          // supplierBps > 10000
     error SplitTransferFailed();      // either leg of a partial resolveSplit transfer failed
     error ResponseWindowOpen();       // (04d) arbiter tried to resolve while response window is still active
+    error RebuttalWindowOpen();       // (33) a response was filed; the raiser's rebuttal time has not ended or been waived
+    error NotDisputeRaiser();         // (33) only the party who raised the dispute may waive the rebuttal
+    error NoResponseYet();            // (33) nothing to rebut: the other side has not responded
+    error RebuttalAlreadyOver();      // (33) decisions are already open
     error EvidenceHashZero();         // (04d) bytes32(0) rejected as dispute evidence
     error NotBuyerRaisedDispute();    // (04d) withdrawDispute called but buyer did not raise this dispute
     error DisputeAlreadyWithdrawn();  // (04d) withdrawDispute called on a non-DISPUTED milestone
@@ -306,7 +310,10 @@ interface IWaybillEscrow {
     event DisputeRaised(uint256 indexed dealId, uint8 indexed milestoneIndex, address raiser, bytes32 evidenceHash);
     event DisputeResponseAdded(uint256 indexed dealId, uint8 indexed milestoneIndex, address responder, bytes32 evidenceHash);
     /// @notice A response re-anchors the arbiter's deadline; indexers and alerts must use this value from now on
-    event ArbiterDeadlineReset(uint256 indexed dealId, uint8 indexed milestoneIndex, uint64 arbiterDeadline);
+    /// @notice (33) A response (or the raiser's waiver) set when decisions open and the arbiter's new deadline
+    event DecisionWindowSet(uint256 indexed dealId, uint8 indexed milestoneIndex, uint64 decisionOpensAt, uint64 arbiterDeadline);
+    /// @notice (33) The party who raised the dispute gave up the rest of their rebuttal time
+    event RebuttalWaived(uint256 indexed dealId, uint8 indexed milestoneIndex, address raiser);
     // (04d)
     event DisputeEvidenceAppended(uint256 indexed dealId, uint8 indexed milestoneIndex, address indexed submitter, bytes32 evidenceHash, uint256 index);
     event DisputeWithdrawn(uint256 indexed dealId, uint8 indexed milestoneIndex, address buyer);
@@ -471,6 +478,8 @@ interface IWaybillEscrow {
     /// @notice (04d) Buyer may withdraw their own dispute, returning the milestone to CLAIMABLE.
     ///         Only valid while DISPUTED, buyerRaisedDispute is true, and before resolution/default.
     function withdrawDispute(uint256 dealId, uint8 milestoneIndex) external;
+    /// @notice (33) The party who raised the dispute ends their rebuttal time early, so the arbiter may decide now.
+    function waiveRebuttal(uint256 dealId, uint8 milestoneIndex) external;
     function resolve(uint256 dealId, uint8 milestoneIndex, bool toSupplier) external;
     function resolveSplit(uint256 dealId, uint8 milestoneIndex, uint16 supplierBps) external;
     /// @notice (04h) Cast a panel vote on a disputed milestone.
@@ -541,6 +550,8 @@ interface IWaybillEscrow {
     function getPanelMembers(uint256 dealId) external view returns (address[3] memory);
     /// @notice (04h) Returns the encoded vote cast by a panel member for a milestone (0 = not voted).
     function getPanelVote(uint256 dealId, uint8 milestoneIndex, address member) external view returns (uint32);
+    /// @notice (33) When decisions open on a responded dispute (0 while there is no response).
+    function getDecisionOpensAt(uint256 dealId, uint8 milestoneIndex) external view returns (uint64);
     /// @notice (04h) Returns true if this deal uses a 3-member panel instead of a single arbiter.
     function isPanelDeal(uint256 dealId) external view returns (bool);
     // 03e / 03g views

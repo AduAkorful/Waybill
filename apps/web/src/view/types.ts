@@ -55,6 +55,8 @@ export interface Tranche {
   disputeTime: bigint
   responseDeadline: bigint
   responseSubmitted: boolean
+  /** On an escrow with the rebuttal rule: when decisions open on a responded dispute (absent elsewhere) */
+  decisionOpensAt?: bigint
   arbiterDeadline: bigint
   /** From off-chain terms, only when the relayer provides them */
   title?: string

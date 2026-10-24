@@ -24,7 +24,7 @@ import type { DealView, Tranche } from '@/view/types'
 import { DecidePanel } from './DecidePanel'
 
 type Who = 'buyer' | 'supplier' | 'arbiter' | null
-type Dialog = { kind: 'respond' | 'append'; t: Tranche } | { kind: 'accept' } | { kind: 'default'; t: Tranche } | null
+type Dialog = { kind: 'respond' | 'append'; t: Tranche } | { kind: 'accept' } | { kind: 'default'; t: Tranche } | { kind: 'waive'; t: Tranche } | null
 
 /** The dispute room: every disputed or decided part of a deal, its clocks, files and history, with each party's real actions. */
 export function RoomScreen({ idText }: { idText: string }) {
@@ -96,6 +96,15 @@ export function RoomScreen({ idText }: { idText: string }) {
           <DisputeDialog deal={d} part={dialog.t} owner={address} mode={dialog.kind} onCancel={() => setDialog(null)} onDone={done} />
         </Modal>
       ) : null}
+      {dialog?.kind === 'waive' ? (
+        <Modal open onClose={() => setDialog(null)} label="Let the arbiter decide now">
+          <h2 className="text-[19px] font-semibold">Let the arbiter decide now?</h2>
+          <p className="mt-2 mb-4 text-[13.5px] leading-relaxed">
+            You raised this dispute and the other side has responded. You have until {dialog.t.decisionOpensAt !== undefined ? formatDateTime(dialog.t.decisionOpensAt) : 'the end of the rebuttal day'} to answer them. If you have nothing to add, this ends that time now and the {d.panel ? 'panel' : 'arbiter'} can decide straight away. It cannot be undone. You can still add evidence until the {d.panel ? 'panel decides' : 'arbiter decides'}. Moves no money.
+          </p>
+          <TxFlow confirmLabel="Let the arbiter decide now" steps={[{ label: 'End my rebuttal time', action: encodeCurrentEscrowAction({ kind: 'waiveRebuttal', dealId: d.id, milestoneIndex: dialog.t.position }) }]} onCancel={() => setDialog(null)} onDone={done} />
+        </Modal>
+      ) : null}
       {dialog?.kind === 'default' ? (
         <Modal open onClose={() => setDialog(null)} label="Apply the default">
           <h2 className="text-[19px] font-semibold">Apply the default outcome</h2>
@@ -113,7 +122,7 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
   const stage = disputeStage(part, deal.chainTime, early)
   const raiser = part.disputeRaiser && part.disputeRaiser.toLowerCase() === deal.buyer.toLowerCase() ? 'buyer' : 'supplier'
   const iRaised = who === raiser
-  const events = (deal.events ?? []).filter((e) => e.position === part.position && /^Dispute|^ArbiterDeadlineReset|^Tranche(Split|Refunded|Claimed)|DefaultApplied|^Panel(VoteCast|Resolved)/.test(e.name))
+  const events = (deal.events ?? []).filter((e) => e.position === part.position && /^Dispute|^DecisionWindowSet|^RebuttalWaived|^Tranche(Split|Refunded|Claimed)|DefaultApplied|^Panel(VoteCast|Resolved)/.test(e.name))
   const rows = historyRows(events)
   const historyNote = 'The dispute history could not be read from the relayer right now. The part\'s state above is read from the escrow.'
 
@@ -131,7 +140,11 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
 
         {open ? (
           <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-rule bg-rule text-[13px] sm:grid-cols-3">
-            <Clock label={part.responseSubmitted ? 'Response window (answered early)' : 'Other side may respond until'} value={part.responseDeadline} active={stage === 'response_open'} />
+            {early && part.responseSubmitted && part.decisionOpensAt !== undefined ? (
+              <Clock label={`The ${raiser} may answer until`} value={part.decisionOpensAt} active={stage === 'rebuttal_open'} />
+            ) : (
+              <Clock label={part.responseSubmitted ? 'Response window (answered early)' : 'Other side may respond until'} value={part.responseDeadline} active={stage === 'response_open'} />
+            )}
             <Clock label={stage === 'decision_open' ? 'Arbiter can decide now · deadline' : 'Arbiter decides by'} value={part.arbiterDeadline} active={stage === 'decision_open'} />
             <div className="bg-sheet px-3 py-2.5">
               <dt className="label">Response</dt>
@@ -189,8 +202,15 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
               <p className="font-semibold">Waiting for the other side to respond</p>
               <p className="mt-1 text-graphite">
                 {early
-                  ? `If no reply, you can decide after ${formatDateTime(part.responseDeadline)}. If they respond sooner, you can decide straight away.`
+                  ? `If no reply, you can decide after ${formatDateTime(part.responseDeadline)}. If they respond, the ${raiser} gets a day to answer, then you can decide (sooner if they say they have nothing to add).`
                   : `You can decide after ${formatDateTime(part.responseDeadline)}, when the window to respond ends${part.responseSubmitted ? ' (they have already responded)' : ''}.`}
+              </p>
+            </div>
+          ) : stage === 'rebuttal_open' ? (
+            <div role="status" className="rounded-md border border-rule bg-sheet p-4 text-[13.5px]">
+              <p className="font-semibold">The other side has responded</p>
+              <p className="mt-1 text-graphite">
+                The {raiser} who raised the dispute may answer the response{part.decisionOpensAt !== undefined ? ` until ${formatDateTime(part.decisionOpensAt)}` : ''}. You can decide then, or sooner if they say they have nothing to add. Read the files meanwhile.
               </p>
             </div>
           ) : deal.arbiterAccepted ? (
@@ -203,8 +223,28 @@ function PartRoom({ deal, part, who, owner, explorer, setDialog, onDone }: { dea
             {!iRaised && !part.responseSubmitted && stage === 'response_open' ? (
               <button type="button" onClick={() => setDialog({ kind: 'respond', t: part })} className="w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet">Respond to the dispute</button>
             ) : null}
-            <button type="button" onClick={() => setDialog({ kind: 'append', t: part })} className="w-full rounded-md border border-rule py-2.5 text-[14px] font-semibold">Add evidence</button>
-            <p className="text-[12px] text-graphite">{part.responseSubmitted && stage === 'decision_open' ? 'The other side has responded, so the arbiter can decide now.' : part.responseSubmitted ? `The other side has responded. The arbiter can decide after ${formatDateTime(part.responseDeadline)}.` : stage === 'response_open' ? `If no reply, the arbiter can decide after ${formatDateTime(part.responseDeadline)}.` : 'The window to respond has closed. The arbiter is deciding.'}</p>
+            {iRaised && stage === 'rebuttal_open' ? (
+              <>
+                <p className="text-[13px]">
+                  The other side has responded. You have {part.decisionOpensAt !== undefined ? `until ${formatDateTime(part.decisionOpensAt)} ` : 'a day '}to read it and add anything; then the {deal.panel ? 'panel' : 'arbiter'} decides.
+                </p>
+                <button type="button" onClick={() => setDialog({ kind: 'append', t: part })} className="w-full rounded-md bg-held py-2.5 text-[14px] font-semibold text-sheet">Answer with evidence</button>
+                <button type="button" onClick={() => setDialog({ kind: 'waive', t: part })} className="w-full rounded-md border border-rule py-2.5 text-[14px] font-semibold">I have nothing to add: let them decide now</button>
+              </>
+            ) : (
+              <button type="button" onClick={() => setDialog({ kind: 'append', t: part })} className="w-full rounded-md border border-rule py-2.5 text-[14px] font-semibold">Add evidence</button>
+            )}
+            <p className="text-[12px] text-graphite">
+              {stage === 'rebuttal_open'
+                ? iRaised
+                  ? 'You can still add evidence after that, until the decision.'
+                  : `You have responded. The ${raiser} may answer until ${part.decisionOpensAt !== undefined ? formatDateTime(part.decisionOpensAt) : 'the end of their rebuttal day'}; then the ${deal.panel ? 'panel' : 'arbiter'} decides.`
+                : stage === 'decision_open'
+                  ? part.responseSubmitted ? `The ${deal.panel ? 'panel' : 'arbiter'} can decide now.` : 'The window to respond has closed. The arbiter is deciding.'
+                  : part.responseSubmitted
+                    ? `The other side has responded. The arbiter can decide after ${formatDateTime(part.responseDeadline)}.`
+                    : `If no reply, the arbiter can decide after ${formatDateTime(part.responseDeadline)}.`}
+            </p>
           </div>
         )}
       </aside>

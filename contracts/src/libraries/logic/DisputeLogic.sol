@@ -11,6 +11,9 @@ import {ClaimLogic}      from "./ClaimLogic.sol";
 /// @notice External library for dispute, respondToDispute, resolve, resolveSplit,
 ///         applyDefault, and all address-change delay functions (03d).
 library DisputeLogic {
+    /// @notice (33) After a response, the raiser's time to read and answer it before anyone may decide
+    uint64 private constant REBUTTAL_PERIOD = 24 hours;
+
     using SafeERC20 for IERC20;
 
     // -------------------------------------------------------------------------
@@ -73,13 +76,56 @@ library DisputeLogic {
 
         ms.responseSubmitted = true;
         ms.responseHash      = evidenceHash;
-        // (31.7) Early resolve: once the counterparty has responded the arbiter may decide
-        // immediately, so the arbiter window is re-anchored to the response time. This can only
-        // shorten the deadline (response happens at or before responseDeadline), never extend it.
-        ms.arbiterDeadline   = uint64(block.timestamp) + uint64(deal.arbiterDeadlineHours) * 1 hours;
 
         emit IWaybillEscrow.DisputeResponseAdded(dealId, milestoneIndex, msg.sender, evidenceHash);
-        emit IWaybillEscrow.ArbiterDeadlineReset(dealId, milestoneIndex, ms.arbiterDeadline);
+        // (31.7 + 33) A response opens decisions early, but only after the raiser's rebuttal day, so the party who
+        // raised the dispute can read the response and answer it before anyone rules. The arbiter's full window
+        // then runs from when decisions open.
+        _openDecisions(s, deal, ms, dealId, milestoneIndex, uint64(block.timestamp) + REBUTTAL_PERIOD);
+    }
+
+    // -------------------------------------------------------------------------
+    // waiveRebuttal (33)
+    // -------------------------------------------------------------------------
+
+    function executeWaiveRebuttal(uint256 dealId, uint8 milestoneIndex) external {
+        WaybillStorage.Layout storage s = _layout();
+        IWaybillEscrow.Deal storage deal = s.deals[dealId];
+        if (deal.state != IWaybillEscrow.DealState.FUNDED)    revert IWaybillEscrow.InvalidDealState();
+        if (milestoneIndex >= deal.milestoneCount)             revert IWaybillEscrow.InvalidMilestone();
+
+        IWaybillEscrow.Milestone storage ms = s.milestones[dealId][milestoneIndex];
+        if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED) revert IWaybillEscrow.NotDisputed();
+        if (msg.sender != ms.disputeRaiser)                     revert IWaybillEscrow.NotDisputeRaiser();
+        if (!ms.responseSubmitted)                              revert IWaybillEscrow.NoResponseYet();
+        if (block.timestamp >= s.decisionOpensAt[dealId][milestoneIndex]) revert IWaybillEscrow.RebuttalAlreadyOver();
+
+        emit IWaybillEscrow.RebuttalWaived(dealId, milestoneIndex, msg.sender);
+        _openDecisions(s, deal, ms, dealId, milestoneIndex, uint64(block.timestamp));
+    }
+
+    /// @notice Sets when decisions open on a responded dispute and re-anchors the arbiter's deadline to it
+    function _openDecisions(
+        WaybillStorage.Layout storage s,
+        IWaybillEscrow.Deal storage deal,
+        IWaybillEscrow.Milestone storage ms,
+        uint256 dealId,
+        uint8 milestoneIndex,
+        uint64 opensAt
+    ) private {
+        s.decisionOpensAt[dealId][milestoneIndex] = opensAt;
+        ms.arbiterDeadline = opensAt + uint64(deal.arbiterDeadlineHours) * 1 hours;
+        emit IWaybillEscrow.DecisionWindowSet(dealId, milestoneIndex, opensAt, ms.arbiterDeadline);
+    }
+
+    /// @notice Reverts while no decision may be made yet: inside the response window with no response, or inside the
+    ///         raiser's rebuttal time after a response.
+    function _requireDecisionsOpen(WaybillStorage.Layout storage s, IWaybillEscrow.Milestone storage ms, uint256 dealId, uint8 milestoneIndex) private view {
+        if (!ms.responseSubmitted) {
+            if (block.timestamp <= ms.responseDeadline) revert IWaybillEscrow.ResponseWindowOpen();
+        } else if (block.timestamp < s.decisionOpensAt[dealId][milestoneIndex]) {
+            revert IWaybillEscrow.RebuttalWindowOpen();
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -215,6 +261,7 @@ library DisputeLogic {
         ms.responseHash        = bytes32(0);
         // arbiterDeadline is zeroed so a future re-dispute gets a fresh value
         ms.arbiterDeadline     = 0;
+        s.decisionOpensAt[dealId][milestoneIndex] = 0;
 
         emit IWaybillEscrow.DisputeWithdrawn(dealId, milestoneIndex, msg.sender);
     }
@@ -345,8 +392,7 @@ library DisputeLogic {
 
         IWaybillEscrow.Milestone storage ms = s.milestones[dealId][milestoneIndex];
         if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED) revert IWaybillEscrow.VoteAfterResolution();
-        // (31.7) Decisions open early once the counterparty has responded; otherwise after the window.
-        if (!ms.responseSubmitted && block.timestamp <= ms.responseDeadline) revert IWaybillEscrow.ResponseWindowOpen();
+        _requireDecisionsOpen(s, ms, dealId, milestoneIndex);
         if (block.timestamp > ms.arbiterDeadline)                revert IWaybillEscrow.ArbiterDeadlinePassed();
 
         // Reject duplicate votes
@@ -421,8 +467,7 @@ library DisputeLogic {
 
         IWaybillEscrow.Milestone storage ms = s.milestones[dealId][milestoneIndex];
         if (ms.state != IWaybillEscrow.MilestoneState.DISPUTED) revert IWaybillEscrow.NotDisputed();
-        // (31.7) Decisions open early once the counterparty has responded; otherwise after the window.
-        if (!ms.responseSubmitted && block.timestamp <= ms.responseDeadline) revert IWaybillEscrow.ResponseWindowOpen();
+        _requireDecisionsOpen(s, ms, dealId, milestoneIndex);
         if (block.timestamp > ms.arbiterDeadline)               revert IWaybillEscrow.ArbiterDeadlinePassed();
 
         ms.state    = IWaybillEscrow.MilestoneState.RESOLVED;

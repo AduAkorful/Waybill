@@ -73,7 +73,7 @@ export function DisputeDialog({ deal, part, owner, mode = 'dispute', onCancel, o
         {append
           ? 'Add more files or a note to this dispute. The arbiter and the other side can read them. You can add more until the arbiter decides.'
           : respond
-          ? `Tell the arbiter your side. ${formatAmount(part.amount)} USDC stays frozen until they decide. You can respond once.${earlyResolve() ? ' Once you respond, the arbiter can decide straight away.' : ' The arbiter decides after the window to respond ends.'}`
+          ? `Tell the arbiter your side. ${formatAmount(part.amount)} USDC stays frozen until they decide. You can respond once.${earlyResolve() ? ' The side who raised the dispute then has a day to answer, after which the arbiter decides.' : ' The arbiter decides after the window to respond ends.'}`
           : `${formatAmount(part.amount)} USDC stays frozen until the arbiter decides. Other parts are not affected. The other side can respond; the buyer can withdraw a dispute before it is decided.`}
       </p>
 
@@ -110,7 +110,7 @@ export function DisputeDialog({ deal, part, owner, mode = 'dispute', onCancel, o
             />
             {!append && !respond ? (
               <p className="mt-1.5 text-[12px] text-graphite">
-                Disputing freezes only this part. The other side then has {deal.responsePeriodHours} hours to respond; {earlyResolve() ? 'the arbiter can decide once they respond, or after that time if they do not.' : 'after that the arbiter can decide.'}
+                Disputing freezes only this part. The other side then has {deal.responsePeriodHours} hours to respond; {earlyResolve() ? 'if they do, you get a day to answer before the arbiter decides; if they do not, the arbiter decides after that time.' : 'after that the arbiter can decide.'}
               </p>
             ) : null}
           </div>

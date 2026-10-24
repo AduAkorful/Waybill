@@ -1,6 +1,9 @@
 import { formatAmount, formatDateTime } from './format'
 import type { DealEvent } from './types'
 
+/** A unix-seconds event argument as a date, or null when it is not one. */
+const when = (v: unknown): string | null => (typeof v === 'string' && /^\d+$/.test(v)) || typeof v === 'number' ? formatDateTime(BigInt(v)) : null
+
 function amount(value: unknown): string | null {
   return typeof value === 'string' && /^\d+$/.test(value) ? `${formatAmount(BigInt(value))} USDC` : null
 }
@@ -64,8 +67,10 @@ export function describeEvent(e: DealEvent): string {
       return `Part${part} disputed`
     case 'DisputeResponseAdded':
       return `A response was filed on part${part}`
-    case 'ArbiterDeadlineReset':
-      return `The arbiter's deadline on part${part} is now ${typeof a.arbiterDeadline === 'string' || typeof a.arbiterDeadline === 'number' ? formatDateTime(BigInt(a.arbiterDeadline)) : 'reset from the response'}`
+    case 'DecisionWindowSet':
+      return `Decisions on part${part} open ${when(a.decisionOpensAt) ?? 'after the rebuttal day'}; the arbiter decides by ${when(a.arbiterDeadline) ?? 'the new deadline'}`
+    case 'RebuttalWaived':
+      return `The side who raised the dispute on part${part} has nothing to add, so the arbiter can decide now`
     case 'DisputeEvidenceAppended':
       return `Evidence was added on part${part}`
     case 'DisputeWithdrawn':

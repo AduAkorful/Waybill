@@ -103,6 +103,14 @@ describe('complete current escrow action boundary', () => {
     )
   })
 
+  test('encodes the raiser ending their rebuttal time, and nothing else', () => {
+    const waive = encodeCurrentEscrowAction({ kind: 'waiveRebuttal', dealId: 7n, milestoneIndex: 2 }, ARC_TESTNET)
+    const decoded = decodeFunctionData({ abi: CURRENT_ESCROW_ACTION_ABI, data: waive.data })
+    expect(decoded.functionName).toBe('waiveRebuttal')
+    expect(decoded.args).toEqual([7n, 2])
+    expect(waive.to).toBe(ARC_TESTNET.contracts.escrow)
+  })
+
   test('rejects invalid hashes, panel votes, and create inputs', () => {
     expect(() =>
       encodeCurrentEscrowAction(
