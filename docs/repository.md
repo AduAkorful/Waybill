@@ -40,3 +40,12 @@ Both builds need the repository root as the install context, because they use `p
 **Relayer (Node host or container).** Install at the root, then run the service from `services/relayer`. Its environment is in `services/relayer/.env.example`. Run exactly one writer instance (see `services/relayer/README.md`).
 
 **Cross-origin access.** The relayer API answers browsers only for origins listed in `WAYBILL_API_ALLOWED_ORIGINS` (comma-separated, exact, no wildcard). Set it to the web app's origin; any other browser origin gets 403, and the API stays read-only (GET). Requests with no `Origin` header, such as health checks, are unaffected.
+
+## Production checklist (web)
+
+- `NEXT_PUBLIC_WAYBILL_NETWORK` set explicitly; mainnet needs the full `NEXT_PUBLIC_WAYBILL_MAINNET_*` set and fails closed otherwise.
+- `NEXT_PUBLIC_WAYBILL_API_BASE_URL` points at the relayer, and that origin's web address is in the relayer's `WAYBILL_API_ALLOWED_ORIGINS`.
+- The Privy app lists the production web origin as an allowed origin.
+- Security headers are set in `apps/web/next.config.ts` (framing refused, no sniffing, HSTS, strict referrer). A script-source CSP needs per-request nonces and has not been added.
+- `error.tsx`, `global-error.tsx` and `not-found.tsx` cover failed renders; none of them can send a transaction.
+- The Chinese supplier copy is a draft and needs native review before the supplier link is shared with real suppliers.

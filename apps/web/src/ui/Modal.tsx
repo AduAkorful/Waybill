@@ -4,6 +4,40 @@ import gsap from "gsap";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { D, E, registerMotion } from "./motion";
 
+const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Keeps Tab inside the dialog, locks page scroll while it is open and hands focus back on close. */
+function useDialogFocus(open: boolean, panel: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    const scroll = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    panel.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    const onTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !panel.current) return;
+      const items = Array.from(panel.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (items.length === 0) return e.preventDefault();
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !panel.current.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !panel.current.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onTab);
+    return () => {
+      window.removeEventListener("keydown", onTab);
+      document.body.style.overflow = scroll;
+      prev?.focus();
+    };
+  }, [open, panel]);
+}
+
 /**
  * A dialog for one action. Centred card on desktop, bottom sheet on phones. Escape or the scrim closes it
  * (except while a transaction is in flight, when `locked` keeps it open).
@@ -15,13 +49,9 @@ export function Modal({ open, onClose, locked = false, label, children }: { open
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !locked && onClose();
     window.addEventListener("keydown", onKey);
-    const prev = document.activeElement as HTMLElement | null;
-    panel.current?.querySelector<HTMLElement>("button, textarea, input")?.focus();
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      prev?.focus();
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [open, locked, onClose]);
+  useDialogFocus(open, panel);
 
   useLayoutEffect(() => {
     if (!open || !panel.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -53,6 +83,7 @@ export function Drawer({ open, onClose, label, children }: { open: boolean; onCl
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+  useDialogFocus(open, panel);
   useLayoutEffect(() => {
     if (!open || !panel.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     registerMotion();

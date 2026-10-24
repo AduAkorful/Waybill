@@ -14,7 +14,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${archivo.variable} ${plexMono.variable} ${notoSc.variable}`} suppressHydrationWarning>
-      <body className="min-h-dvh">{children}</body>
+      <body className="min-h-dvh">
+        <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-ink focus:px-3 focus:py-2 focus:text-[13px] focus:text-paper">
+          Skip to content
+        </a>
+        <div id="main" tabIndex={-1} className="outline-none">
+          {children}
+        </div>
+      </body>
     </html>
   )
 }
