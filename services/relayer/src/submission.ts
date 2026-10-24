@@ -94,6 +94,7 @@ export async function submitEligibleCandidate(
   candidate: RelayerCandidate,
   eligibility: EligibilityResult,
   nonceManager: SerializedNonceManager,
+  onSubmitted?: (hash: TransactionHash) => Promise<void>,
 ): Promise<SubmissionResult> {
   if (eligibility.eligible === false) {
     throw new Error(`Refusing ineligible relayer candidate: ${eligibility.reason}`)
@@ -116,6 +117,7 @@ export async function submitEligibleCandidate(
       nonce,
     }),
   )
+  await onSubmitted?.(hash)
   const receipt = await client.waitForTransactionReceipt({ hash, confirmations: 1 })
   return { hash, status: receipt.status }
 }

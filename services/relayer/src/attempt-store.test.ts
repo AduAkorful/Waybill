@@ -26,20 +26,23 @@ class FakeDatabase {
 
     if (text.includes('INSERT')) {
       if (!row) {
-        this.rows.set(key, {
+        const created = {
           operation: String(operation),
           deal_id: String(dealId),
           milestone_index: Number(milestoneIndex),
           status: 'pending',
           tx_hash: null,
           attempt_count: 1,
-        })
+        } as Row
+        this.rows.set(key, created)
+        return { rows: [created] as RowType[] }
       }
     } else if (text.includes('SET status = \'pending\'')) {
       if (row?.status === 'reverted') {
         row.status = 'pending'
         row.tx_hash = null
         row.attempt_count += 1
+        return { rows: [row] as RowType[] }
       }
     } else if (text.includes('SET status = \'submitted\'')) {
       if (row?.status === 'pending') {
@@ -90,6 +93,17 @@ describe('PostgresAttemptStore', () => {
     await expect(store.reserve(key)).resolves.toMatchObject({
       shouldSubmit: false,
       attempt: { status: 'success', attemptCount: 1 },
+    })
+  })
+
+  test('does not let a duplicate pending reservation submit concurrently', async () => {
+    const database = new FakeDatabase()
+    const store = new PostgresAttemptStore(database)
+
+    await expect(store.reserve(key)).resolves.toMatchObject({ shouldSubmit: true })
+    await expect(store.reserve(key)).resolves.toMatchObject({
+      shouldSubmit: false,
+      attempt: { status: 'pending' },
     })
   })
 

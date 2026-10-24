@@ -25,6 +25,24 @@ export interface AttemptReservation {
   shouldSubmit: boolean
 }
 
+export interface RelayerAttemptStore {
+  reserve(key: RelayerAttemptKey): Promise<AttemptReservation>
+  markSubmitted(key: RelayerAttemptKey, txHash: `0x${string}`): Promise<void>
+  markReceipt(key: RelayerAttemptKey, status: 'success' | 'reverted'): Promise<void>
+}
+
+export function attemptKeyFor(candidate: {
+  operation: RelayerOperation
+  dealId: bigint
+  milestoneIndex: number
+}): RelayerAttemptKey {
+  return {
+    operation: candidate.operation,
+    dealId: candidate.dealId,
+    milestoneIndex: candidate.milestoneIndex,
+  }
+}
+
 interface AttemptRow {
   operation: RelayerOperation
   deal_id: string | number | bigint
@@ -53,6 +71,7 @@ const INSERT_SQL = `
     (operation, deal_id, milestone_index, status, attempt_count)
   VALUES ($1, $2, $3, 'pending', 1)
   ON CONFLICT (operation, deal_id, milestone_index) DO NOTHING
+  RETURNING operation, deal_id, milestone_index, status, tx_hash, attempt_count
 `
 
 const RETRY_SQL = `
@@ -63,6 +82,7 @@ const RETRY_SQL = `
       updated_at = NOW()
   WHERE operation = $1 AND deal_id = $2 AND milestone_index = $3
     AND status = 'reverted'
+  RETURNING operation, deal_id, milestone_index, status, tx_hash, attempt_count
 `
 
 const SUBMITTED_SQL = `
@@ -112,7 +132,7 @@ function toAttempt(row: AttemptRow): RelayerAttempt {
   }
 }
 
-export class PostgresAttemptStore {
+export class PostgresAttemptStore implements RelayerAttemptStore {
   constructor(private readonly database: SqlExecutor) {}
 
   async get(key: RelayerAttemptKey): Promise<RelayerAttempt | null> {
@@ -128,13 +148,19 @@ export class PostgresAttemptStore {
   async reserve(key: RelayerAttemptKey): Promise<AttemptReservation> {
     validateKey(key)
     const values = [key.operation, key.dealId.toString(), key.milestoneIndex] as const
-    await this.database.query(INSERT_SQL, values)
-    await this.database.query(RETRY_SQL, values)
+    const inserted = await this.database.query<AttemptRow>(INSERT_SQL, values)
+    if (inserted.rows[0]) {
+      return { attempt: toAttempt(inserted.rows[0]), shouldSubmit: true }
+    }
+    const retried = await this.database.query<AttemptRow>(RETRY_SQL, values)
+    if (retried.rows[0]) {
+      return { attempt: toAttempt(retried.rows[0]), shouldSubmit: true }
+    }
     const attempt = await this.get(key)
     if (!attempt) throw new Error('Attempt disappeared after reservation')
     return {
       attempt,
-      shouldSubmit: attempt.status === 'pending',
+      shouldSubmit: false,
     }
   }
 
