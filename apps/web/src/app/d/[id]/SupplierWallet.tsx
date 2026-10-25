@@ -1,7 +1,6 @@
 'use client'
 
 import { overdueStatus } from '@/view/derive'
-import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { isAddress } from 'viem'
 import { usePrivy } from '@/auth'
@@ -113,7 +112,7 @@ function Inner({ deal: d, lang, autoLogin, onMounted, onChanged, onViewer }: { d
             ) : (
               <button onClick={() => setDialog({ respond: p })} className="mt-2.5 rounded-md border border-rule px-3 py-1.5 text-[12.5px] font-semibold">{t.respond}</button>
             )}
-            <Link href={`/app/room/${d.id}`} className="mt-2.5 ml-2 inline-block rounded-md border border-rule px-3 py-1.5 text-[12.5px] font-semibold">{t.room}</Link>
+            <a href={`/app/room/${d.id}`} className="mt-2.5 ml-2 inline-block rounded-md border border-rule px-3 py-1.5 text-[12.5px] font-semibold">{t.room}</a>
           </div>
         )
       } else if (d.state === 'funded' && overdueStatus(p, d.chainTime) === 'overdue') {
@@ -129,12 +128,14 @@ function Inner({ deal: d, lang, autoLogin, onMounted, onChanged, onViewer }: { d
 
   return (
     <>
-      {authenticated && address && !isSupplier ? <NamedPartyBanner deal={d} wallet={address} /> : null}
+      {authenticated && address && !isSupplier ? <NamedPartyBanner deal={d} wallet={address} onChanged={onChanged} /> : null}
       {authenticated && isBuyer ? (
         <div role="status" data-buyer-view className="mt-6 rounded-md border border-held/50 bg-sheet px-4 py-3">
           <p className="font-semibold">{lang === 'zh' ? '您是这笔交易的买方' : 'You are the buyer on this deal'}</p>
           <p className="mt-1 text-[13px]">{lang === 'zh' ? '此页面是发给供应商用于接受交易的链接。请在您的交易页面管理和注资。' : 'This page is the link you send the supplier so they can accept. You fund and manage the deal from your own deal page.'}</p>
-          <Link href={`/app/deals/${d.id}`} className="mt-2 inline-block rounded-md bg-ink px-3.5 py-2 text-[13.5px] font-semibold text-paper">{lang === 'zh' ? '打开我的交易' : 'Open my deal'}</Link>
+          {/* a plain anchor, not next/link: /app has its own root Providers, and a client transition from this page (which
+              mounts a second Privy/wagmi tree) silently stalled on the live site. A full load into /app is reliable. */}
+          <a href={`/app/deals/${d.id}`} data-open-my-deal className="mt-2 inline-block rounded-md bg-ink px-3.5 py-2 text-[13.5px] font-semibold text-paper">{lang === 'zh' ? '打开我的交易' : 'Open my deal'}</a>
         </div>
       ) : null}
       {authenticated && address && !isSupplier && !isBuyer && !isNamedHere ? (

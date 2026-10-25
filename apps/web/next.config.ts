@@ -74,6 +74,10 @@ const config: NextConfig = {
   poweredByHeader: false,
   // The shared network package ships TypeScript source, so Next must compile it.
   transpilePackages: ['@waybill/network'],
+  // /app/deals/new is a natural guess for the new-deal form, which lives at /app/new. A server redirect, so it works before any JS loads.
+  async redirects() {
+    return [{ source: '/app/deals/new', destination: '/app/new', permanent: false }]
+  },
   async headers() {
     return [
       {

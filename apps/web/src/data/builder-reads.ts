@@ -105,9 +105,14 @@ export function useArbiterCheck(address: string): Read<ArbiterCheck> | null {
     let cancelled = false
     setRead({ status: 'loading' })
     const target = address.trim() as `0x${string}`
-    Promise.all([
-      client.readContract({ address: network.contracts.arbiterList, abi: ARBITER_LIST, functionName: 'isAllowed', args: [target] }),
-      client.readContract({ address: network.contracts.arbiterList, abi: ARBITER_LIST, functionName: 'feeUsdc', args: [target] }),
+    // a read that never settles must not leave the field on "Checking…" for ever: give up after 15 s with an error
+    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('the network did not answer in time, try again')), 15_000))
+    Promise.race([
+      Promise.all([
+        client.readContract({ address: network.contracts.arbiterList, abi: ARBITER_LIST, functionName: 'isAllowed', args: [target] }),
+        client.readContract({ address: network.contracts.arbiterList, abi: ARBITER_LIST, functionName: 'feeUsdc', args: [target] }),
+      ]),
+      timeout,
     ])
       .then(([allowed, fee]) => !cancelled && setRead({ status: 'ready', value: { allowed, fee } }))
       .catch((e) => !cancelled && setRead({ status: 'error', message: e instanceof Error ? e.message : String(e) }))

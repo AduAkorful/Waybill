@@ -84,6 +84,8 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
           <Waybill deal={deal} redacted />
         </section>
 
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10">
+        <div className="min-w-0">
         <section className="mt-8">
           <h2 className="text-[17px] font-semibold tracking-tight">Where the money is</h2>
           <div className="mt-3">
@@ -98,7 +100,8 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
           </div>
         </section>
 
-        <section className="mt-8">
+        </div>
+        <section className="mt-8 min-w-0">
           <h2 className="text-[17px] font-semibold tracking-tight">History</h2>
           {history.status === 'unconfigured' ? <p className="mt-2 text-graphite">This site has no history source configured, so none is shown.</p> : null}
           {history.status === 'error' ? <p role="alert" className="mt-2 text-hold">History is unavailable right now: {history.message}</p> : null}
@@ -109,6 +112,8 @@ export default async function PublicRecord({ params }: { params: Promise<{ id: s
             </div>
           ) : null}
         </section>
+
+        </div>
 
         <section className="mt-8 text-[13px] text-graphite">
           <h2 className="text-[17px] font-semibold tracking-tight text-ink">On-chain details</h2>

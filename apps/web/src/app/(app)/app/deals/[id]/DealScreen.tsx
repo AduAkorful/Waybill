@@ -138,7 +138,7 @@ export function DealScreen({ idText }: { idText: string }) {
           <div data-action data-confirm-delivery className="text-[13px]">
             <p className="leading-snug">
               Waiting on you. When this part is delivered, confirm it here. {t.reviewWindow > 0
-                ? <>That starts your {reviewLength(t.reviewWindow)} review: you can still dispute until it closes, then the supplier can claim the money.</>
+                ? <>That starts your {reviewLength(t.reviewWindow)} review. During it you can release the money straight away with Approve and release, or dispute; if you do nothing, the supplier is paid automatically when the review ends.</>
                 : <>The supplier can then claim the money straight away.</>}
               {' '}Due {formatDateTime(t.deadline)}; if it is not confirmed by then the supplier can dispute during the grace period, and after that you can take a refund.
             </p>
@@ -221,8 +221,8 @@ export function DealScreen({ idText }: { idText: string }) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px]">
-      <main className="min-w-0 px-4 pt-6 pb-10 md:px-10">
+    <div className="mx-auto grid w-full max-w-7xl grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
+      <main className="min-w-0 px-4 pt-6 pb-10 md:px-8 xl:px-10">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
             <p className="label">
@@ -243,7 +243,7 @@ export function DealScreen({ idText }: { idText: string }) {
         </div>
 
         {read.fresh === false ? <p role="status" className="mt-3 text-[12px] text-graphite">Showing what was read a moment ago. Updating from the chain…</p> : null}
-        {address && !isBuyer ? <NamedPartyBanner deal={d} wallet={address} /> : null}
+        {address && !isBuyer ? <NamedPartyBanner deal={d} wallet={address} onChanged={() => setRefresh((n) => n + 1)} /> : null}
 
         {read.history.status === 'error' ? (
           <p role="alert" className="mt-4 text-[12.5px] text-hold">History is unavailable right now: {read.history.message}</p>
@@ -344,7 +344,7 @@ export function DealScreen({ idText }: { idText: string }) {
           <h2 className="mt-1 text-[19px] leading-tight font-semibold">Confirm part {dialog.t.index} was delivered?</h2>
           <p className="mt-2 mb-4 text-[13.5px] leading-relaxed">
             {dialog.t.reviewWindow > 0
-              ? <>This starts your {reviewLength(dialog.t.reviewWindow)} review of {formatAmount(dialog.t.amount)} USDC. You can still dispute until it closes; then the supplier can claim it.</>
+              ? <>This starts your {reviewLength(dialog.t.reviewWindow)} review of {formatAmount(dialog.t.amount)} USDC. You don&apos;t have to wait it out: right after this you can release the money now with Approve and release, or dispute. If you do nothing, the supplier is paid automatically when the review ends.</>
               : <>The supplier can then claim {formatAmount(dialog.t.amount)} USDC straight away, and Waybill can&apos;t return it.</>}
           </p>
           <TxFlow

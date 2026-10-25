@@ -62,8 +62,12 @@ export function useWaybillTransaction() {
   const [state, setState] = useState<ComponentTransactionState>({ status: 'idle' })
   const resumed = useRef<string | null>(null)
 
+  // the hash this flow is settling, so a hash found on chain and the wallet's own late answer settle only once
+  const settling = useRef<string | null>(null)
   const settle = useCallback(async (action: EncodedWalletAction, hash: Hex, from: string | undefined) => {
     if (!publicClient) return
+    if (settling.current === hash) return
+    settling.current = hash
     setState({ status: 'confirming', hash })
     const result = await waitForActionReceipt(publicClient, hash)
     if (result.status === 'unknown') {
@@ -116,17 +120,79 @@ export function useWaybillTransaction() {
         assertCanPayFee(balance, gas, gasPrice)
       }
       setState({ status: 'signing' })
-      const hash = await sendWalletAction(walletClient, action)
       const from = walletClient.account.address
+      // Some wallets (seen with Rabby) close their window but answer the page late. Watch the chain meanwhile: once
+      // this exact call from this account lands in a block, move on to confirming with its hash.
+      const watch = watchForSent(publicClient, from, action, (found) => {
+        rememberPending(from, action, found)
+        resumed.current = found
+        void settle(action, found, from)
+      })
+      let hash: Hex
+      try {
+        hash = await sendWalletAction(walletClient, action)
+      } finally {
+        watch.stop()
+      }
       rememberPending(from, action, hash)
       resumed.current = hash
       await settle(action, hash, from)
     } catch (error) {
+      // a wallet that errors after its transaction was already found on chain does not undo that transaction
+      if (settling.current) return
       setState({ status: 'error', error: classifyWalletError(error) })
     }
   }, [chainId, publicClient, walletClient, settle])
 
-  const reset = useCallback(() => setState({ status: 'idle' }), [])
+  const reset = useCallback(() => {
+    settling.current = null
+    setState({ status: 'idle' })
+  }, [])
 
   return { execute, resume, reset, state, ready: Boolean(walletClient && publicClient && chainId) }
+}
+
+type BlockReader = NonNullable<ReturnType<typeof usePublicClient>>
+
+/** Polls new blocks for the exact call (same sender, target and data) and reports its hash once. */
+export function watchForSent(
+  client: Pick<BlockReader, 'getBlockNumber' | 'getBlock'>,
+  from: string,
+  action: Pick<EncodedWalletAction, 'to' | 'data'>,
+  onFound: (hash: Hex) => void,
+  intervalMs = 2000,
+): { stop: () => void } {
+  let live = true
+  let next: bigint | null = null
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const tick = async () => {
+    if (!live) return
+    try {
+      const head = await client.getBlockNumber()
+      if (next === null) next = head + 1n
+      // never scan more than a handful of blocks per tick
+      for (let n = next > head - 20n ? next : head - 20n; n <= head && live; n++) {
+        const block = await client.getBlock({ blockNumber: n, includeTransactions: true })
+        const hit = block.transactions.find(
+          (t) => typeof t === 'object' && t.from?.toLowerCase() === from.toLowerCase() && t.to?.toLowerCase() === action.to.toLowerCase() && t.input?.toLowerCase() === action.data.toLowerCase(),
+        )
+        next = n + 1n
+        if (hit && typeof hit === 'object') {
+          live = false
+          onFound(hit.hash)
+          return
+        }
+      }
+    } catch {
+      // a failed read just waits for the next tick
+    }
+    if (live) timer = setTimeout(tick, intervalMs)
+  }
+  timer = setTimeout(tick, 0)
+  return {
+    stop: () => {
+      live = false
+      if (timer) clearTimeout(timer)
+    },
+  }
 }

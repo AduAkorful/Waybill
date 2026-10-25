@@ -20,12 +20,30 @@ const RULES: Record<Which, { title: string; proposer: Who; rejecter: Who; curren
   refund: { title: 'Where refunds go', proposer: 'buyer', rejecter: 'supplier', current: (d) => d.buyerRefund, pending: (d) => d.pendingRefund },
 }
 
-/** A full address that wraps rather than truncates, with a copy button, so a person can check every character. */
+/** Middle of a long address left out so it fits one line; the start and end are what people compare. */
+export function middleTruncate(value: string, head = 10, tail = 8): string {
+  return value.length <= head + tail + 1 ? value : `${value.slice(0, head)}…${value.slice(-tail)}`
+}
+
+/**
+ * An address on one line with its middle left out, the full value on hover and one tap away (so a person can still
+ * check every character), and a copy button.
+ */
 function FullAddress({ value }: { value: string }) {
   const [copied, setCopied] = useState(false)
+  const [full, setFull] = useState(false)
   return (
-    <span className="flex items-start gap-2">
-      <span className="mono min-w-0 text-[12.5px] break-all">{value}</span>
+    <span className="flex items-center gap-2">
+      <button
+        type="button"
+        title={value}
+        aria-label={full ? value : `${value}, shown shortened. Show the full address`}
+        aria-expanded={full}
+        onClick={() => setFull((f) => !f)}
+        className={`mono min-w-0 text-left text-[12.5px] ${full ? 'break-all' : 'truncate whitespace-nowrap'}`}
+      >
+        {full ? value : middleTruncate(value)}
+      </button>
       <button
         type="button"
         onClick={() => void navigator.clipboard?.writeText(value).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) }, () => {})}

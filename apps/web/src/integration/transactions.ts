@@ -125,6 +125,8 @@ export async function waitForActionReceipt(
     const receipt = await publicClient.waitForTransactionReceipt({
       hash,
       confirmations: 1,
+      // Arc blocks are sub-second: look every second so the dialog closes soon after the receipt lands
+      pollingInterval: 1_000,
     })
     if (receipt.status === 'reverted') {
       return { status: 'reverted', hash, receipt }

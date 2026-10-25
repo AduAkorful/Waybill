@@ -130,6 +130,8 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
               <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-tight">{d.state === 'proposed' ? t.title : t.titleOngoing}</h1>
               <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-graphite">{d.state === 'proposed' ? t.intro : t.introOngoing}</p>
 
+              <div className={walletReady ? '' : 'lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-10'}>
+              <div className="min-w-0">
               <div className={`mt-6 grid grid-cols-2 gap-x-6 gap-y-3 rounded-md border border-rule bg-sheet px-4 py-3.5 ${refundedFor(d) > 0n ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
                 <div className="col-span-2 sm:col-span-1"><p className="label">{t.total}</p><p className="mono text-[22px] whitespace-nowrap sm:text-[26px]">{formatAmount(d.totalAmount)} <span className="text-[14px] text-graphite">USDC</span></p></div>
                 <div><p className="label">{viewer === 'supplier' ? t.releasedTile : t.releasedTileNeutral}</p><p className="mono text-[22px] whitespace-nowrap sm:text-[26px] text-released" aria-label={`${formatAmount(releasedFor(d))} USDC`}>{formatCents(toCents(releasedFor(d)))} <span className="text-[14px] text-graphite">USDC</span></p></div>
@@ -158,7 +160,7 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
                   {mustAccept || mustRespond ? (
                     <div className="mt-6">
                       {walletOn ? (
-                        <p role="status" className="text-[13px] text-graphite">{t.loading}</p>
+                        <p role="status" className="text-[13px] text-graphite">{t.walletLoading}</p>
                       ) : (
                         <>
                           <button type="button" onClick={() => { setSignInAsked(true); setWalletOn(true) }} className="rounded-md bg-ink px-5 py-3 text-[15px] font-semibold text-paper">{mustAccept ? t.signIn : t.signInRespond}</button>
@@ -172,14 +174,20 @@ export function SupplierLink({ idText, initial }: { idText: string; initial: Dea
                       <p className="mt-2 text-[12.5px] text-graphite">{t.signInPartyHelp}</p>
                     </div>
                   ) : walletOn ? (
-                    <p role="status" className="mt-6 text-[13px] text-graphite">{t.loading}</p>
+                    <p role="status" className="mt-6 text-[13px] text-graphite">{t.walletLoading}</p>
                   ) : null}
-                  <section className="mt-10" aria-label={t.tracker}>
+                </>
+              ) : null}
+              </div>
+              {!walletReady ? (
+                <>
+                  <section className="mt-10 min-w-0 lg:mt-6" aria-label={t.tracker}>
                     <h2 className="label mb-3">{t.tracker}</h2>
                     <LiveWaybill deal={d} lang={lang} detail="summary" compact showLockStamp={false} />
                   </section>
                 </>
               ) : null}
+              </div>
               <p className="mt-8 text-[12px] text-graphite">{lang === "zh" ? formatDateTimeZh(d.chainTime) : formatDateTime(d.chainTime)} · {getBrowserNetwork().network === 'mainnet' ? 'Arc' : 'Arc testnet'}</p>
             </>
           )

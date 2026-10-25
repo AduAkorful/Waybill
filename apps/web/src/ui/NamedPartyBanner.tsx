@@ -1,4 +1,10 @@
+'use client'
+
 import Link from 'next/link'
+import { useState } from 'react'
+import { encodeEscrowAction } from '@/integration/escrow'
+import { Modal } from '@/ui/Modal'
+import { TxFlow } from '@/ui/TxFlow'
 import { needsFrom } from '@/view/inbox'
 import type { DealView } from '@/view/types'
 
@@ -6,7 +12,7 @@ import type { DealView } from '@/view/types'
  * For a wallet that is named on a deal as attestor or arbiter and has not accepted yet: says so where they landed,
  * and links to the one place that role accepts. Shows nothing for anyone else.
  */
-export function NamedPartyBanner({ deal, wallet }: { deal: DealView; wallet: `0x${string}` }) {
+export function NamedPartyBanner({ deal, wallet, onChanged }: { deal: DealView; wallet: `0x${string}`; onChanged?: () => void }) {
   const asAttestor = needsFrom('attestor', deal, wallet) === 'Accept'
   const asArbiter = needsFrom('arbiter', deal, wallet) === 'Accept'
   const toSign = needsFrom('attestor', deal, wallet) === 'Sign'
@@ -30,8 +36,42 @@ export function NamedPartyBanner({ deal, wallet }: { deal: DealView; wallet: `0x
       <p className="mt-1 text-[13px] text-graphite">Accepting only records that you agree. It moves no money, and the deal cannot be funded until everyone named has accepted.</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {asAttestor ? <Link href={`/app/attest/${deal.id}`} className="rounded-md bg-held px-3.5 py-2 text-[13.5px] font-semibold text-sheet">Accept as attestor</Link> : null}
-        {asArbiter ? <Link href={`/app/room/${deal.id}`} className="rounded-md bg-held px-3.5 py-2 text-[13.5px] font-semibold text-sheet">Accept as arbiter</Link> : null}
+        {asArbiter ? <AcceptArbiter deal={deal} onChanged={onChanged} /> : null}
       </div>
     </div>
+  )
+}
+
+/** Accepting the arbiter role straight from where the arbiter landed: one dialog, one signature, no second page. */
+function AcceptArbiter({ deal, onChanged }: { deal: DealView; onChanged?: () => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button type="button" data-accept-arbiter onClick={() => setOpen(true)} className="rounded-md bg-held px-3.5 py-2 text-[13.5px] font-semibold text-sheet">
+        Accept as arbiter
+      </button>
+      <Modal open={open} onClose={() => setOpen(false)} label="Accept the arbiter role">
+        {open ? (
+          <>
+            <h2 className="text-[19px] font-semibold">Accept the arbiter role on deal {String(deal.id)}</h2>
+            <p className="mt-2 mb-4 text-[13.5px] leading-relaxed">
+              {deal.panel
+                ? 'With two other arbiters you decide disputes on this deal: when two of you vote the same way, that outcome applies. '
+                : 'You decide disputes on this deal, release, refund or split, and are paid your fee only if you decide in time. '}
+              This only records that you accept. It moves no money, and you can never send money to yourself.
+            </p>
+            <TxFlow
+              confirmLabel="Accept"
+              steps={[{ label: 'Accept the arbiter role', action: encodeEscrowAction({ kind: 'acceptArbiter', dealId: deal.id }) }]}
+              onCancel={() => setOpen(false)}
+              onDone={() => {
+                setOpen(false)
+                onChanged?.()
+              }}
+            />
+          </>
+        ) : null}
+      </Modal>
+    </>
   )
 }

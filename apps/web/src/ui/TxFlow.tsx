@@ -269,7 +269,7 @@ export function TxFlow({
             className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${state.status === 'success' ? 'bg-released' : 'animate-pulse bg-held ring-4 ring-held/20'}`}
           />
           <div className="min-w-0">
-            <p className="text-[14px] font-semibold">{state.status === 'success' ? 'Confirmed' : 'Confirming on Arc…'}</p>
+            <p className="text-[14px] font-semibold">{state.status === 'success' ? 'Confirmed' : 'Confirming on chain…'}</p>
             <p className="text-[12.5px] text-graphite">
               {state.status === 'success' ? 'The network accepted it.' : "Sent. Usually a few seconds. Don't send it again."}
             </p>

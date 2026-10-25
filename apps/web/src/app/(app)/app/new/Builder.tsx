@@ -54,7 +54,11 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   const [form, setForm] = useState<BuilderForm>(() => emptyForm(buyer, limits.minFeeBps, TEMPLATES[1]!))
   const arbiter = useArbiterCheck(form.arbiter)
   const panelRead = [useArbiterCheck(form.panel[0] ?? ''), useArbiterCheck(form.panel[1] ?? ''), useArbiterCheck(form.panel[2] ?? '')]
-  const panelChecks = panelRead.map((r) => (r?.status === 'ready' ? r.value : null))
+  const panelChecks = panelRead.map((r, i) => {
+    if (r?.status === 'ready') return r.value
+    const hit = arbiters.arbiters.find((x) => x.address.toLowerCase() === (form.panel[i] ?? '').trim().toLowerCase())
+    return hit ? { allowed: true, fee: hit.fee } : null
+  })
   // The deal as it was when Create was pressed. The form behind the dialog keeps re-reading the chain, and a failed
   // re-read must not close or change a dialog the wallet is waiting on.
   const [balance, setBalance] = useState<bigint | null>(null)
@@ -135,7 +139,12 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
     return () => { live = false }
   }, [client])
 
-  const checked = arbiter?.status === 'ready' ? arbiter.value : null
+  // the approved-list API already says who is allowed and their fee; it answers when a chain read stalls
+  const fromList = (a: string) => {
+    const hit = arbiters.arbiters.find((x) => x.address.toLowerCase() === a.trim().toLowerCase())
+    return hit ? { allowed: true, fee: hit.fee } : null
+  }
+  const checked = arbiter?.status === 'ready' ? arbiter.value : fromList(form.arbiter)
   // the checks are new objects on every render, so key the memo on what they say
   const checksKey = JSON.stringify(panelChecks.map((c) => (c ? [c.allowed, String(c.fee)] : null)))
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -144,7 +153,20 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
   const setPart = (i: number, patch: Partial<PartForm>) => setForm((f) => ({ ...f, parts: f.parts.map((p, j) => (j === i ? { ...p, ...patch } : p)) }))
   const pick = (t: Template) => {
     setTemplate(t)
-    setForm((f) => ({ ...f, parts: t.parts() }))
+    // keep attestors already typed: a part in the new template that also needs attestors takes the old part's list,
+    // so switching templates does not wipe them and leave an "name at least one attestor" error behind
+    // (the same position when it had some, otherwise every attestor typed anywhere, since templates put them on different parts)
+    setForm((f) => {
+      const pool = [...new Set(f.parts.flatMap((p) => p.attestors.map((a) => a.trim()).filter((a) => a !== '')))]
+      return {
+        ...f,
+        parts: t.parts().map((np, i) => {
+          const same = f.parts[i]?.attestors.filter((a) => a.trim() !== '') ?? []
+          const kept = same.length ? same : pool
+          return np.condition === 1 && kept.length ? { ...np, attestors: kept } : np
+        }),
+      }
+    })
   }
 
   const terms = buildTerms(details, form.parts, template.id === 'custom' ? undefined : template.name)
@@ -191,7 +213,12 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
           </div>
           <div>
             <label className="label block" htmlFor="total">Total, USDC</label>
-            <input id="total" name="total" aria-invalid={bad('Enter the total')} className={`${input} mono`} inputMode="decimal" value={form.total} onChange={(e) => set({ total: e.target.value })} />
+            <input id="total" name="total" aria-invalid={bad('Enter the total')} className={`${input} mono`} inputMode="decimal" value={form.total} onChange={(e) => set({ total: e.target.value })} aria-describedby="total-help" />
+            {(() => {
+              const n = Number(form.total.trim())
+              const low = form.total.trim() !== '' && Number.isFinite(n) && n < 1
+              return <p id="total-help" role={low ? 'alert' : undefined} className={`mt-1 text-[12px] ${low ? 'text-hold' : 'text-graphite'}`}>{low ? 'The total must be at least 1 USDC.' : 'At least 1 USDC.'}</p>
+            })()}
           </div>
           <div className="sm:col-span-2">
             <label className="label block" htmlFor="refund">Refunds go to</label>
@@ -239,18 +266,22 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
           <ol className="space-y-3">
             {form.parts.map((p, i) => (
               <li key={i} className="rounded-md border border-rule bg-paper p-3.5">
-                <div className="flex flex-wrap items-end gap-3">
-                  <span className="mono pb-2 text-[13px] text-graphite">{i + 1}</span>
+                <div className="flex flex-wrap items-start gap-3">
+                  {/* top-aligned row: the index sits on the inputs' centre line; captions hang below without shifting them */}
+                  <div className="w-4 shrink-0" aria-hidden="true">
+                    <span className="label invisible block">#</span>
+                    <span className="mono mt-1.5 flex h-11 items-center justify-center text-[13px] text-graphite">{i + 1}</span>
+                  </div>
                   <div className="w-24">
                     <label className="label block" htmlFor={`pct-${i}`}>Share, %</label>
-                    <input id={`pct-${i}`} name={`pct-${i}`} className={`${input} mono`} inputMode="decimal" value={p.percent} onChange={(e) => setPart(i, { percent: e.target.value })} />
+                    <input id={`pct-${i}`} name={`pct-${i}`} className={`${input} mono h-11 py-0`} inputMode="decimal" value={p.percent} onChange={(e) => setPart(i, { percent: e.target.value })} />
                     <p className="mono mt-1 text-[12px] text-graphite" aria-live="off">{partAmount(form.total, p.percent) === null ? '' : `${formatAmount(partAmount(form.total, p.percent)!)} USDC`}</p>
                   </div>
-                  <div className="min-w-0 basis-full sm:flex-1 sm:basis-0">
+                  <div className="order-last min-w-0 basis-full pl-7 sm:order-none sm:flex-1 sm:basis-[12rem] sm:pl-0">
                     <label className="label block" htmlFor={`cond-${i}`}>Paid when</label>
                     <select
                       id={`cond-${i}`}
-                      className={input}
+                      className={`${input} h-11 py-0`}
                       value={p.condition}
                       onChange={(e) => {
                         const condition = Number(e.target.value) as ReleaseCondition
@@ -261,7 +292,7 @@ function Form({ buyer, limits }: { buyer: `0x${string}`; limits: Extract<ReturnT
                     </select>
                   </div>
                   {form.parts.length > 1 ? (
-                    <button type="button" onClick={() => set({ parts: form.parts.filter((_, j) => j !== i) })} aria-label={`Remove part ${i + 1}`} className="ml-auto inline-flex min-h-11 items-center px-2 text-[12.5px] text-graphite hover:text-hold sm:ml-0 sm:pb-0">Remove</button>
+                    <button type="button" onClick={() => set({ parts: form.parts.filter((_, j) => j !== i) })} aria-label={`Remove part ${i + 1}`} className="ml-auto mt-[22px] inline-flex h-11 items-center self-start px-2 text-[12.5px] text-graphite hover:text-hold sm:ml-0">Remove</button>
                   ) : null}
                 </div>
                 {p.condition === 1 ? (
@@ -458,6 +489,7 @@ type ArbiterChoices = ReturnType<typeof useArbiterChoices>
 /** One arbiter wallet: a pick from the approved list or a pasted address, checked against the list contract. */
 /** With a clash (the buyer's own wallet, or a repeat on the panel) only the clash error shows, not the list check as well. */
 function ArbiterField({ id, label, value, onChange, check, choices, clash = false }: { id: string; label: string; value: string; onChange: (v: string) => void; check: ReturnType<typeof useArbiterCheck>; choices: ArbiterChoices; clash?: boolean }) {
+  const listed = choices.arbiters.find((a) => a.address.toLowerCase() === value.trim().toLowerCase()) ?? null
   return (
     <div>
       <label className="label block" htmlFor={id}>{label}</label>
@@ -473,7 +505,8 @@ function ArbiterField({ id, label, value, onChange, check, choices, clash = fals
       <input id={id} className={`${input} mono`} value={value} onChange={(e) => onChange(e.target.value)} placeholder="0x… from the approved list" spellCheck={false} />
       {clash ? null : <p className="mt-1 text-[12px]" role="status">
         {check === null ? <span className="text-graphite">Decides disputes. Must be on the approved list.</span> : null}
-        {check?.status === 'loading' ? <span className="text-graphite">Checking the approved list…</span> : null}
+        {check?.status === 'loading' && listed ? <span className="text-released">On the approved list · fee {formatAmount(listed.fee)} USDC{listed.fee === 0n ? ' (this arbiter charges no fee)' : ''}, paid only if they decide in time</span> : null}
+        {check?.status === 'loading' && !listed ? <span className="text-graphite">Checking the approved list…</span> : null}
         {check?.status === 'error' ? <span className="text-hold">Could not check the list: {check.message}</span> : null}
         {check?.status === 'ready' && check.value.allowed ? <span className="text-released">On the approved list · fee {formatAmount(check.value.fee)} USDC, paid only if they decide in time</span> : null}
         {check?.status === 'ready' && !check.value.allowed ? <span className="text-hold">Not on the approved list.</span> : null}
