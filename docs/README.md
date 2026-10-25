@@ -42,5 +42,6 @@ These pages are for whoever runs the deployment.
 |---|---|
 | `contracts/` | Solidity (Foundry): the escrow and its linked logic libraries, the arbiter list, the attestor registry, and the bond and financing vaults |
 | `apps/web/` | Next.js web app |
+| `apps/prototype/` | A design prototype of the interface with demo data; separate and not deployed |
 | `services/relayer/` | Indexer, read API, evidence upload, email, operator alerts and the gas-only claim and refund worker |
 | `packages/network/` | The network manifests (Arc testnet and Arc mainnet) shared by the web app and the relayer |
